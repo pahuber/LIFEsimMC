@@ -1,0 +1,16 @@
+{
+  "_checkout": "2022.6.3",
+  "_output_dir": "C:\\Users\\huber\\Desktop\\LIFEsim2",
+  "_repo_dir": "C:\\Users\\huber\\.cookiecutters\\cookiecutter-hypermodern-python",
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Philipp A. Huber",
+  "copyright_year": "2024",
+  "development_status": "Development Status :: 3 - Alpha",
+  "email": "huberph@phys.ehtz.ch",
+  "friendly_name": "LIFEsim 2",
+  "github_user": "pahuber",
+  "license": "GPL-3.0",
+  "package_name": "lifesim2",
+  "project_name": "lifesim2",
+  "version": "0.0.0"
+}
