@@ -8,3 +8,5 @@ class Context:
         self.scene = None
         self.spectrum_files = None
         self.data = None
+        self.templates = None
+        self.extractions = []
