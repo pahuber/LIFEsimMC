@@ -6,4 +6,5 @@ class Context:
         self.observation = None
         self.observatory = None
         self.scene = None
+        self.spectrum_files = None
         self.data = None

@@ -19,6 +19,6 @@ class Pipeline:
 
     def run(self):
         """Run the pipeline with all the modules that have been added. Remove the modules after running."""
-        for index_module, module in enumerate(self._modules):
+        for module in self._modules:
             self._context = module.apply(context=self._context)
-            self._modules.pop(index_module)
+        self._modules = []
