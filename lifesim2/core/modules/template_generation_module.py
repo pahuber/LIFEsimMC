@@ -12,8 +12,10 @@ from lifesim2.util.helpers import Template
 class TemplateGenerationModule(BaseModule):
     """Class representation of the template generation module."""
 
-    def __init__(self, write_to_fits: bool = True, create_copy: bool = True, output_path: Path = Path(".")):
+    def __init__(self, gpus: tuple[int], write_to_fits: bool = True, create_copy: bool = True,
+                 output_path: Path = Path(".")):
         """Constructor method."""
+        self.gpus = gpus
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
         self.output_path = output_path
@@ -66,6 +68,7 @@ class TemplateGenerationModule(BaseModule):
                 observation=context.observation,
                 scene=scene_template,
                 spectrum_files=context.spectrum_files,
+                gpus=self.gpus,
                 output_dir=self.output_path,
                 write_fits=self.write_to_fits,
                 create_copy=self.create_copy
