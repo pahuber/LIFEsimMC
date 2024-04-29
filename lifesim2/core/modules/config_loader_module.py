@@ -52,6 +52,7 @@ class ConfigLoaderModule(BaseModule):
         observatory = Observatory(**config_dict['observatory']) if not self.observatory else self.observatory
         observation = Observation(**config_dict['observation']) if not self.observation else self.observation
 
+        context.config_file_path = self.config_file_path
         context.settings = settings
         context.observatory = observatory
         context.observation = observation

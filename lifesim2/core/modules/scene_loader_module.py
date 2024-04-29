@@ -39,6 +39,8 @@ class SceneLoaderModule(BaseModule):
             self.exoplanetary_system_file_path) if self.exoplanetary_system_file_path else None
 
         scene = Scene(**system_dict) if not self.scene else self.scene
+
+        context.exoplanetary_system_file_path = self.exoplanetary_system_file_path
         context.scene = scene
         context.spectrum_files = self.spectrum_files
         return context

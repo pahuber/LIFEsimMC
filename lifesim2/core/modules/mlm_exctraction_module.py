@@ -1,7 +1,6 @@
 from itertools import product
 from typing import Tuple
 
-import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from torch import Tensor
@@ -31,69 +30,69 @@ class MLMExtractionModule(BaseModule):
             )
         )
         optimum_flux = torch.zeros(cost_function.shape)
-        ################
-
-        context.data = torch.einsum('ijk, ij->ijk', context.data, 1 / torch.sqrt(torch.mean(context.data ** 2, axis=2)))
-        context.data = context.data.numpy()
-        # plt.imshow(context.data[0])
-        # plt.title('Data Before Fit Subtraction')
-        # plt.colorbar()
-        # plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
-        # plt.show()
+        # ################
         #
-        # template = \
-        #     [template for template in context.templates if template.x == 8 and template.y == 4][0]
-        # plt.imshow(template.data[0])
-        # plt.title('Template Before Fit Subtraction')
-        # plt.colorbar()
-        # plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
-        # plt.show()
-
-        for index_time in range(len(context.data[0][0])):
-            data_spectral_column = context.data[0][:, index_time]
-
-            coefficients = np.polyfit(
-                range(len(data_spectral_column)),
-                data_spectral_column,
-                3
-            )
-            fitted_function = np.poly1d(coefficients)
-
-            context.data[0][:, index_time] -= fitted_function(range(len(data_spectral_column)))
-
-            for index_x, index_y in product(range(context.settings.grid_size), range(context.settings.grid_size)):
-                template = \
-                    [template for template in context.templates if template.x == index_x and template.y == index_y][0]
-
-                # if index_time == 0:
-                #     template.data = template.data.numpy()
-
-                # template_data_spectral_column = template.data[0][:, index_time]
-
-                template.data[0][:, index_time] -= fitted_function(range(len(data_spectral_column)))
-                a = 0
-                # / (
-                # np.sqrt(np.mean(template.data.numpy()[0][:, index_time] ** 2)))
-                # if index_time == len(context.data[0][0]) - 1:
-                #     template.data = torch.tensor(template.data)
-
-        context.data = torch.tensor(context.data)
-        data = context.data
-        # plt.imshow(context.data[0])
-        # plt.title('Data After Fit Subtraction')
-        # plt.colorbar()
-        # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
-        # plt.show()
-        # 
-        # template = \
-        #     [template for template in context.templates if template.x == 8 and template.y == 4][0]
-        # plt.imshow(template.data[0])
-        # plt.title('Template After Fit Subtraction')
-        # plt.colorbar()
-        # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
-        # plt.show()
-
-        ##########
+        # context.data = torch.einsum('ijk, ij->ijk', context.data, 1 / torch.sqrt(torch.mean(context.data ** 2, axis=2)))
+        # context.data = context.data.numpy()
+        # # plt.imshow(context.data[0])
+        # # plt.title('Data Before Fit Subtraction')
+        # # plt.colorbar()
+        # # plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
+        # # plt.show()
+        # #
+        # # template = \
+        # #     [template for template in context.templates if template.x == 8 and template.y == 4][0]
+        # # plt.imshow(template.data[0])
+        # # plt.title('Template Before Fit Subtraction')
+        # # plt.colorbar()
+        # # plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
+        # # plt.show()
+        #
+        # for index_time in tqdm(range(len(context.data[0][0]))):
+        #     data_spectral_column = np.nan_to_num(context.data[0][:, index_time])
+        #
+        #     coefficients = np.polyfit(
+        #         range(len(data_spectral_column)),
+        #         data_spectral_column,
+        #         3
+        #     )
+        #     fitted_function = np.poly1d(coefficients)
+        #
+        #     context.data[0][:, index_time] -= fitted_function(range(len(data_spectral_column)))
+        #
+        #     for index_x, index_y in product(range(context.settings.grid_size), range(context.settings.grid_size)):
+        #         template = \
+        #             [template for template in context.templates if template.x == index_x and template.y == index_y][0]
+        #
+        #         # if index_time == 0:
+        #         #     template.data = template.data.numpy()
+        #
+        #         # template_data_spectral_column = template.data[0][:, index_time]
+        #
+        #         template.data[0][:, index_time] -= fitted_function(range(len(data_spectral_column)))
+        #         a = 0
+        #         # / (
+        #         # np.sqrt(np.mean(template.data.numpy()[0][:, index_time] ** 2)))
+        #         # if index_time == len(context.data[0][0]) - 1:
+        #         #     template.data = torch.tensor(template.data)
+        #
+        # context.data = torch.tensor(context.data)
+        # data = context.data
+        # # plt.imshow(context.data[0])
+        # # plt.title('Data After Fit Subtraction')
+        # # plt.colorbar()
+        # # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
+        # # plt.show()
+        # #
+        # # template = \
+        # #     [template for template in context.templates if template.x == 8 and template.y == 4][0]
+        # # plt.imshow(template.data[0])
+        # # plt.title('Template After Fit Subtraction')
+        # # plt.colorbar()
+        # # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
+        # # plt.show()
+        #
+        # ##########
 
         for index_x, index_y in product(range(context.settings.grid_size), range(context.settings.grid_size)):
 

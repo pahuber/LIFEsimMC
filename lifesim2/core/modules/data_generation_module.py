@@ -26,6 +26,8 @@ class DataGenerationModule(BaseModule):
         phringe = PHRINGE()
 
         phringe.run(
+            config_file_path=context.config_file_path,
+            exoplanetary_system_file_path=context.exoplanetary_system_file_path,
             settings=context.settings,
             observatory=context.observatory,
             observation=context.observation,
