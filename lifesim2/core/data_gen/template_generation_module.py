@@ -18,7 +18,7 @@ class TemplateGenerationModule(BaseModule):
             gpus: tuple[int],
             write_to_fits: bool = True,
             create_copy: bool = True,
-            output_path: Path = Path(".")
+            output_path: Path = Path("../modules")
     ):
         """Constructor method."""
         self.gpus = gpus
