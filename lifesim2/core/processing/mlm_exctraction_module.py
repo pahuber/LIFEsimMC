@@ -1,9 +1,10 @@
 from itertools import product
 from typing import Tuple
 
+import scipy
 import torch
 from matplotlib import pyplot as plt
-from torch import Tensor
+from torch import Tensor, tensor
 
 from lifesim2.core.base_module import BaseModule
 from lifesim2.util.grid import get_indices_of_maximum_of_2d_array
@@ -90,13 +91,22 @@ class MLMExtractionModule(BaseModule):
             mask = ((x - center[0]) ** 2 + (y - center[1]) ** 2 <= radius ** 2 + 0.5) & \
                    ((x - center[0]) ** 2 + (y - center[1]) ** 2 >= (radius - 1) ** 2 + 0.5)
 
-            # TODO: Remove planet position from mask
-            # # Extract the pixels within the circle
-            # plt.imshow(cost_functions_white[0, :, :] * mask)
-            # plt.colorbar()
-            # plt.show()
+            # remove planet position from mask
             plt.imshow(mask)
             plt.show()
+
+            #################
+            # get array of cost function values for each pixel in the mask for each output index
+            cost_function_values_in_mask = torch.zeros(
+                (context.observatory.beam_combination_scheme.number_of_differential_outputs, mask.sum()),
+                dtype=torch.float32
+            )
+            for index_output in range(context.observatory.beam_combination_scheme.number_of_differential_outputs):
+                cost_function_values_in_mask[index_output] = cost_functions_white[index_output, :, :][mask]
+
+            a = 0
+
+            ################
 
             masked_fluxes_white_flattened = torch.einsum(
                 'ijk, ij -> ijk',
@@ -111,6 +121,7 @@ class MLMExtractionModule(BaseModule):
                 # deviation
                 non_zero_values = [el for el in masked_fluxes_white_flattened[:, index] if el > 0]
                 uncertainties[index] = torch.std(torch.asarray(non_zero_values))
+        return 0, cost_function_values_in_mask
 
     def _get_matrix_b(self, data: Tensor, template_data: Tensor) -> Tensor:
         """Calculate the matrix B according to equation B.3.
@@ -200,12 +211,40 @@ class MLMExtractionModule(BaseModule):
         # Get the whitened data and the uncertainties on the extracted flux
         data_white = self._get_whitened_data(optimum_fluxes, cost_functions, context)
         cost_functions_white, optimum_fluxes_white = self._calculate_maximum_likelihood(data_white, context)
-        optimum_fluxes_uncertainties = self._get_fluxes_uncertainties(
+
+        # TODO: what about data whitening with poly subtraction?
+        optimum_fluxes_uncertainties, cost_function_values_in_mask = self._get_fluxes_uncertainties(
             cost_functions,
-            cost_functions_white,
+            cost_functions,  # cost_functions_white,
             optimum_fluxes_white,
             context
         )
+
+        plt.hist(cost_function_values_in_mask[0])
+        plt.show()
+
+        ##########
+        mu_y_hat = torch.max(cost_functions)
+        mu_x_hat = torch.mean(cost_function_values_in_mask)
+        n = len(cost_function_values_in_mask[0])
+        sigma_x_hat = torch.sqrt(torch.sum((cost_function_values_in_mask - mu_x_hat) ** 2) / (n - 1))
+        t = (mu_y_hat - mu_x_hat) / (sigma_x_hat * torch.sqrt(tensor(1 + 1 / n)))
+
+        # calc fpf from t using t-statistics
+        fpf = scipy.stats.t.sf(t, n - 1)
+
+        # convert fpf to sigma values
+        sigma_fpf = scipy.stats.norm.ppf(1 - fpf)
+
+        print(mu_y_hat)
+        print(cost_function_values_in_mask)
+        print(mu_x_hat)
+        print(n)
+        print(sigma_x_hat)
+        print(t)
+        print(fpf)
+        print(sigma_fpf)
+        ####
 
         context.extractions.append(
             Extraction(
