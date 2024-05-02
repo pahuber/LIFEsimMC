@@ -1,7 +1,6 @@
 from datetime import datetime
 from pathlib import Path
 
-import torch
 from phringe.phringe import PHRINGE
 from tqdm.contrib.itertools import product
 
@@ -18,7 +17,7 @@ class TemplateGenerationModule(BaseModule):
             gpus: tuple[int],
             write_to_fits: bool = True,
             create_copy: bool = True,
-            output_path: Path = Path("../modules")
+            output_path: Path = Path(".")
     ):
         """Constructor method."""
         self.gpus = gpus
@@ -77,16 +76,14 @@ class TemplateGenerationModule(BaseModule):
                 scene=scene_template,
                 spectrum_files=context.spectrum_files,
                 gpus=self.gpus,
+                fits_suffix=f'_{index_x}_{index_y}',
                 output_dir=template_dir if self.write_to_fits else None,
                 write_fits=self.write_to_fits,
-                fits_suffix=f'_{index_x}_{index_y}',
                 create_copy=self.create_copy if index_x == 0 and index_y == 0 else False,
-                create_directory=False
+                create_directory=False,
+                normalize=True
             )
             data = phringe.get_data()
-
-            # Normalize the data to unit RMS
-            data = torch.einsum('ijk, ij->ijk', data, 1 / torch.sqrt(torch.mean(data ** 2, axis=2)))
 
             template = Template(x=index_x, y=index_y, data=data)
             templates.append(template)
