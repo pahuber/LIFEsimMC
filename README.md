@@ -1,4 +1,4 @@
-# LIFEsim 2
+# LIFEsimMC
 
 [![PyPI](https://img.shields.io/pypi/v/lifesim2.svg)][pypi_]
 [![Status](https://img.shields.io/pypi/status/lifesim2.svg)][status]
@@ -31,10 +31,10 @@
 
 ## Installation
 
-You can install _LIFEsim 2_ via [pip] from [PyPI]:
+You can install _LIFEsimMC_ via [pip] from [PyPI]:
 
 ```console
-$ pip install lifesim2
+$ pip install lifesimmc
 ```
 
 ## Usage
