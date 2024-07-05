@@ -21,7 +21,7 @@
 [pre-commit]: https://github.com/pre-commit/pre-commit
 [black]: https://github.com/psf/black
 
-`LIFEsimMC` is a Monte Carlo-based end-to-end simulator for the Large Interferometer For Exoplanets (LIFE). It uses [PHRINGE](https://github.com/pahuber/PHRINGE) for the generation of synthetic data and provides an additional suite of signal extraction and data analysis tools.
+*LIFEsimMC* is a Monte Carlo-based end-to-end simulator for the Large Interferometer For Exoplanets (LIFE). It uses [PHRINGE](https://github.com/pahuber/PHRINGE) for the generation of synthetic data and provides an additional suite of signal extraction and data analysis tools.
 
 It is currently being developed and will be available in due time. The documentation will be available here once it is ready.
 
