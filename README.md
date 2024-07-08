@@ -1,23 +1,23 @@
 # LIFEsimMC
 
-[![PyPI](https://img.shields.io/pypi/v/lifesim2.svg)][pypi_]
-[![Status](https://img.shields.io/pypi/status/lifesim2.svg)][status]
-[![Python Version](https://img.shields.io/pypi/pyversions/lifesim2)][python version]
-[![License](https://img.shields.io/pypi/l/lifesim2)][license]
+[![PyPI](https://img.shields.io/pypi/v/lifesimmc.svg)][pypi_]
+[![Status](https://img.shields.io/pypi/status/lifesimmc.svg)][status]
+[![Python Version](https://img.shields.io/pypi/pyversions/lifesimmc)][python version]
+[![License](https://img.shields.io/pypi/l/lifesimmc)][license]
 
-[![Read the documentation at https://lifesim2.readthedocs.io/](https://img.shields.io/readthedocs/lifesim2/latest.svg?label=Read%20the%20Docs)][read the docs]
-[![Tests](https://github.com/pahuber/lifesim2/workflows/Tests/badge.svg)][tests]
-[![Codecov](https://codecov.io/gh/pahuber/lifesim2/branch/main/graph/badge.svg)][codecov]
+[![Read the documentation at https://lifesimmc.readthedocs.io/](https://img.shields.io/readthedocs/lifesimmc/latest.svg?label=Read%20the%20Docs)][read the docs]
+[![Tests](https://github.com/pahuber/lifesimmc/workflows/Tests/badge.svg)][tests]
+[![Codecov](https://codecov.io/gh/pahuber/lifesimmc/branch/main/graph/badge.svg)][codecov]
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)][pre-commit]
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)][black]
 
-[pypi_]: https://pypi.org/project/lifesim2/
-[status]: https://pypi.org/project/lifesim2/
-[python version]: https://pypi.org/project/lifesim2
-[read the docs]: https://lifesim2.readthedocs.io/
-[tests]: https://github.com/pahuber/lifesim2/actions?workflow=Tests
-[codecov]: https://app.codecov.io/gh/pahuber/lifesim2
+[pypi_]: https://pypi.org/project/lifesimmc/
+[status]: https://pypi.org/project/lifesimmc/
+[python version]: https://pypi.org/project/lifesimmc
+[read the docs]: https://lifesimmc.readthedocs.io/
+[tests]: https://github.com/pahuber/lifesimmc/actions?workflow=Tests
+[codecov]: https://app.codecov.io/gh/pahuber/lifesimmc
 [pre-commit]: https://github.com/pre-commit/pre-commit
 [black]: https://github.com/psf/black
 
@@ -67,11 +67,11 @@ This project was generated from [@cjolowicz]'s [Hypermodern Python Cookiecutter]
 [@cjolowicz]: https://github.com/cjolowicz
 [pypi]: https://pypi.org/
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
-[file an issue]: https://github.com/pahuber/lifesim2/issues
+[file an issue]: https://github.com/pahuber/lifesimmc/issues
 [pip]: https://pip.pypa.io/
 
 <!-- github-only -->
 
-[license]: https://github.com/pahuber/lifesim2/blob/main/LICENSE
-[contributor guide]: https://github.com/pahuber/lifesim2/blob/main/CONTRIBUTING.md
-[command-line reference]: https://lifesim2.readthedocs.io/en/latest/usage.html
+[license]: https://github.com/pahuber/lifesimmc/blob/main/LICENSE
+[contributor guide]: https://github.com/pahuber/lifesimmc/blob/main/CONTRIBUTING.md
+[command-line reference]: https://lifesimmc.readthedocs.io/en/latest/usage.html
