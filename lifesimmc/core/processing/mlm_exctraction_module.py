@@ -92,8 +92,8 @@ class MLMExtractionModule(BaseModule):
                    ((x - center[0]) ** 2 + (y - center[1]) ** 2 >= (radius - 1) ** 2 + 0.5)
 
             # remove planet position from mask
-            plt.imshow(mask)
-            plt.show()
+            # plt.imshow(mask)
+            # plt.show()
 
             #################
             # get array of cost function values for each pixel in the mask for each output index
@@ -220,8 +220,8 @@ class MLMExtractionModule(BaseModule):
             context
         )
 
-        plt.hist(cost_function_values_in_mask[0])
-        plt.show()
+        # plt.hist(cost_function_values_in_mask[0])
+        # plt.show()
 
         ##########
         mu_y_hat = torch.max(cost_functions)
@@ -236,14 +236,14 @@ class MLMExtractionModule(BaseModule):
         # convert fpf to sigma values
         sigma_fpf = scipy.stats.norm.ppf(1 - fpf)
 
-        print(mu_y_hat)
-        print(cost_function_values_in_mask)
-        print(mu_x_hat)
-        print(n)
-        print(sigma_x_hat)
-        print(t)
-        print(fpf)
-        print(sigma_fpf)
+        # print(mu_y_hat)
+        # print(cost_function_values_in_mask)
+        # print(mu_x_hat)
+        # print(n)
+        # print(sigma_x_hat)
+        # print(t)
+        # print(fpf)
+        # print(sigma_fpf)
         ####
 
         context.extractions.append(

@@ -5,7 +5,7 @@
       <paths name="LIFEsim2/huberph@rainbow:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/huberph/lifesim2" local="$PROJECT_DIR$" />
+            <mapping deploy="/home/huberph/lifesimmc" local="$PROJECT_DIR$" />
             <mapping local="" />
           </mappings>
         </serverdata>

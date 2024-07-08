@@ -45,6 +45,7 @@ class PolynomialSubtractionModule(BaseModule):
         # plt.show()
 
         # Subtract polynomial fit from data and templates
+        print('Subtracting polynomial fits...')
         for index_time in tqdm(range(len(context.data[0][0]))):
             for index_output in range(len(context.data)):
                 data_spectral_column = np.nan_to_num(context.data[index_output][:, index_time])
@@ -134,4 +135,5 @@ class PolynomialSubtractionModule(BaseModule):
         # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
         # plt.show()
 
+        print('Done')
         return context

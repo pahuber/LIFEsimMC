@@ -61,6 +61,7 @@ class TemplateGenerationModule(BaseModule):
         templates = []
 
         # Swipe the planet position through every point in the grid and generate the data for each position
+        print('Generating templates...')
         for index_x, index_y in product(range(context.settings.grid_size), range(context.settings.grid_size)):
             # Set the planet position to the current position in the grid
             scene_template.planets[0].grid_position = (index_x, index_y)
@@ -89,4 +90,5 @@ class TemplateGenerationModule(BaseModule):
             templates.append(template)
 
         context.templates = templates
+        print('Done')
         return context
