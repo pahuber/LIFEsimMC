@@ -8,6 +8,5 @@ def main() -> None:
     """LIFEsim 2."""
 
 
-
 if __name__ == "__main__":
-    main(prog_name="lifesim2")  # pragma: no cover
+    main(prog_name="lifesimmc")  # pragma: no cover

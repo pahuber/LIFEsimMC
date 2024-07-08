@@ -4,9 +4,9 @@ from pathlib import Path
 from phringe.phringe import PHRINGE
 from tqdm.contrib.itertools import product
 
-from lifesim2.core.base_module import BaseModule
-from lifesim2.core.context import Context
-from lifesim2.util.helpers import Template
+from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.context import Context
+from lifesimmc.util.helpers import Template
 
 
 class TemplateGenerationModule(BaseModule):

@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10 (LIFEsim2) (3)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="lifesim2: Remote Python 3.10.12 (sftp://huberph@rainbow:22/scratch/user/huberph/venv_lifesim2/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.10 (LIFEsimMC)" project-jdk-type="Python SDK" />
 </project>

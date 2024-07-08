@@ -2,10 +2,11 @@ from itertools import product
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from lifesim2.core.base_module import BaseModule
-from lifesim2.core.context import Context
+from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.context import Context
 
 
 class PolynomialSubtractionModule(BaseModule):
@@ -70,46 +71,49 @@ class PolynomialSubtractionModule(BaseModule):
                     template_index = context.templates.index(template)
 
                     # Plot template before fit subtraction
-                    # if index_x == 8 and index_y == 4 and index_time == 0:
-                    #     plt.plot(context.templates[template_index].data[index_output][:, index_time],
-                    #              context.observatory.wavelength_bin_centers, label='Template Pre-Subtraction')
-                    #     plt.ylabel('Wavelength ($\mu$m)')
-                    #     plt.xlabel('Photon Counts')
-                    #     plt.title('Template Before Subtraction')
-                    #     # plt.legend()
-                    #     plt.show()
+                    if index_x == 8 and index_y == 4 and index_time == 0:
+                        plt.plot(context.templates[template_index].data[index_output][:, index_time],
+                                 context.observatory.wavelength_bin_centers, label='Template Pre-Subtraction')
+                        plt.ylabel('Wavelength ($\mu$m)')
+                        plt.xlabel('Photon Counts')
+                        plt.title('Template Before Subtraction')
+                        # plt.legend()
+                        plt.show()
 
                     # Subtract polynomial fit from template
                     context.templates[template_index].data[index_output][:,
                     index_time] -= fitted_function(range(len(data_spectral_column)))
 
                     # Plot data and polynomial fit
-                    # if index_x == 8 and index_y == 4 and index_time == 0:
-                    #     # Plot data and polynomial fit
-                    #     plt.plot(data_spectral_column, context.observatory.wavelength_bin_centers, label='Data')
-                    #     plt.plot(fitted_function(range(len(data_spectral_column))),
-                    #              context.observatory.wavelength_bin_centers, label='Fit')
-                    #     plt.ylabel('Wavelength ($\mu$m)')
-                    #     plt.xlabel('Photon Counts')
-                    #     plt.title('Full Data and Polynomial Fit')
-                    #     plt.legend()
-                    #     plt.show()
+                    if index_x == 8 and index_y == 4 and index_time == 0:
+                        # Plot data and polynomial fit
+                        plt.plot(data_spectral_column, context.observatory.wavelength_bin_centers, label='Data',
+                                 color='#37B3FF', linewidth=2)
+                        plt.plot(fitted_function(range(len(data_spectral_column))),
+                                 context.observatory.wavelength_bin_centers, label='Fit', color='#FFC000', linewidth=2)
+                        plt.ylabel('Wavelength ($\mu$m)')
+                        plt.xlabel('Photon Counts')
+                        # plt.title('Full Data and Polynomial Fit')
+                        plt.legend()
+                        plt.axis('off')
+                        plt.savefig('Full_Data_Polynomial_Fit.svg', dpi=300, transparent=True)
+                        plt.show()
 
-                    # # Plot template after fit subtraction
-                    # plt.plot(context.templates[template_index].data[index_output][:, index_time],
-                    #          context.observatory.wavelength_bin_centers, label='Template Post-Subtraction')
-                    # plt.ylabel('Wavelength ($\mu$m)')
-                    # plt.xlabel('Photon Counts')
-                    # plt.title('Template After Subtraction')
-                    # # plt.legend()
-                    # plt.show()
+                        # Plot template after fit subtraction
+                        plt.plot(context.templates[template_index].data[index_output][:, index_time],
+                                 context.observatory.wavelength_bin_centers, label='Template Post-Subtraction')
+                        plt.ylabel('Wavelength ($\mu$m)')
+                        plt.xlabel('Photon Counts')
+                        plt.title('Template After Subtraction')
+                        # plt.legend()
+                        plt.show()
 
-                    # Plot template data after fit subtraction
-                    # plt.imshow(template.data[0, :, 0:100])
-                    # plt.title('Template After Fit Subtraction')
-                    # plt.colorbar()
-                    # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
-                    # plt.show()
+                        # Plot template data after fit subtraction
+                        # plt.imshow(template.data[0, :, 0:100])
+                        # plt.title('Template After Fit Subtraction')
+                        # plt.colorbar()
+                        # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
+                        # plt.show()
 
         context.data = torch.tensor(context.data)
 

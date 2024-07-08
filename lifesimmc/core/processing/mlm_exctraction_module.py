@@ -6,9 +6,9 @@ import torch
 from matplotlib import pyplot as plt
 from torch import Tensor, tensor
 
-from lifesim2.core.base_module import BaseModule
-from lifesim2.util.grid import get_indices_of_maximum_of_2d_array
-from lifesim2.util.helpers import Extraction
+from lifesimmc.core.base_module import BaseModule
+from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
+from lifesimmc.util.helpers import Extraction
 
 
 class MLMExtractionModule(BaseModule):

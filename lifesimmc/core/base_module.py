@@ -1,6 +1,6 @@
 from abc import ABC
 
-from lifesim2.core.context import Context
+from lifesimmc.core.context import Context
 
 
 class BaseModule(ABC):

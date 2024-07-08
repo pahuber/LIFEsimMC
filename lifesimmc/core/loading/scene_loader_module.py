@@ -4,8 +4,8 @@ from typing import overload
 from phringe.core.entities.scene import Scene
 from phringe.io.utils import get_dict_from_path
 
-from lifesim2.core.base_module import BaseModule
-from lifesim2.core.context import Context
+from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.context import Context
 
 
 class SceneLoaderModule(BaseModule):

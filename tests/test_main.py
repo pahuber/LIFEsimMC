@@ -2,7 +2,7 @@
 import pytest
 from click.testing import CliRunner
 
-from lifesim2 import __main__
+from lifesimmc import __main__
 
 
 @pytest.fixture

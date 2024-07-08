@@ -1,1 +1,1 @@
-"""Test suite for the lifesim2 package."""
+"""Test suite for the lifesimmc package."""

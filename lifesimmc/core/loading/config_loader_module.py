@@ -6,8 +6,8 @@ from phringe.core.entities.observatory.observatory import Observatory
 from phringe.core.entities.settings import Settings
 from phringe.io.utils import get_dict_from_path
 
-from lifesim2.core.base_module import BaseModule
-from lifesim2.core.context import Context
+from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.context import Context
 
 
 class ConfigLoaderModule(BaseModule):
