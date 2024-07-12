@@ -31,12 +31,12 @@ pipeline.add_module(module)
 
 # Generate templates
 module = TemplateGenerationModule(gpus=None, write_to_fits=True, create_copy=True)
-pipeline.add_module(module)
+# pipeline.add_module(module)
 
 # Load templates
 module = TemplateLoadingModule(
-    template_directory=Path('path'))
-# pipeline.add_module(module)
+    template_directory=Path('/home/huberph/lifesimmc/_wd/templates_40x40'))
+pipeline.add_module(module)
 
 # Subtract polynomial spectral fit
 module = PolynomialSubtractionModule()
