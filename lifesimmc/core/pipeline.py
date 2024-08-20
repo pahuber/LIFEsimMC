@@ -1,6 +1,4 @@
-from copy import copy
-
-from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.modules.base_module import BaseModule
 
 
 class Pipeline:
@@ -10,18 +8,25 @@ class Pipeline:
         """Constructor method."""
         self.gpu = gpu
         self._modules = []
+        self._resources = []
 
     def add_module(self, module: BaseModule):
         """Add a module to the pipeline.
 
         :param module: The module to add
         """
-        module.preceding_modules = copy(self._modules)
+        module.resources = self._resources
         module.gpu = self.gpu
         self._modules.append(module)
 
     def run(self):
         """Run the pipeline with all the modules that have been added. Remove the modules after running."""
         for module in self._modules:
-            module.apply()
+            resource = module.apply(self._resources)
+            if resource is not None:
+                if isinstance(resource, tuple):
+                    for res in resource:
+                        self._resources.append(res)
+                else:
+                    self._resources.append(resource)
         self._modules = []

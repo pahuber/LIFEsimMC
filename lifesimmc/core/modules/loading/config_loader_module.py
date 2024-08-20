@@ -8,24 +8,31 @@ from phringe.core.entities.scene import Scene
 from phringe.core.entities.simulation import Simulation
 from phringe.io.utils import load_config
 
-from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.modules.base_module import BaseModule
+from lifesimmc.core.resources.config_resource import ConfigResource
 
 
 class ConfigLoaderModule(BaseModule):
     """Class representation of the configuration loader module."""
 
     @overload
-    def __init__(self, name: str, config_file_path: Path):
+    def __init__(self, config_out: str, config_file_path: Path):
         ...
 
     @overload
-    def __init__(self, name: str, simulation: Simulation, observation_mode: ObservationMode, instrument: Instrument,
-                 scene: Scene):
+    def __init__(
+            self,
+            config_out: str,
+            simulation: Simulation,
+            observation_mode: ObservationMode,
+            instrument: Instrument,
+            scene: Scene
+    ):
         ...
 
     def __init__(
             self,
-            name: str,
+            config_out: str,
             config_file_path: Path = None,
             simulation: Simulation = None,
             observation_mode: ObservationMode = None,
@@ -39,16 +46,15 @@ class ConfigLoaderModule(BaseModule):
         :param observation_mode: The observation mode object
         :param instrument: The instrument object
         """
-        super().__init__(name)
-        self.name = name
+        super().__init__()
+        self.config_out = ConfigResource(name=config_out)
         self.config_file_path = config_file_path
         self.simulation = simulation
         self.observation_mode = observation_mode
         self.instrument = instrument
         self.scene = scene
-        self.phringe = None
 
-    def apply(self):
+    def apply(self, resources: list[ConfigResource]) -> ConfigResource:
         """Load the configuration file.
         """
         print('Loading configuration...')
@@ -61,11 +67,12 @@ class ConfigLoaderModule(BaseModule):
         ) if not self.observation_mode else self.observation_mode
         scene = Scene(**config_dict['scene']) if not self.scene else self.scene
 
-        self.config_file_path = self.config_file_path
-        self.simulation = simulation
-        self.observation_mode = observation_mode
-        self.instrument = instrument
-        self.scene = scene
-        self.phringe = PHRINGE()
+        self.config_out.config_file_path = self.config_file_path
+        self.config_out.simulation = simulation
+        self.config_out.observation_mode = observation_mode
+        self.config_out.instrument = instrument
+        self.config_out.scene = scene
+        self.config_out.phringe = PHRINGE()
 
         print('Done')
+        return self.config_out

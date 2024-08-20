@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from lifesimmc.core.data_gen.data_generation_module import DataGenerationModule
-from lifesimmc.core.data_gen.template_generation_module import TemplateGenerationModule
-from lifesimmc.core.loading.config_loader_module import ConfigLoaderModule
+from lifesimmc.core.modules.generating.data_generation_module import DataGenerationModule
+from lifesimmc.core.modules.generating.template_generation_module import TemplateGenerationModule
+from lifesimmc.core.modules.loading.config_loader_module import ConfigLoaderModule
+from lifesimmc.core.modules.processing.covariance_calculation_module import CovarianceCalculationModule
+from lifesimmc.core.modules.processing.whitening_module import WhiteningModule
 from lifesimmc.core.pipeline import Pipeline
-from lifesimmc.core.processing.covariance_calculation_module import CovarianceCalculationModule
-from lifesimmc.core.processing.whitening_module import WhiteningModule
 
 config_file_path = Path("config.py")
 
@@ -13,17 +13,17 @@ config_file_path = Path("config.py")
 pipeline = Pipeline(gpu=4)
 
 # Load configuration
-module = ConfigLoaderModule(name='config', config_file_path=config_file_path)
+module = ConfigLoaderModule(config_out='conf', config_file_path=config_file_path)
 pipeline.add_module(module)
 
 # Generate data
-module = DataGenerationModule(name='data_gen', config_in='config', write_to_fits=False, create_copy=False)
+module = DataGenerationModule(config_in='conf', data_out='data', write_to_fits=False, create_copy=False)
 pipeline.add_module(module)
 
 # Generate templates
 module = TemplateGenerationModule(
-    name='temp_gen',
-    config_in='config',
+    config_in='conf',
+    template_out='temp',
     planet_name='Earth',
     write_to_fits=False,
     create_copy=False
@@ -36,12 +36,16 @@ pipeline.add_module(module)
 # pipeline.add_module(module)
 
 # Calculate covariance of data
-module = CovarianceCalculationModule(name='cov', config_in='config')
+module = CovarianceCalculationModule(config_in='conf', cov_out='cov')
 pipeline.add_module(module)
 
 # Whiten data and templates
-module = WhiteningModule(name='white', data_in='data_gen', template_in='temp_gen', cov_in='cov')
+module = WhiteningModule(cov_in='cov', data_in='data', template_in='temp', data_out='dataw', template_out='tempw')
 pipeline.add_module(module)
+
+# # Estimate fluxes using analytical ML
+# module = AnalyticalMLEModule()
+# pipeline.add_module(module)
 
 # Extract fluxes using MLM
 # module = MLDetectionModule3()  # grid numerical ML full flux + np test, semiuseful

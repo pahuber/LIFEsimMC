@@ -9,7 +9,7 @@ from phringe.api import PHRINGE
 from lifesimmc.util.helpers import Extraction
 
 sys.path.append("/home/huberph/lifesimmc")
-from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.modules.base_module import BaseModule
 
 
 class MCMCExtractionModule(BaseModule):
@@ -244,7 +244,7 @@ class MCMCExtractionModule(BaseModule):
             scene=context.scene,
             spectrum_files=context.spectrum_files,
             gpus=self.gpus,
-            output_dir='.',
+            output_dir='',
             write_fits=False,
             create_copy=False,
             detailed=True

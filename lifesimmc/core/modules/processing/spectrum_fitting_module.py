@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
-from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.context import Context
 
 
