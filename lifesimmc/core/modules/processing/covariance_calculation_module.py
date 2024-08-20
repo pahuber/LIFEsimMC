@@ -1,5 +1,8 @@
+from copy import copy
+
 import numpy as np
 import torch
+from phringe.api import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -22,7 +25,7 @@ class CovarianceCalculationModule(BaseModule):
 
         config = self.get_resource_from_name(self.config_in)
 
-        simulation = config.simulation
+        simulation = copy(config.simulation)
         simulation.has_planet_signal = False
 
         is_invertible = False
@@ -30,7 +33,8 @@ class CovarianceCalculationModule(BaseModule):
 
         while not is_invertible and counter <= 10:
 
-            config.phringe.run(
+            phringe = PHRINGE()
+            phringe.run(
                 config_file_path=config.config_file_path,
                 simulation=simulation,
                 instrument=config.instrument,
@@ -41,18 +45,22 @@ class CovarianceCalculationModule(BaseModule):
                 create_copy=False
             )
 
-            data = config.phringe.get_data()
+            data = phringe.get_data()
 
             # Calculate covariance matrix for each differential output
             self.cov_out.matrix = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
             for i in range(len(data)):
                 self.cov_out.matrix[i] = data[i].cov()
 
-                try:
-                    np.linalg.inv(np.sqrt(self.cov_out.matrix[i].cpu().numpy()))
-                    is_invertible = True
-                except np.linalg.LinAlgError:
+                if not np.isnan(self.cov_out.matrix[i].cpu().numpy()).any():
+                    try:
+                        np.linalg.inv(np.sqrt(self.cov_out.matrix[i].cpu().numpy()))
+                        is_invertible = True
+                    except np.linalg.LinAlgError:
+                        is_invertible = False
+                else:
                     is_invertible = False
+                    break
 
             counter += 1
 

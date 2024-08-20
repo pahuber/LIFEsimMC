@@ -32,7 +32,7 @@ class DataGenerationModule(BaseModule):
             create_copy=self.create_copy
         )
 
-        self.data_out.data = config.phringe.get_data()
+        self.data_out._data = config.phringe.get_data()
 
         print('Done')
         return self.data_out

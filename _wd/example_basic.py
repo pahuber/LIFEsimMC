@@ -3,7 +3,9 @@ from pathlib import Path
 from lifesimmc.core.modules.generating.data_generation_module import DataGenerationModule
 from lifesimmc.core.modules.generating.template_generation_module import TemplateGenerationModule
 from lifesimmc.core.modules.loading.config_loader_module import ConfigLoaderModule
+from lifesimmc.core.modules.processing.analytical_mle_module import AnalyticalMLEModule
 from lifesimmc.core.modules.processing.covariance_calculation_module import CovarianceCalculationModule
+from lifesimmc.core.modules.processing.numerical_mle_module import NumericalMLEModule
 from lifesimmc.core.modules.processing.whitening_module import WhiteningModule
 from lifesimmc.core.pipeline import Pipeline
 
@@ -43,9 +45,24 @@ pipeline.add_module(module)
 module = WhiteningModule(cov_in='cov', data_in='data', template_in='temp', data_out='dataw', template_out='tempw')
 pipeline.add_module(module)
 
-# # Estimate fluxes using analytical ML
-# module = AnalyticalMLEModule()
-# pipeline.add_module(module)
+# Estimate fluxes using analytical MLE
+module = AnalyticalMLEModule(
+    config_in='conf',
+    data_in='dataw',
+    template_in='tempw',
+    image_out='imag',
+    spectrum_out='speca'
+)
+pipeline.add_module(module)
+
+# Estimate fluxes using numerical MLE
+module = NumericalMLEModule(
+    config_in='conf',
+    data_in='dataw',
+    cov_in='cov',
+    spectrum_out='specn'
+)
+pipeline.add_module(module)
 
 # Extract fluxes using MLM
 # module = MLDetectionModule3()  # grid numerical ML full flux + np test, semiuseful

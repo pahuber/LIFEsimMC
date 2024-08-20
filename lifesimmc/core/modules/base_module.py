@@ -10,7 +10,6 @@ class BaseModule(ABC):
     def __init__(self):
         """Constructor method."""
         self.gpu = None
-        # self.preceding_modules = None
 
     def get_resource_from_name(self, name: str):
         """Get the resource from the name.
@@ -24,5 +23,8 @@ class BaseModule(ABC):
     @abstractmethod
     def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource]:
         """Apply the module.
+
+        :param resources: The resources to apply the module to
+        :return: The resource
         """
         pass

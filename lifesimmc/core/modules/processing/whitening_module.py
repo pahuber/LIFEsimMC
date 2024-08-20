@@ -34,7 +34,7 @@ class WhiteningModule(BaseModule):
         print('Whitening data and/or templates...')
 
         cov = self.get_resource_from_name(self.cov_in)
-        data = self.get_resource_from_name(self.data_in).data if self.data_in is not None else None
+        data = self.get_resource_from_name(self.data_in).get_data() if self.data_in is not None else None
         templates = self.get_resource_from_name(self.template_in).templates if self.template_in is not None else None
         icov2 = torch.zeros(cov.matrix.shape)
 
@@ -44,16 +44,16 @@ class WhiteningModule(BaseModule):
 
         if data is not None:
             for i in range(data.shape[0]):
-                data[i] = icov2 @ data[i]
-            self.data_out.data = data
+                data[i] = icov2[i] @ data[i]
+            self.data_out.set_data(data)
 
         if templates is not None:
             for template in templates:
                 template_data = template.data
                 for i in range(len(template_data)):
-                    template_data[i] = icov2 @ template_data[i]
+                    template_data[i] = icov2[i] @ template_data[i]
                 template = Template(template.x, template.y, template_data, template.planet_name)
-                self.template_out.templates.append(template)
+                self.template_out.add_template(template)
 
         print('Done')
         if self.data_out is not None and self.template_out is not None:
