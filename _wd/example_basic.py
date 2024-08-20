@@ -5,6 +5,7 @@ from lifesimmc.core.data_gen.template_generation_module import TemplateGeneratio
 from lifesimmc.core.loading.config_loader_module import ConfigLoaderModule
 from lifesimmc.core.pipeline import Pipeline
 from lifesimmc.core.processing.covariance_calculation_module import CovarianceCalculationModule
+from lifesimmc.core.processing.whitening_module import WhiteningModule
 
 config_file_path = Path("config.py")
 
@@ -16,13 +17,13 @@ module = ConfigLoaderModule(name='config', config_file_path=config_file_path)
 pipeline.add_module(module)
 
 # Generate data
-module = DataGenerationModule(name='data_gen', config_module='config', write_to_fits=False, create_copy=False)
+module = DataGenerationModule(name='data_gen', config_in='config', write_to_fits=False, create_copy=False)
 pipeline.add_module(module)
 
 # Generate templates
 module = TemplateGenerationModule(
     name='temp_gen',
-    config_module='config',
+    config_in='config',
     planet_name='Earth',
     write_to_fits=False,
     create_copy=False
@@ -35,7 +36,11 @@ pipeline.add_module(module)
 # pipeline.add_module(module)
 
 # Calculate covariance of data
-module = CovarianceCalculationModule(name='cov', config_module='config')
+module = CovarianceCalculationModule(name='cov', config_in='config')
+pipeline.add_module(module)
+
+# Whiten data and templates
+module = WhiteningModule(name='white', data_in='data_gen', template_in='temp_gen', cov_in='cov')
 pipeline.add_module(module)
 
 # Extract fluxes using MLM

@@ -4,10 +4,10 @@ from lifesimmc.core.base_module import BaseModule
 class DataGenerationModule(BaseModule):
     """Class representation of the data generation module."""
 
-    def __init__(self, name: str, config_module: str, write_to_fits: bool = True, create_copy: bool = True):
+    def __init__(self, name: str, config_in: str, write_to_fits: bool = True, create_copy: bool = True):
         """Constructor method."""
         super().__init__(name)
-        self.config_module = config_module
+        self.config_module = config_in
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
         self.data = None

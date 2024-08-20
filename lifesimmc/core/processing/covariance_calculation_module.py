@@ -7,11 +7,11 @@ from lifesimmc.core.base_module import BaseModule
 class CovarianceCalculationModule(BaseModule):
     """Class representation of the base module."""
 
-    def __init__(self, name: str, config_module: str):
+    def __init__(self, name: str, config_in: str):
         """Constructor method."""
         super().__init__(name)
         self.name = name
-        self.config_module = config_module
+        self.config_module = config_in
         self.covariance_matrix = None
 
     def apply(self):

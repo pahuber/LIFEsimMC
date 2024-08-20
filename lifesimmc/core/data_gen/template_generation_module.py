@@ -13,7 +13,7 @@ class TemplateGenerationModule(BaseModule):
     def __init__(
             self,
             name: str,
-            config_module: str,
+            config_in: str,
             planet_name: str,
             write_to_fits: bool = True,
             create_copy: bool = True
@@ -21,7 +21,7 @@ class TemplateGenerationModule(BaseModule):
         """Constructor method."""
         super().__init__(name)
         self.name = name
-        self.config_module = config_module
+        self.config_module = config_in
         self.planet_name = planet_name
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
@@ -37,32 +37,11 @@ class TemplateGenerationModule(BaseModule):
             template_dir = Path(datetime.now().strftime("%Y%m%d_%H%M%S.%f"))
             template_dir.mkdir(parents=True, exist_ok=True)
 
-        # simulation_template = config_module.simulation.copy()
-        # scene_template = config_module.scene.copy()
-        #
-        # # Remove all planets frm the scene except the one with the name planet_name
-        # scene_template.planets = [planet for planet in scene_template.planets if planet.name == self.planet_name]
-        #
-        # # Turn off the planet orbital motion and only use the initial position of the planets. This matters, because the
-        # # sky coordinates for the planets are calculated based on their distance from the star and may vary for
-        # # different times of the observation, if the planet has moved a lot (to rule out undersampling issues when the
-        # # planet would get very close to the star).
-        # simulation_template.has_planet_orbital_motion = False
-        #
-        # # Turn off noise sources so the scene.get_all_sources() only returns the planets in the data generator module
-        # # and the intensity response is ideal
-        # simulation_template.has_planet_signal = True
-        # simulation_template.has_stellar_leakage = False
-        # simulation_template.has_local_zodi_leakage = False
-        # simulation_template.has_exozodi_leakage = False
-        # simulation_template.has_amplitude_perturbations = False
-        # simulation_template.has_phase_perturbations = False
-        # simulation_template.has_polarization_perturbations = False
-
         templates = []
 
         # Swipe the planet position through every point in the grid and generate the data for each position
         print('Generating templates...')
+
         device = config_module.phringe._director._device
         time = config_module.phringe.get_time_steps().to(device)
         wavelength = config_module.phringe.get_wavelength_bin_centers().to(device)
