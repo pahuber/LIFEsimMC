@@ -11,10 +11,10 @@ from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
 from lifesimmc.util.helpers import Extraction
 
 
-class MLMExtractionModule(BaseModule):
-    """Class representation of the MLM extraction module."""
+class MLDetectionModule(BaseModule):
+    """Class representation of the Maximum Likelihood extraction module."""
 
-    def _calculate_maximum_likelihood(self, data, context) -> Tuple:
+    def _calculate_maximum_likelihood(self, data, context, is_white=False) -> Tuple:
         """Calculate the maximum likelihood estimate for the flux in units of photons at the position of the maximum of
         the cost function.
 
@@ -24,18 +24,27 @@ class MLMExtractionModule(BaseModule):
 
         cost_function = torch.zeros(
             (
-                context.observatory.beam_combination_scheme.number_of_differential_outputs,
-                context.settings.grid_size,
-                context.settings.grid_size,
-                len(context.observatory.wavelength_bin_centers)
+                context.instrument.beam_combiner.number_of_differential_outputs,
+                context.simulation.grid_size,
+                context.simulation.grid_size,
+                len(context.instrument.wavelength_bin_centers)
             )
         )
         optimum_flux = torch.zeros(cost_function.shape)
 
-        for index_x, index_y in product(range(context.settings.grid_size), range(context.settings.grid_size)):
+        for index_x, index_y in product(range(context.simulation.grid_size), range(context.simulation.grid_size)):
 
-            template = [template for template in context.templates if template.x == index_x and template.y == index_y][
-                0]
+            # For the data (not whitened) and if polyfit subtraction has been done, then use the templates_subtracted
+            if context.templates_subtracted is not None:
+                # print('polyfit')
+                template = [template for template in context.templates_subtracted if template.x == index_x and
+                            template.y == index_y][0]
+            # For the whitened data or if no polyfit subtraction has been done, then use the original templates
+            else:
+                # print('no polyfit')
+                template = \
+                    [template for template in context.templates if template.x == index_x and template.y == index_y][
+                        0]
 
             template_data = torch.einsum('ijk, ij->ijk', template.data,
                                          1 / torch.sqrt(torch.mean(template.data ** 2, axis=2)))
@@ -44,16 +53,17 @@ class MLMExtractionModule(BaseModule):
             matrix_b = self._get_matrix_b(data, template_data)
 
             for index_output in range(len(matrix_b)):
-                matrix_b = torch.nan_to_num(matrix_b, 1)
+                matrix_b = torch.nan_to_num(matrix_b, 1)  # really 1?
                 optimum_flux[index_output, index_x, index_y] = torch.diag(
                     torch.linalg.inv(matrix_b[index_output]) * matrix_c[index_output])
 
                 # Set positivity constraint
-                optimum_flux[index_output, index_x, index_y] = torch.where(
-                    optimum_flux[index_output, index_x, index_y] >= 0,
-                    optimum_flux[index_output, index_x, index_y],
-                    0
-                )
+                if not is_white:
+                    optimum_flux[index_output, index_x, index_y] = torch.where(
+                        optimum_flux[index_output, index_x, index_y] >= 0,
+                        optimum_flux[index_output, index_x, index_y],
+                        0
+                    )
 
                 # Calculate the cost function according to equation B.8
                 cost_function[index_output, index_x, index_y] = (optimum_flux[index_output, index_x, index_y] *
@@ -61,7 +71,7 @@ class MLMExtractionModule(BaseModule):
 
         # Sum cost function over all wavelengths
         cost_function = torch.sum(torch.nan_to_num(cost_function, 0), axis=3)
-        cost_function[torch.isnan(cost_function)] = 0
+        # cost_function[torch.isnan(cost_function)] = 0
         return cost_function, optimum_flux
 
     def _get_fluxes_uncertainties(self, cost_functions, cost_functions_white, optimum_fluxes_white,
@@ -98,10 +108,10 @@ class MLMExtractionModule(BaseModule):
             #################
             # get array of cost function values for each pixel in the mask for each output index
             cost_function_values_in_mask = torch.zeros(
-                (context.observatory.beam_combination_scheme.number_of_differential_outputs, mask.sum()),
+                (context.instrument.beam_combiner.number_of_differential_outputs, mask.sum()),
                 dtype=torch.float32
             )
-            for index_output in range(context.observatory.beam_combination_scheme.number_of_differential_outputs):
+            for index_output in range(context.instrument.beam_combiner.number_of_differential_outputs):
                 cost_function_values_in_mask[index_output] = cost_functions_white[index_output, :, :][mask]
 
             a = 0
@@ -112,7 +122,7 @@ class MLMExtractionModule(BaseModule):
                 'ijk, ij -> ijk',
                 optimum_fluxes_white[index_output, :, :],
                 mask
-            ).reshape(context.settings.grid_size ** 2, -1)
+            ).reshape(context.simulation.grid_size ** 2, -1)
 
             uncertainties = torch.zeros(masked_fluxes_white_flattened.shape[1], dtype=torch.float32)
 
@@ -163,8 +173,8 @@ class MLMExtractionModule(BaseModule):
         """
         optimum_flux_at_maximum = torch.zeros(
             (
-                context.observatory.beam_combination_scheme.number_of_differential_outputs,
-                len(context.observatory.wavelength_bin_centers)
+                context.instrument.beam_combiner.number_of_differential_outputs,
+                len(context.instrument.wavelength_bin_centers)
             ),
             dtype=torch.float32
         )
@@ -183,11 +193,14 @@ class MLMExtractionModule(BaseModule):
         :param context: The context object of the pipeline
         :return: The whitened signal
         """
-        for index_output in range(context.observatory.beam_combination_scheme.number_of_differential_outputs):
+        for index_output in range(context.instrument.beam_combiner.number_of_differential_outputs):
             index_x, index_y = get_indices_of_maximum_of_2d_array(cost_functions[index_output])
+            print(index_x, index_y)
             signal_white = context.data.detach().clone()
-            template = [template for template in context.templates if template.x == index_x and template.y == index_y][
-                0]
+            # Always use original templates for whitening
+            template = \
+                [template for template in context.templates if template.x == index_x and template.y == index_y][
+                    0]
             signal_white -= torch.einsum(
                 'ij, ijk->ijk',
                 optimum_fluxes[:, index_x, index_y],
@@ -201,7 +214,10 @@ class MLMExtractionModule(BaseModule):
         :param context: The context object of the pipelines
         :return: The (updated) context object
         """
+        # Get cost functions and optimum fluxes for all positions and differential outputs
         cost_functions, optimum_fluxes = self._calculate_maximum_likelihood(context.data, context)
+
+        # Get the optimum flux at the position of the maximum of the cost function
         optimum_flux_at_maximum = self._get_optimum_flux_at_cost_function_maximum(
             cost_functions,
             optimum_fluxes,
@@ -210,18 +226,48 @@ class MLMExtractionModule(BaseModule):
 
         # Get the whitened data and the uncertainties on the extracted flux
         data_white = self._get_whitened_data(optimum_fluxes, cost_functions, context)
-        cost_functions_white, optimum_fluxes_white = self._calculate_maximum_likelihood(data_white, context)
+        cost_functions_white, optimum_fluxes_white = self._calculate_maximum_likelihood(data_white, context,
+                                                                                        is_white=True)
 
         # TODO: what about data whitening with poly subtraction?
         optimum_fluxes_uncertainties, cost_function_values_in_mask = self._get_fluxes_uncertainties(
             cost_functions,
-            cost_functions,  # cost_functions_white,
+            cost_functions_white,
             optimum_fluxes_white,
             context
         )
 
         # plt.hist(cost_function_values_in_mask[0])
         # plt.show()
+
+        # plot cost function and cost function white next to eah other using subplots
+        plt.subplot(1, 2, 1)
+        plt.imshow(cost_functions[0])
+        plt.colorbar()
+        plt.title('Cost Function')
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(cost_functions_white[0], vmin=torch.min(cost_functions[0]),
+                   vmax=torch.max(cost_functions[0]))
+        plt.colorbar()
+        plt.title('Cost Function White')
+        plt.show()
+
+        # plot cost function and cost function white next to eah other using subplots
+        plt.subplot(1, 2, 1)
+        plt.imshow(cost_functions[0], cmap='magma')
+        plt.colorbar()
+        # plt.title('Cost Function')
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(cost_functions_white[0], cmap='magma')
+        plt.colorbar()
+        # plt.title('Cost Function White')
+        plt.savefig('image.svg')
+        plt.show()
+
+        plt.plot(optimum_flux_at_maximum[0])
+        plt.show()
 
         ##########
         mu_y_hat = torch.max(cost_functions)
@@ -236,21 +282,21 @@ class MLMExtractionModule(BaseModule):
         # convert fpf to sigma values
         sigma_fpf = scipy.stats.norm.ppf(1 - fpf)
 
-        # print(mu_y_hat)
-        # print(cost_function_values_in_mask)
-        # print(mu_x_hat)
-        # print(n)
-        # print(sigma_x_hat)
-        # print(t)
-        # print(fpf)
-        # print(sigma_fpf)
+        print(mu_y_hat)
+        print(mu_x_hat)
+        print(n)
+        print(sigma_x_hat)
+        print('t: ', t)
+        print('fpf: ', fpf)
+        print('sigma: ', sigma_fpf)
         ####
 
         context.extractions.append(
             Extraction(
-                optimum_flux_at_maximum,
-                optimum_fluxes_uncertainties,
-                context.observatory.wavelength_bin_centers,
+                None,
+                None,
+                None,
+                context.instrument.wavelength_bin_centers,
                 cost_functions
             )
         )

@@ -1,8 +1,10 @@
+import copy
 from itertools import product
 
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tqdm import tqdm
 
 from lifesimmc.core.base_module import BaseModule
@@ -36,16 +38,35 @@ class PolynomialSubtractionModule(BaseModule):
         # plt.show()
 
         # Plot template before fit subtraction
-        # template = \
-        #     [template for template in context.templates if template.x == 8 and template.y == 4][0]
-        # plt.imshow(template.data[0, :, 0:100])
-        # plt.title('Template Before Fit Subtraction')
-        # plt.colorbar()
-        # plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
-        # plt.show()
+        template = \
+            [template for template in context.templates if template.x == 8 and template.y == 4][0]
+        plt.imshow(template.data[0, :, 0:100])
+        plt.title('Template Before Fit Subtraction')
+        plt.colorbar()
+        plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
+        plt.show()
 
         # Subtract polynomial fit from data and templates
         print('Subtracting polynomial fits...')
+        context.templates_subtracted = copy.deepcopy(context.templates)
+
+        # #############
+        plt.figure()
+        ax = plt.gca()
+        im = ax.imshow(context.data[0], cmap='Greys')
+        plt.ylabel('Spectral Channel', size=8)
+        plt.xlabel('Time (d)', size=8)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cb = plt.colorbar(im, cax=cax)
+        cb.set_label(label='Normalized Counts', size=8)
+        cb.ax.tick_params(labelsize=6)
+        plt.savefig('data_before.svg', dpi=500, bbox_inches='tight')
+        plt.show()
+        # #############
+
+        polynomial_fits = np.zeros(context.data.shape)
+
         for index_time in tqdm(range(len(context.data[0][0]))):
             for index_output in range(len(context.data)):
                 data_spectral_column = np.nan_to_num(context.data[index_output][:, index_time])
@@ -60,9 +81,11 @@ class PolynomialSubtractionModule(BaseModule):
 
                 # Subtract polynomial fit from data
                 context.data[index_output][:, index_time] -= fitted_function(range(len(data_spectral_column)))
+                polynomial_fits[index_output][:, index_time] = fitted_function(range(len(data_spectral_column)))
 
                 # Loop through grid of templates
-                for index_x, index_y in product(range(context.settings.grid_size), range(context.settings.grid_size)):
+                for index_x, index_y in product(range(context.simulation.grid_size),
+                                                range(context.simulation.grid_size)):
                     # Get template corresponding to grid position
                     template = \
                         [template for template in context.templates if template.x == index_x and template.y == index_y][
@@ -72,26 +95,27 @@ class PolynomialSubtractionModule(BaseModule):
                     template_index = context.templates.index(template)
 
                     # Plot template before fit subtraction
-                    if index_x == 8 and index_y == 4 and index_time == 0:
-                        plt.plot(context.templates[template_index].data[index_output][:, index_time],
-                                 context.observatory.wavelength_bin_centers, label='Template Pre-Subtraction')
-                        plt.ylabel('Wavelength ($\mu$m)')
-                        plt.xlabel('Photon Counts')
-                        plt.title('Template Before Subtraction')
-                        # plt.legend()
-                        plt.show()
+                    # if index_x == 8 and index_y == 4 and index_time == 0:
+                    #     plt.plot(context.templates[template_index].data[index_output][:, index_time],
+                    #              context.observatory.wavelength_bin_centers, label='Template Pre-Subtraction')
+                    #     plt.ylabel('Wavelength ($\mu$m)')
+                    #     plt.xlabel('Photon Counts')
+                    #     plt.title('Template Before Subtraction')
+                    #     # plt.legend()
+                    #     plt.show()
 
                     # Subtract polynomial fit from template
-                    context.templates[template_index].data[index_output][:,
+                    context.templates_subtracted[template_index].data[index_output][:,
                     index_time] -= fitted_function(range(len(data_spectral_column)))
+                    # TODO: do we really want zero here?
 
                     # Plot data and polynomial fit
                     if index_x == 8 and index_y == 4 and index_time == 0:
                         # Plot data and polynomial fit
-                        plt.plot(data_spectral_column, context.observatory.wavelength_bin_centers, label='Data',
+                        plt.plot(data_spectral_column, context.instrument.wavelength_bin_centers, label='Data',
                                  color='#37B3FF', linewidth=2)
                         plt.plot(fitted_function(range(len(data_spectral_column))),
-                                 context.observatory.wavelength_bin_centers, label='Fit', color='#FFC000', linewidth=2)
+                                 context.instrument.wavelength_bin_centers, label='Fit', color='#FFC000', linewidth=2)
                         plt.ylabel('Wavelength ($\mu$m)')
                         plt.xlabel('Photon Counts')
                         # plt.title('Full Data and Polynomial Fit')
@@ -99,24 +123,50 @@ class PolynomialSubtractionModule(BaseModule):
                         plt.axis('off')
                         plt.savefig('Full_Data_Polynomial_Fit.svg', dpi=300, transparent=True)
                         plt.show()
-
-                        # Plot template after fit subtraction
-                        plt.plot(context.templates[template_index].data[index_output][:, index_time],
-                                 context.observatory.wavelength_bin_centers, label='Template Post-Subtraction')
-                        plt.ylabel('Wavelength ($\mu$m)')
-                        plt.xlabel('Photon Counts')
-                        plt.title('Template After Subtraction')
-                        # plt.legend()
-                        plt.show()
-
-                        # Plot template data after fit subtraction
-                        # plt.imshow(template.data[0, :, 0:100])
-                        # plt.title('Template After Fit Subtraction')
-                        # plt.colorbar()
-                        # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
+                        #
+                        #     # Plot template after fit subtraction
+                        # plt.plot(context.templates[template_index].data[index_output][:, index_time],
+                        #          context.observatory.wavelength_bin_centers, label='Template Post-Subtraction')
+                        # plt.ylabel('Wavelength ($\mu$m)')
+                        # plt.xlabel('Photon Counts')
+                        # plt.title('Template After Subtraction')
+                        # # plt.legend()
                         # plt.show()
 
+                    # Plot template data after fit subtraction
+                    # plt.imshow(template.data[0, :, 0:100])
+                    # plt.title('Template After Fit Subtraction')
+                    # plt.colorbar()
+                    # # plt.savefig('Data_After_Fit_Subtraction.png', dpi=300)
+                    # plt.show()
+
         context.data = torch.tensor(context.data)
+        context.polyfits = torch.tensor(polynomial_fits)
+
+        template = \
+            [template for template in context.templates if template.x == 8 and template.y == 4][0]
+        plt.imshow(template.data[0, :, 0:100])
+        plt.title('Template After Fit Subtraction')
+        plt.colorbar()
+        # plt.savefig('Data_Before_Fit_Subtraction.png', dpi=300)
+        plt.show()
+
+        # ###########
+        #
+        # plt.figure()
+        # ax = plt.gca()
+        # im = ax.imshow(context.data[0], cmap='Greys')
+        # context.templates_subtracted = copy.deepcopy(context.templates)
+        # plt.ylabel('Spectral Channel', size=8)
+        # plt.xlabel('Time (d)', size=8)
+        # divider = make_axes_locatable(ax)
+        # cax = divider.append_axes("right", size="5%", pad=0.05)
+        # cb = plt.colorbar(im, cax=cax)
+        # cb.set_label(label='Counts', size=8)
+        # cb.ax.tick_params(labelsize=6)
+        # plt.savefig('data_after.svg', dpi=500, bbox_inches='tight')
+        # plt.show()
+        # ############
 
         # Plot full data after fit
         # data = context.data
