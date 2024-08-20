@@ -2,7 +2,7 @@ class Context:
     """Class representation of the context."""
 
     def __init__(self):
-        self._phringe = None
+        self.phringe = None
         self.config_file_path = None
         self.simulation = None
         self.observation_mode = None
