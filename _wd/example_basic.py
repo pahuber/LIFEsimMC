@@ -8,6 +8,7 @@ from lifesimmc.core.modules.processing.covariance_calculation_module import Cova
 from lifesimmc.core.modules.processing.mcmc_extraction_module import MCMCModule
 from lifesimmc.core.modules.processing.numerical_mle_module import NumericalMLEModule
 from lifesimmc.core.modules.processing.whitening_module import WhiteningModule
+from lifesimmc.core.modules.testing.energy_detector_test_module import EnergyDetectorTestModule
 from lifesimmc.core.pipeline import Pipeline
 
 config_file_path = Path("config.py")
@@ -75,9 +76,9 @@ module = NumericalMLEModule(
     cov_in='cov',
     spectrum_out='specn'
 )
-pipeline.add_module(module)
+# pipeline.add_module(module)
 
-# Estimate flux using MCMC
+# Estimate flux using MCMC # TODO: BB, Full, init positions
 module = MCMCModule(
     config_in='conf',
     data_in='dataw',
@@ -85,6 +86,10 @@ module = MCMCModule(
     spectrum_in='speci',
     spectrum_out='specm'
 )
+# pipeline.add_module(module)
+
+# Perform energy detector test
+module = EnergyDetectorTestModule(data_in='dataw', test_out='teste', pfa=0.05)
 pipeline.add_module(module)
 
 # Extract fluxes using MLM
