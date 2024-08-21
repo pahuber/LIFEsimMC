@@ -48,13 +48,16 @@ class CovarianceCalculationModule(BaseModule):
             data = phringe.get_data()
 
             # Calculate covariance matrix for each differential output
-            self.cov_out.matrix = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
-            for i in range(len(data)):
-                self.cov_out.matrix[i] = data[i].cov()
+            self.cov_out.cov = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
+            self.cov_out.icov2 = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
 
-                if not np.isnan(self.cov_out.matrix[i].cpu().numpy()).any():
+            for i in range(len(data)):
+                self.cov_out.cov[i] = data[i].cov()
+
+                if not (self.cov_out.cov[i] < 0).any():
                     try:
-                        np.linalg.inv(np.sqrt(self.cov_out.matrix[i].cpu().numpy()))
+                        self.cov_out.icov2[i] = torch.tensor(np.linalg.inv(np.sqrt(self.cov_out.cov[i].cpu().numpy())),
+                                                             device=config.phringe._director._device)
                         is_invertible = True
                     except np.linalg.LinAlgError:
                         is_invertible = False

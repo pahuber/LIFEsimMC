@@ -16,20 +16,18 @@ class TemplateGenerationModule(BaseModule):
             self,
             config_in: str,
             template_out: str,
-            planet_name: str,
             write_to_fits: bool = True,
             create_copy: bool = True
     ):
         """Constructor method."""
         self.config_in = config_in
         self.template_out = template_out
-        self.planet_name = planet_name
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
         self.template_out = TemplateResource(template_out)
 
     def apply(self, resources: list[BaseResource]) -> TemplateResource:
-        """Generate templates for the planet with name planet_name at each point in the grid.
+        """Generate templates for a planet at each point in the grid.
         """
         config = self.get_resource_from_name(self.config_in)
 
@@ -65,7 +63,7 @@ class TemplateGenerationModule(BaseModule):
             # Generate the data
             data = config.phringe.get_template(time, wavelength, posx, posy, flux)
 
-            template = Template(x=index_x, y=index_y, data=data, planet_name=self.planet_name)
+            template = Template(x=index_x, y=index_y, data=data)
             templates.append(template)
 
         self.template_out.templates = templates

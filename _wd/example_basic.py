@@ -5,6 +5,7 @@ from lifesimmc.core.modules.generating.template_generation_module import Templat
 from lifesimmc.core.modules.loading.config_loader_module import ConfigLoaderModule
 from lifesimmc.core.modules.processing.analytical_mle_module import AnalyticalMLEModule
 from lifesimmc.core.modules.processing.covariance_calculation_module import CovarianceCalculationModule
+from lifesimmc.core.modules.processing.mcmc_extraction_module import MCMCModule
 from lifesimmc.core.modules.processing.numerical_mle_module import NumericalMLEModule
 from lifesimmc.core.modules.processing.whitening_module import WhiteningModule
 from lifesimmc.core.pipeline import Pipeline
@@ -19,14 +20,19 @@ module = ConfigLoaderModule(config_out='conf', config_file_path=config_file_path
 pipeline.add_module(module)
 
 # Generate data
-module = DataGenerationModule(config_in='conf', data_out='data', write_to_fits=False, create_copy=False)
+module = DataGenerationModule(
+    config_in='conf',
+    data_out='data',
+    spectrum_out='speci',
+    write_to_fits=False,
+    create_copy=False
+)
 pipeline.add_module(module)
 
 # Generate templates
 module = TemplateGenerationModule(
     config_in='conf',
     template_out='temp',
-    planet_name='Earth',
     write_to_fits=False,
     create_copy=False
 )
@@ -42,10 +48,17 @@ module = CovarianceCalculationModule(config_in='conf', cov_out='cov')
 pipeline.add_module(module)
 
 # Whiten data and templates
-module = WhiteningModule(cov_in='cov', data_in='data', template_in='temp', data_out='dataw', template_out='tempw')
+module = WhiteningModule(
+    cov_in='cov',
+    config_in='conf',
+    data_in='data',
+    template_in='temp',
+    data_out='dataw',
+    template_out='tempw'
+)
 pipeline.add_module(module)
 
-# Estimate fluxes using analytical MLE
+# Estimate flux using analytical MLE
 module = AnalyticalMLEModule(
     config_in='conf',
     data_in='dataw',
@@ -55,12 +68,22 @@ module = AnalyticalMLEModule(
 )
 pipeline.add_module(module)
 
-# Estimate fluxes using numerical MLE
+# Estimate flux using numerical MLE
 module = NumericalMLEModule(
     config_in='conf',
     data_in='dataw',
     cov_in='cov',
     spectrum_out='specn'
+)
+pipeline.add_module(module)
+
+# Estimate flux using MCMC
+module = MCMCModule(
+    config_in='conf',
+    data_in='dataw',
+    cov_in='cov',
+    spectrum_in='speci',
+    spectrum_out='specm'
 )
 pipeline.add_module(module)
 

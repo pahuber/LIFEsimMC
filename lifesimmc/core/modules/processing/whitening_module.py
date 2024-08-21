@@ -16,6 +16,7 @@ class WhiteningModule(BaseModule):
     def __init__(
             self,
             cov_in: str,
+            config_in: str,
             data_in: str = None,
             template_in: str = None,
             data_out: str = None,
@@ -25,6 +26,7 @@ class WhiteningModule(BaseModule):
         self.cov_in = cov_in
         self.data_in = data_in
         self.template_in = template_in
+        self.config_in = config_in
         self.data_out = DataResource(data_out) if data_out is not None else None
         self.template_out = TemplateResource(template_out) if template_out is not None else None
 
@@ -34,13 +36,16 @@ class WhiteningModule(BaseModule):
         print('Whitening data and/or templates...')
 
         cov = self.get_resource_from_name(self.cov_in)
+        config = self.get_resource_from_name(self.config_in)
         data = self.get_resource_from_name(self.data_in).get_data() if self.data_in is not None else None
         templates = self.get_resource_from_name(self.template_in).templates if self.template_in is not None else None
-        icov2 = torch.zeros(cov.matrix.shape)
+        icov2 = torch.zeros(cov.cov.shape)
 
         # For all differential outputs
         for i in range(data.shape[0]):
-            icov2[i] = torch.tensor(np.linalg.inv(np.sqrt(cov.matrix[i].cpu().numpy())))
+            icov2[i] = torch.tensor(
+                np.linalg.inv(np.sqrt(cov.cov[i].cpu().numpy()))
+            )
 
         if data is not None:
             for i in range(data.shape[0]):
@@ -49,10 +54,11 @@ class WhiteningModule(BaseModule):
 
         if templates is not None:
             for template in templates:
-                template_data = template.data
+                icov2 = icov2.to(config.phringe._director._device)
+                template_data = template.data.to(config.phringe._director._device)
                 for i in range(len(template_data)):
                     template_data[i] = icov2[i] @ template_data[i]
-                template = Template(template.x, template.y, template_data, template.planet_name)
+                template = Template(template.x, template.y, template_data)
                 self.template_out.add_template(template)
 
         print('Done')

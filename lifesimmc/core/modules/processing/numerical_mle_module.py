@@ -21,14 +21,14 @@ class NumericalMLEModule(BaseModule):
         print('Performing numerical MLE...')
 
         config = self.get_resource_from_name(self.config_in)
-        data = self.get_resource_from_name(self.data_in).get_data()
+        data = self.get_resource_from_name(self.data_in).get_data().cpu().numpy()
         cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
-        icov2 = torch.zeros(cov.matrix.shape)
+        icov2 = torch.zeros(cov.cov.shape)
         for i in range(data.shape[0]):
-            icov2[i] = torch.tensor(np.linalg.inv(np.sqrt(cov.matrix[i].cpu().numpy())))
+            icov2[i] = torch.tensor(np.linalg.inv(np.sqrt(cov.cov[i].cpu().numpy())))
 
-        times = config.phringe.get_time_steps()
-        wavelengths = config.phringe.get_wavelength_bin_centers()
+        times = config.phringe.get_time_steps().to(config.phringe._director._device)
+        wavelengths = config.phringe.get_wavelength_bin_centers().to(config.phringe._director._device)
 
         params = Parameters()
         posx = -3.45e-7
@@ -38,26 +38,31 @@ class NumericalMLEModule(BaseModule):
         fovs = config.phringe.get_field_of_view()
 
         for i in range(len(flux_init)):
-            params.add(f'flux_{i}', value=flux_init[i], min=0, max=1e8)
+            params.add(f'flux_{i}', value=flux_init[i].cpu().numpy(), min=0, max=1e8)
         params.add('pos_x', value=posx, min=-fovs[0], max=fovs[0])
         params.add('pos_y', value=posy, min=-fovs[0], max=fovs[0])
 
-        def residual_data(params, target):
-            posx = params['pos_x'].value
-            posy = params['pos_y'].value
-            flux = torch.tensor([params[f'flux_{i}'].value for i in range(len(flux_init))])
-            model = icov2i @ config.phringe.get_template(times, wavelengths, posx, posy, flux).cpu().numpy()
-            return model - target
+        icov2 = icov2.cpu().numpy()
 
         for i in range(len(config.instrument.differential_outputs)):
+            def residual_data(params, target):
+                posx = params['pos_x'].value.to(config.phringe._director._device)
+                posy = params['pos_y'].value.to(config.phringe._director._device)
+                flux = torch.tensor(
+                    [params[f'flux_{i}'].value for i in range(len(flux_init))],
+                    device=config.phringe._director._device
+                )
+                model = icov2i @ config.phringe.get_template(times, wavelengths, posx, posy, flux).cpu().numpy()
+                return model - target
+
             icov2i = icov2[i]
             out = minimize(residual_data, params, args=(data[i],), method='leastsq')
-
             cov = out.covar
-            if cov is not None:
-                print(cov.shape)
-            else:
-                print('No covariance matrix for estimation')
+
+            if cov is None:
+                print("Covariance matrix could not be estimated. Try different method.")
+                break
+
             stds = np.sqrt(np.diag(cov))
 
             fluxes = [out.params[f'flux_{i}'].value for i in range(len(flux_init))]
@@ -73,9 +78,11 @@ class NumericalMLEModule(BaseModule):
             # best_fit = get_model(xdata, out.params['pos_x'].value, out.params['pos_y'].value,
             #                      *[out.params[f'flux_{i}'].value for i in range(len(flux_real))])
             # Plot best flux and snr in a 2x1 grid
+            flux_init = flux_init.cpu().numpy()
             plt.subplot(2, 1, 1)
             plt.plot(flux_init[:-1], linestyle='dashed', label='True', color='black')
-            plt.errorbar(range(len(fluxes[:-1])), fluxes[:-1], yerr=flux_err[:-1], fmt='o', color='black', label='Fit')
+            plt.errorbar(range(len(fluxes[:-1])), fluxes[:-1], yerr=flux_err[:-1], fmt='o', color='black',
+                         label='Fit')
             plt.fill_between(
                 range(len(flux_init[:-1])),
                 np.array(flux_init[:-1]) - np.array(flux_err[:-1]),

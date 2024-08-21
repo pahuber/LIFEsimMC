@@ -27,6 +27,7 @@ class AnalyticalMLEModule(BaseModule):
         :param context: The context object of the pipeline
         :return: The cost function and the optimum flux
         """
+        data = data.to(config.phringe._director._device)
 
         cost_function = torch.zeros(
             (
@@ -34,9 +35,10 @@ class AnalyticalMLEModule(BaseModule):
                 config.simulation.grid_size,
                 config.simulation.grid_size,
                 len(config.instrument.wavelength_bin_centers)
-            )
+            ),
+            device=config.phringe._director._device
         )
-        optimum_flux = torch.zeros(cost_function.shape)
+        optimum_flux = torch.zeros(cost_function.shape, device=config.phringe._director._device)
 
         for index_x, index_y in product(range(config.simulation.grid_size), range(config.simulation.grid_size)):
 
@@ -47,8 +49,8 @@ class AnalyticalMLEModule(BaseModule):
             template_data = torch.einsum('ijk, ij->ijk', template.data,
                                          1 / torch.sqrt(torch.mean(template.data ** 2, axis=2)))
 
-            matrix_c = self._get_matrix_c(data, template_data)
-            matrix_b = self._get_matrix_b(data, template_data)
+            matrix_c = self._get_matrix_c(data, template_data).to(config.phringe._director._device)
+            matrix_b = self._get_matrix_b(data, template_data).to(config.phringe._director._device)
 
             for index_output in range(len(matrix_b)):
                 matrix_b = torch.nan_to_num(matrix_b, 1)  # really 1?
@@ -143,7 +145,7 @@ class AnalyticalMLEModule(BaseModule):
         self.image_out.image = cost_functions
         self.spectrum_out.spectral_flux_density = optimum_flux_at_maximum
 
-        plt.imshow(self.image_out.image[0], cmap='magma')
+        plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')
         plt.colorbar()
         plt.show()
 
