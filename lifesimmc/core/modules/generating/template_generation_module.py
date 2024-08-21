@@ -66,7 +66,7 @@ class TemplateGenerationModule(BaseModule):
             template = Template(x=index_x, y=index_y, data=data)
             templates.append(template)
 
-        self.template_out.templates = templates
+        self.template_out._templates += templates
 
         print('Done')
         return self.template_out

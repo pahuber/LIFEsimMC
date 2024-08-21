@@ -1,4 +1,5 @@
 from lifesimmc.core.modules.base_module import BaseModule
+from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class Pipeline:
@@ -18,6 +19,17 @@ class Pipeline:
         module.resources = self._resources
         module.gpu = self.gpu
         self._modules.append(module)
+
+    def get_resource(self, name: str) -> BaseResource:
+        """Get a resource by name.
+
+        :param name: The name of the resource
+        :return: The resource
+        """
+        for resource in self._resources:
+            if resource.name == name:
+                return resource
+        return None
 
     def run(self):
         """Run the pipeline with all the modules that have been added. Remove the modules after running."""

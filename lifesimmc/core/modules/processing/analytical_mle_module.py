@@ -1,7 +1,6 @@
 from itertools import product
 
 import torch
-from matplotlib import pyplot as plt
 from torch import Tensor
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -145,12 +144,12 @@ class AnalyticalMLEModule(BaseModule):
         self.image_out.image = cost_functions
         self.spectrum_out.spectral_flux_density = optimum_flux_at_maximum
 
-        plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')
-        plt.colorbar()
-        plt.show()
-
-        plt.plot(self.spectrum_out.spectral_flux_density[0])
-        plt.show()
+        # plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')
+        # plt.colorbar()
+        # plt.show()
+        #
+        # plt.plot(self.spectrum_out.spectral_flux_density[0])
+        # plt.show()
 
         print('Done')
-        return self.spectrum_out
+        return self.spectrum_out, self.image_out

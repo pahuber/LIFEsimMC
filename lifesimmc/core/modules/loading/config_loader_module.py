@@ -16,7 +16,7 @@ class ConfigLoaderModule(BaseModule):
     """Class representation of the configuration loader module."""
 
     @overload
-    def __init__(self, config_out: str, config_file_path: Path):
+    def __init__(self, r_config_out: str, config_file_path: Path):
         ...
 
     @overload

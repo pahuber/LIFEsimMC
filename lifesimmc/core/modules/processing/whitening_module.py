@@ -38,7 +38,8 @@ class WhiteningModule(BaseModule):
         cov = self.get_resource_from_name(self.cov_in)
         config = self.get_resource_from_name(self.config_in)
         data = self.get_resource_from_name(self.data_in).get_data() if self.data_in is not None else None
-        templates = self.get_resource_from_name(self.template_in).templates if self.template_in is not None else None
+        templates = self.get_resource_from_name(
+            self.template_in).get_templates() if self.template_in is not None else None
         icov2 = torch.zeros(cov.cov.shape)
 
         # For all differential outputs

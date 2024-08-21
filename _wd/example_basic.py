@@ -104,48 +104,5 @@ module = NeymanPearsonTestModule(
 )
 pipeline.add_module(module)
 
-# Extract fluxes using MLM
-# module = MLDetectionModule3()  # grid numerical ML full flux + np test, semiuseful
-# module = MLDetectionModule2_BB()  # cov subtraction, energy detector, np test, num ML estimation bb
-# module = MLDetectionModuleCov()  # cov subtraction, grid search, analytical ML full flux + NP test
-# module = MLDetectionModule2()  # cov subtraction, energy detector, np test, num ML estimation full flux
-# pipeline.add_module(module)
-#
-# # Get MCMC flux estimation
-# module = MCMCBBFittingModule(gpus=(4,))
-# # pipeline.add_module(module)
-#
-# module = MCMCExtractionModule(gpus=(4,))
-# # pipeline.add_module(module)
-#
-# # Blackbody fitting
-# module = SpectrumFittingModule()
-# pipeline.add_module(module)
-
 # Run pipeline
 pipeline.run()
-
-########################################################################################################################
-
-# Plot raw photometry data
-# plt.imshow(pipeline._context.data[0], cmap='Greys')
-# # plt.colorbar()
-# plt.xlabel('Time Step')
-# plt.ylabel('Wavelength Channel')
-# plt.colorbar()
-# plt.show()
-#
-# # Plot cost function
-# center_x, center_y = pipeline._context.extractions[0].cost_function[0].shape[1] / 2, \
-#                      pipeline._context.extractions[0].cost_function[0].shape[0] / 2
-# plt.imshow(pipeline._context.extractions[0].cost_function[0], cmap='magma')
-# plt.plot(center_x - 0.5, center_y - 0.5, marker='*', markersize=20, color='white')
-# plt.colorbar()
-# plt.axis('off')
-# plt.show()
-#
-# # # Plot flux
-# plt.plot(pipeline._context.extractions[0].flux[0])
-# plt.xlabel('Wavelength (um)')
-# plt.ylabel('Flux (W/m^2/um)')
-# plt.show()

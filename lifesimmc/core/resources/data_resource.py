@@ -1,4 +1,4 @@
-from copy import copy
+from copy import deepcopy
 
 from lifesimmc.core.resources.base_resource import BaseResource
 
@@ -9,7 +9,7 @@ class DataResource(BaseResource):
         self._data = None
 
     def get_data(self):
-        return copy(self._data)
+        return deepcopy(self._data)
 
     def set_data(self, data):
         self._data = data
