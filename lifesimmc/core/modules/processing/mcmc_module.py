@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.spectrum_resource import SpectrumResource
+from lifesimmc.util.helpers import Spectrum
 
 sys.path.append("/home/huberph/lifesimmc")
 from lifesimmc.core.modules.base_module import BaseModule
@@ -44,7 +45,7 @@ class MCMCModule(BaseModule):
         config = self.get_resource_from_name(self.config_in)
         data = self.get_resource_from_name(self.data_in).get_data().cpu().numpy().astype(np.float64)
         cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
-        spectrum = self.get_resource_from_name(self.spectrum_in).spectrum
+        spectrum = self.get_resource_from_name(self.spectrum_in)
 
         def get_model(time, x_pos, y_pos, *flux):
             """Return the data model for all wavelengths."""
@@ -106,12 +107,16 @@ class MCMCModule(BaseModule):
         icov2 = cov.icov2.cpu().numpy() if cov is not None else None
 
         # Define MCMC
-        flux_init = spectrum[0].spectral_flux_density.cpu().numpy().tolist()
+        flux_init = spectrum.spectra[0].spectral_flux_density.cpu().numpy().tolist()
         initial_guess = [-3.4e-7, 3.4e-7]
         initial_guess.extend(flux_init)
         ndim = len(initial_guess)
         nwalkers = 4 * ndim
         nsteps = 100
+
+        spectra_flux_densities = []
+        err_lows = []
+        err_highs = []
 
         for p in range(len(config.instrument.differential_outputs)):
             self.i = p
@@ -227,6 +232,10 @@ class MCMCModule(BaseModule):
             err_low_pos = err_low[:2]
             err_high_pos = err_high[:2]
 
+            spectrum = Spectrum(best_flux, err_low_flux, err_high_flux, self.wavelengths,
+                                config.phringe._director._wavelength_bin_widths.cpu().numpy())
+            self.spectrum_out.spectra.append(spectrum)
+
             # TODO: automate this for all extractions
             # for q, extraction in enumerate(context.extractions):
             #     context.extractions[i] = Extraction(
@@ -262,29 +271,29 @@ class MCMCModule(BaseModule):
             plt.close()
 
             # Plot data and true spectrum and error bars
-            wl = config.phringe.get_wavelength_bin_centers().cpu().numpy()
-            wl = wl[:-1]
-            flux_init = flux_init[:-1]
-            yerr = np.stack([err_low_flux, err_high_flux])
-            plt.errorbar(wl, best_flux, yerr=yerr, fmt=".k", capsize=0)
-            plt.scatter(wl, best_flux, label='Data', color='black')
-            plt.plot(wl, flux_init, label='True', color='black', linestyle='dashed')
-            # plt.fill_between(range(len(best[:-1])), np.array(best[:-1]) - np.array(err_low[:-1]),
-            #                  np.array(best[:-1]) + np.array(err_high[:-1]),
-            #                  color="k", alpha=0.2)
-            plt.fill_between(wl, np.array(flux_init) - np.array(err_low_flux),
-                             np.array(flux_init) + np.array(err_high_flux),
-                             color="k", alpha=0.2, label='1-$\sigma$')
-            plt.title('True vs. Estimated Spectrum')
-            plt.xlabel('Wavelength ($\mu$m)')
-            plt.ylabel('Flux Density (ph s$^{-1}$ m$^{-2}$ $\mu$m$^{-1}$)')
-            plt.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-            plt.legend()
-            plt.ylim(0, 1e6)
-            plt.tight_layout()
-            plt.savefig('spectrum.svg')
-            plt.show()
-            plt.close()
+            # wl = config.phringe.get_wavelength_bin_centers().cpu().numpy()
+            # wl = wl[:-1]
+            # flux_init = flux_init[:-1]
+            # yerr = np.stack([err_low_flux, err_high_flux])
+            # plt.errorbar(wl, best_flux, yerr=yerr, fmt=".k", capsize=0)
+            # plt.scatter(wl, best_flux, label='Data', color='black')
+            # plt.plot(wl, flux_init, label='True', color='black', linestyle='dashed')
+            # # plt.fill_between(range(len(best[:-1])), np.array(best[:-1]) - np.array(err_low[:-1]),
+            # #                  np.array(best[:-1]) + np.array(err_high[:-1]),
+            # #                  color="k", alpha=0.2)
+            # plt.fill_between(wl, np.array(flux_init) - np.array(err_low_flux),
+            #                  np.array(flux_init) + np.array(err_high_flux),
+            #                  color="k", alpha=0.2, label='1-$\sigma$')
+            # plt.title('True vs. Estimated Spectrum')
+            # plt.xlabel('Wavelength ($\mu$m)')
+            # plt.ylabel('Flux Density (ph s$^{-1}$ m$^{-2}$ $\mu$m$^{-1}$)')
+            # plt.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+            # plt.legend()
+            # plt.ylim(0, 1e6)
+            # plt.tight_layout()
+            # plt.savefig('spectrum.svg')
+            # plt.show()
+            # plt.close()
 
             # Plot SNR
             bins = config.phringe._director._wavelength_bin_widths.cpu().numpy()[:-1]
@@ -323,4 +332,13 @@ class MCMCModule(BaseModule):
 
         # return context
 
+        # Save spectrum
+        self.spectrum_out.spectral_flux_density = spectra_flux_densities
+        self.spectrum_out.err_low = err_lows
+        self.spectrum_out.err_high = err_highs
+        self.spectrum_out.wavelengths = self.wavelengths
+        self.spectrum_out.bins = config.phringe._director._wavelength_bin_widths.cpu().numpy()
+
         print('Done')
+
+        return self.spectrum_out

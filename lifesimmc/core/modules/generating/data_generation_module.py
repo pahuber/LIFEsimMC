@@ -41,9 +41,10 @@ class DataGenerationModule(BaseModule):
         self.data_out._data = config.phringe.get_data()
         spectra = []
         for planet in config.phringe._director._planets:
-            spectrum = Spectrum(planet.spectral_flux_density, config.phringe.get_wavelength_bin_centers(), planet.name)
+            spectrum = Spectrum(planet.spectral_flux_density, None, None, config.phringe.get_wavelength_bin_centers(),
+                                config.phringe._director._wavelength_bin_widths)
             spectra.append(spectrum)
 
-        self.spectrum_out.spectrum = spectra
+        self.spectrum_out.spectra.extend(spectra)
         print('Done')
         return self.data_out, self.spectrum_out
