@@ -15,13 +15,13 @@ from lifesimmc.core.modules.base_module import BaseModule
 class MCMCModule(BaseModule):
     """Module to estimate the flux using a parametric maximum likelihood estimation"""
 
-    def __init__(self, config_in: str, data_in: str, spectrum_in: str, spectrum_out: str, cov_in: str = None):
+    def __init__(self, r_config_in: str, r_data_in: str, r_spectrum_in: str, r_spectrum_out: str, r_cov_in: str = None):
         """Constructor method."""
-        self.config_in = config_in
-        self.data_in = data_in
-        self.spectrum_in = spectrum_in
-        self.spectrum_out = SpectrumResource(spectrum_out)
-        self.cov_in = cov_in
+        self.config_in = r_config_in
+        self.data_in = r_data_in
+        self.spectrum_in = r_spectrum_in
+        self.spectrum_out = SpectrumResource(r_spectrum_out)
+        self.cov_in = r_cov_in
 
     def get_scaled_blackbody_spectrum(self, wavelengths, temperature: float, radius: float) -> np.ndarray:
         """Get a scaled blackbody spectrum.

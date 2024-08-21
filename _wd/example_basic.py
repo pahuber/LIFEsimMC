@@ -5,10 +5,11 @@ from lifesimmc.core.modules.generating.template_generation_module import Templat
 from lifesimmc.core.modules.loading.config_loader_module import ConfigLoaderModule
 from lifesimmc.core.modules.processing.analytical_mle_module import AnalyticalMLEModule
 from lifesimmc.core.modules.processing.covariance_calculation_module import CovarianceCalculationModule
-from lifesimmc.core.modules.processing.mcmc_extraction_module import MCMCModule
+from lifesimmc.core.modules.processing.mcmc_module import MCMCModule
 from lifesimmc.core.modules.processing.numerical_mle_module import NumericalMLEModule
 from lifesimmc.core.modules.processing.whitening_module import WhiteningModule
 from lifesimmc.core.modules.testing.energy_detector_test_module import EnergyDetectorTestModule
+from lifesimmc.core.modules.testing.neyman_pearson_test_module import NeymanPearsonTestModule
 from lifesimmc.core.pipeline import Pipeline
 
 config_file_path = Path("config.py")
@@ -17,14 +18,14 @@ config_file_path = Path("config.py")
 pipeline = Pipeline(gpu=4)
 
 # Load configuration
-module = ConfigLoaderModule(config_out='conf', config_file_path=config_file_path)
+module = ConfigLoaderModule(r_config_out='conf', config_file_path=config_file_path)
 pipeline.add_module(module)
 
 # Generate data
 module = DataGenerationModule(
-    config_in='conf',
-    data_out='data',
-    spectrum_out='speci',
+    r_config_in='conf',
+    r_data_out='data',
+    r_spectrum_out='speci',
     write_to_fits=False,
     create_copy=False
 )
@@ -32,8 +33,8 @@ pipeline.add_module(module)
 
 # Generate templates
 module = TemplateGenerationModule(
-    config_in='conf',
-    template_out='temp',
+    r_config_in='conf',
+    r_template_out='temp',
     write_to_fits=False,
     create_copy=False
 )
@@ -50,46 +51,57 @@ pipeline.add_module(module)
 
 # Whiten data and templates
 module = WhiteningModule(
-    cov_in='cov',
-    config_in='conf',
-    data_in='data',
-    template_in='temp',
-    data_out='dataw',
-    template_out='tempw'
+    r_config_in='conf',
+    r_cov_in='cov',
+    r_data_in='data',
+    r_template_in='temp',
+    r_data_out='dataw',
+    r_template_out='tempw'
 )
 pipeline.add_module(module)
 
 # Estimate flux using analytical MLE
 module = AnalyticalMLEModule(
-    config_in='conf',
-    data_in='dataw',
-    template_in='tempw',
-    image_out='imag',
-    spectrum_out='speca'
+    r_config_in='conf',
+    r_data_in='dataw',
+    r_template_in='tempw',
+    r_image_out='imag',
+    r_spectrum_out='speca'
 )
 pipeline.add_module(module)
 
 # Estimate flux using numerical MLE
 module = NumericalMLEModule(
-    config_in='conf',
-    data_in='dataw',
-    cov_in='cov',
-    spectrum_out='specn'
+    r_config_in='conf',
+    r_data_in='dataw',
+    r_cov_in='cov',
+    r_spectrum_out='specn'
 )
 # pipeline.add_module(module)
 
 # Estimate flux using MCMC # TODO: BB, Full, init positions
 module = MCMCModule(
-    config_in='conf',
-    data_in='dataw',
-    cov_in='cov',
-    spectrum_in='speci',
-    spectrum_out='specm'
+    r_config_in='conf',
+    r_data_in='dataw',
+    r_cov_in='cov',
+    r_spectrum_in='speci',
+    r_spectrum_out='specm'
 )
 # pipeline.add_module(module)
 
 # Perform energy detector test
-module = EnergyDetectorTestModule(data_in='dataw', test_out='teste', pfa=0.05)
+module = EnergyDetectorTestModule(r_data_in='dataw', r_test_out='teste', pfa=0.05)
+pipeline.add_module(module)
+
+# Perform Neyman-Pearson test
+module = NeymanPearsonTestModule(
+    r_config_in='conf',
+    r_cov_in='cov',
+    r_data_in='dataw',
+    r_spectrum_in='speci',
+    r_test_out='testn',
+    pfa=0.05
+)
 pipeline.add_module(module)
 
 # Extract fluxes using MLM

@@ -14,17 +14,17 @@ class TemplateGenerationModule(BaseModule):
 
     def __init__(
             self,
-            config_in: str,
-            template_out: str,
+            r_config_in: str,
+            r_template_out: str,
             write_to_fits: bool = True,
             create_copy: bool = True
     ):
         """Constructor method."""
-        self.config_in = config_in
-        self.template_out = template_out
+        self.config_in = r_config_in
+        self.template_out = r_template_out
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
-        self.template_out = TemplateResource(template_out)
+        self.template_out = TemplateResource(r_template_out)
 
     def apply(self, resources: list[BaseResource]) -> TemplateResource:
         """Generate templates for a planet at each point in the grid.

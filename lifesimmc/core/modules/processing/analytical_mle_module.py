@@ -13,12 +13,12 @@ from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
 
 
 class AnalyticalMLEModule(BaseModule):
-    def __init__(self, config_in: str, data_in: str, template_in: str, image_out: str, spectrum_out: str):
-        self.config_in = config_in
-        self.data_in = data_in
-        self.template_in = template_in
-        self.image_out = ImageResource(image_out)
-        self.spectrum_out = SpectrumResource(spectrum_out)
+    def __init__(self, r_config_in: str, r_data_in: str, r_template_in: str, r_image_out: str, r_spectrum_out: str):
+        self.config_in = r_config_in
+        self.data_in = r_data_in
+        self.template_in = r_template_in
+        self.image_out = ImageResource(r_image_out)
+        self.spectrum_out = SpectrumResource(r_spectrum_out)
 
     def _calculate_maximum_likelihood(self, data: Tensor, templates: list, config: ConfigResource) -> tuple:
         """Calculate the maximum likelihood estimate for the flux in units of photons at the position of the maximum of

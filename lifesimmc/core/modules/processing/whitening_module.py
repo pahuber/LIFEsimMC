@@ -15,20 +15,20 @@ class WhiteningModule(BaseModule):
 
     def __init__(
             self,
-            cov_in: str,
-            config_in: str,
-            data_in: str = None,
-            template_in: str = None,
-            data_out: str = None,
-            template_out: str = None
+            r_cov_in: str,
+            r_config_in: str,
+            r_data_in: str = None,
+            r_template_in: str = None,
+            r_data_out: str = None,
+            r_template_out: str = None
     ):
         """Constructor method."""
-        self.cov_in = cov_in
-        self.data_in = data_in
-        self.template_in = template_in
-        self.config_in = config_in
-        self.data_out = DataResource(data_out) if data_out is not None else None
-        self.template_out = TemplateResource(template_out) if template_out is not None else None
+        self.cov_in = r_cov_in
+        self.data_in = r_data_in
+        self.template_in = r_template_in
+        self.config_in = r_config_in
+        self.data_out = DataResource(r_data_out) if r_data_out is not None else None
+        self.template_out = TemplateResource(r_template_out) if r_template_out is not None else None
 
     def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
         """Whiten the data using the covariance matrix.

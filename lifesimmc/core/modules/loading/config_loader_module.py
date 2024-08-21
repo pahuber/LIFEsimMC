@@ -22,7 +22,7 @@ class ConfigLoaderModule(BaseModule):
     @overload
     def __init__(
             self,
-            config_out: str,
+            r_config_out: str,
             simulation: Simulation,
             observation_mode: ObservationMode,
             instrument: Instrument,
@@ -32,7 +32,7 @@ class ConfigLoaderModule(BaseModule):
 
     def __init__(
             self,
-            config_out: str,
+            r_config_out: str,
             config_file_path: Path = None,
             simulation: Simulation = None,
             observation_mode: ObservationMode = None,
@@ -47,7 +47,7 @@ class ConfigLoaderModule(BaseModule):
         :param instrument: The instrument object
         """
         super().__init__()
-        self.config_out = ConfigResource(name=config_out)
+        self.r_config_out = ConfigResource(name=r_config_out)
         self.config_file_path = config_file_path
         self.simulation = simulation
         self.observation_mode = observation_mode
@@ -67,12 +67,12 @@ class ConfigLoaderModule(BaseModule):
         ) if not self.observation_mode else self.observation_mode
         scene = Scene(**config_dict['scene']) if not self.scene else self.scene
 
-        self.config_out.config_file_path = self.config_file_path
-        self.config_out.simulation = simulation
-        self.config_out.observation_mode = observation_mode
-        self.config_out.instrument = instrument
-        self.config_out.scene = scene
-        self.config_out.phringe = PHRINGE()
+        self.r_config_out.config_file_path = self.config_file_path
+        self.r_config_out.simulation = simulation
+        self.r_config_out.observation_mode = observation_mode
+        self.r_config_out.instrument = instrument
+        self.r_config_out.scene = scene
+        self.r_config_out.phringe = PHRINGE()
 
         print('Done')
-        return self.config_out
+        return self.r_config_out

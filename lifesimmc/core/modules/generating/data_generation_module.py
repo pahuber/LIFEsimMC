@@ -10,15 +10,15 @@ from lifesimmc.util.helpers import Spectrum
 class DataGenerationModule(BaseModule):
     """Class representation of the data generation module."""
 
-    def __init__(self, config_in: str, data_out: str, spectrum_out: str, write_to_fits: bool = True,
+    def __init__(self, r_config_in: str, r_data_out: str, r_spectrum_out: str, write_to_fits: bool = True,
                  create_copy: bool = True):
         """Constructor method."""
         super().__init__()
-        self.config_in = config_in
+        self.config_in = r_config_in
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
-        self.data_out = DataResource(data_out)
-        self.spectrum_out = SpectrumResource(spectrum_out)
+        self.data_out = DataResource(r_data_out)
+        self.spectrum_out = SpectrumResource(r_spectrum_out)
 
     def apply(self, resources: list[BaseResource]) -> Union[DataResource, SpectrumResource]:
         """Use PHRINGE to generate synthetic data.

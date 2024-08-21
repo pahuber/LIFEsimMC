@@ -6,9 +6,9 @@ from lifesimmc.core.resources.test_resource import TestResource
 
 
 class EnergyDetectorTestModule(BaseModule):
-    def __init__(self, data_in: str, test_out: str, pfa: float):
-        self.data_in = data_in
-        self.test_out = TestResource(test_out)
+    def __init__(self, r_data_in: str, r_test_out: str, pfa: float):
+        self.data_in = r_data_in
+        self.test_out = TestResource(r_test_out)
         self.pfa = pfa
 
     def apply(self, resources: list[BaseResource]) -> TestResource:

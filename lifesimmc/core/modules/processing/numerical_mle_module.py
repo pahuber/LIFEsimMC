@@ -11,11 +11,11 @@ from lifesimmc.core.resources.spectrum_resource import SpectrumResource
 
 
 class NumericalMLEModule(BaseModule):
-    def __init__(self, config_in: str, data_in: str, cov_in: Union[str, None], spectrum_out: str):
-        self.config_in = config_in
-        self.data_in = data_in
-        self.cov_in = cov_in if cov_in is not None else None
-        self.spectrum_out = SpectrumResource(spectrum_out)
+    def __init__(self, r_config_in: str, r_data_in: str, r_cov_in: Union[str, None], r_spectrum_out: str):
+        self.config_in = r_config_in
+        self.data_in = r_data_in
+        self.cov_in = r_cov_in if r_cov_in is not None else None
+        self.spectrum_out = SpectrumResource(r_spectrum_out)
 
     def apply(self, resources: list[BaseResource]) -> SpectrumResource:
         print('Performing numerical MLE...')
