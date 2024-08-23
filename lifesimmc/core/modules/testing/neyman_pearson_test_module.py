@@ -24,7 +24,7 @@ class NeymanPearsonTestModule(BaseModule):
         config = self.get_resource_from_name(self.config_in)
         cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
         data = self.get_resource_from_name(self.data_in).get_data()
-        spectrum = self.get_resource_from_name(self.spectrum_in).spectrum[0].spectral_flux_density
+        spectrum = self.get_resource_from_name(self.spectrum_in).spectrq[0].spectral_flux_density
         num_of_diff_outputs = len(data)
 
         if cov is not None:
@@ -37,9 +37,9 @@ class NeymanPearsonTestModule(BaseModule):
         x_pos = -3e-7
         y_pos = 3e-7
         flux = spectrum
-        time = config.phringe.get_time_steps().to(config.phringe._director._device)
-        self.wavelengths = config.phringe.get_wavelength_bin_centers().to(config.phringe._director._device)
-        self.fovs = config.phringe.get_field_of_view().cpu().numpy()
+        time = config.phringe.get_time_steps(as_numpy=False)
+        self.wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=False)
+        self.fovs = config.phringe.get_field_of_view(as_numpy=True)
         icov2 = icov2.cpu().numpy()
 
         self.test_out.test_statistic = []
@@ -50,7 +50,7 @@ class NeymanPearsonTestModule(BaseModule):
             ndim = dataf.numel()
             icov2i = icov2[i]
             model = (icov2i @ config.phringe.get_template(time, self.wavelengths, x_pos, y_pos,
-                                                          flux).cpu().numpy()).flatten()
+                                                          flux).cpu().numpy())[:, :, :, 0, 0].flatten()
             xtx = (model.T.dot(model)) / ndim
             # pfa = 0.0001
             xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)

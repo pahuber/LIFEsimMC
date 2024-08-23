@@ -53,7 +53,7 @@ class WhiteningModule(BaseModule):
                 icov2 = icov2.to(config.phringe._director._device)
                 template_data = template.data.to(config.phringe._director._device)
                 for i in range(len(template_data)):
-                    template_data[i] = icov2[i] @ template_data[i]
+                    template_data[i] = icov2[i] @ template_data[i].float()
                 template = Template(ix=template.ix, iy=template.iy, data=template_data, x=template.x, y=template.y)
                 self.template_out.add_template(template)
 

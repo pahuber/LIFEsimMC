@@ -30,15 +30,16 @@ class NumericalMLEModule(BaseModule):
             icov2 = torch.diag(torch.ones(data.shape[1], device=config.phringe._director._device)).unsqueeze(0).repeat(
                 data.shape[0], 1, 1)
 
-        times = config.phringe.get_time_steps().to(config.phringe._director._device)
-        wavelengths = config.phringe.get_wavelength_bin_centers().to(config.phringe._director._device)
+        times = config.phringe.get_time_steps(as_numpy=False)
+        wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=False)
+        wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=False)
 
         params = Parameters()
         posx = -3.45e-7
         posy = 3.45e-7
 
-        flux_init = config.phringe.get_spectral_flux_density('Earth')
-        hfov_max = np.sqrt(2) * config.phringe.get_field_of_view()[-1] / 2
+        flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=False)
+        hfov_max = np.sqrt(2) * config.phringe.get_field_of_view(as_numpy=False)[-1] / 2
 
         for i in range(len(flux_init)):
             params.add(f'flux_{i}', value=1 * flux_init[i].cpu().numpy(), min=0, max=1e7)
@@ -56,8 +57,9 @@ class NumericalMLEModule(BaseModule):
                     [params[f'flux_{z}'].value for z in range(len(flux_init))],
                     device=config.phringe._director._device
                 )
-                model = (icov2i @ config.phringe.get_template(times, wavelengths, posx, posy, flux)[
-                    self.i].cpu().numpy())
+                model = (icov2i @
+                         config.phringe.get_template_torch(times, wavelengths, wavelength_bin_widths, posx, posy, flux)[
+                         self.i, :, :, 0, 0].cpu().numpy())
                 return model - target
 
             icov2i = icov2[i]
@@ -91,8 +93,8 @@ class NumericalMLEModule(BaseModule):
             posy_err = stds[-1]
 
             self.spectrum_out.spectra.append(
-                Spectrum(fluxes, flux_err, flux_err, config.phringe.get_wavelength_bin_centers(),
-                         config.phringe._director._wavelength_bin_widths))
+                Spectrum(fluxes, flux_err, flux_err, config.phringe.get_wavelength_bin_centers(as_numpy=False),
+                         config.phringe.get_wavelength_bin_widths(as_numpy=False)))
 
             # best_fit = get_model(xdata, out.params['pos_x'].value, out.params['pos_y'].value,
             #                      *[out.params[f'flux_{i}'].value for i in range(len(flux_real))])

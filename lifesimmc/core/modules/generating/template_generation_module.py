@@ -46,14 +46,15 @@ class TemplateGenerationModule(BaseModule):
         print('Generating templates...')
 
         device = config.phringe._director._device
-        time = config.phringe.get_time_steps().to(device)
-        wavelength = config.phringe.get_wavelength_bin_centers().to(device)
-        flux = config.phringe.get_spectral_flux_density('Earth').to(device)
+        time = config.phringe.get_time_steps(as_numpy=False).to(device)
+        wavelength = config.phringe.get_wavelength_bin_centers(as_numpy=False).to(device)
+        wavelength_bin_width = config.phringe.get_wavelength_bin_widths(as_numpy=False).to(device)
+        flux = config.phringe.get_spectral_flux_density('Earth', as_numpy=False).to(device)
         flux = torch.ones(flux.shape, device=device)
         # coord = [source for source in config.phringe._director._sources if source.name == 'Earth'][
         #     0].sky_coordinates[1, 0]
         # TODO: implement choosable fov
-        fov_max = config.phringe.get_field_of_view()[
+        fov_max = config.phringe.get_field_of_view(as_numpy=False)[
                       0] / 2 if self.fov is None else self.fov / 2
         coord = np.linspace(-fov_max, fov_max, config.simulation.grid_size)
 
@@ -67,9 +68,9 @@ class TemplateGenerationModule(BaseModule):
             posy = torch.tensor(y, device=device)
 
             # Generate the data
-            data = config.phringe.get_template(time, wavelength, posx, posy, flux)
+            data = config.phringe.get_template_torch(time, wavelength, wavelength_bin_width, posx, posy, flux)
 
-            template = Template(x=posx, y=posy, data=data, ix=ix, iy=iy)
+            template = Template(x=posx, y=posy, data=data[:, :, :, 0, 0], ix=ix, iy=iy)
             templates.append(template)
         self.template_out._templates += templates
 

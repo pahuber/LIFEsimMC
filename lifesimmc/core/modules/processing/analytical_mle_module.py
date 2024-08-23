@@ -1,7 +1,6 @@
 from itertools import product
 
 import torch
-from matplotlib import pyplot as plt
 from torch import Tensor
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -133,8 +132,6 @@ class AnalyticalMLEModule(BaseModule):
                     0]
             x, y = template.x, template.y
             coordinates.append((x, y))
-            plt.imshow(template.data[0].cpu().numpy())
-            plt.show()
 
         return optimum_flux_at_maximum, coordinates
 
@@ -156,15 +153,17 @@ class AnalyticalMLEModule(BaseModule):
             templates
         )
 
-        plt.plot(optimum_flux_at_maximum[0].cpu().numpy())
-        plt.show()
-
         # TODO: for all differential outputs
         self.image_out.image = cost_functions
 
         for index_output in range(len(optimum_flux_at_maximum)):
-            spectrum = Spectrum(optimum_flux_at_maximum, None, None, config.phringe.get_wavelength_bin_centers(),
-                                config.phringe._director._wavelength_bin_widths)
+            spectrum = Spectrum(
+                optimum_flux_at_maximum,
+                None,
+                None,
+                config.phringe.get_wavelength_bin_centers(as_numpy=False),
+                config.phringe.get_wavelength_bin_widths(as_numpy=False)
+            )
             self.spectrum_out.spectra.append(spectrum)
 
         self.coordinate_out.coordinates = coordinates

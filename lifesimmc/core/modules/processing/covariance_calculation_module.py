@@ -48,7 +48,7 @@ class CovarianceCalculationModule(BaseModule):
             create_copy=False
         )
 
-        data = phringe.get_data()
+        data = phringe.get_data(as_numpy=False)
 
         self.cov_out.cov = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
         self.cov_out.icov2 = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))

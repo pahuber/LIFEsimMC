@@ -63,8 +63,10 @@ class MCMCModule(BaseModule):
             flux = torch.tensor(flux).to(config.phringe._director._device)
             x_pos = torch.tensor(x_pos).to(config.phringe._director._device)
             y_pos = torch.tensor(y_pos).to(config.phringe._director._device)
-            model = icov2i @ config.phringe.get_template(time, self.wavelengths, x_pos, y_pos, flux).cpu().numpy()[
-                self.i]
+            model = icov2i @ \
+                    config.phringe.get_template_torch(time, self.wavelengths, self.wavelength_bin_widths, x_pos, y_pos,
+                                                      flux).cpu().numpy()[
+                    self.i, :, :, 0, 0]
             # for i, wavelength in enumerate(self.wavelengths):
             #     self.wavelength = wavelength
             #     model[i] = get_model_single(time, flux[i], x_pos, y_pos) * wl_bin[i] * dit
@@ -108,9 +110,10 @@ class MCMCModule(BaseModule):
         #########################################################################
         # Working
 
-        time = config.phringe.get_time_steps().to(config.phringe._director._device)
-        self.wavelengths = config.phringe.get_wavelength_bin_centers().to(config.phringe._director._device)
-        self.fovs = config.phringe.get_field_of_view().cpu().numpy()
+        time = config.phringe.get_time_steps(as_numpy=False)
+        self.wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=False)
+        self.wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=False)
+        self.fovs = config.phringe.get_field_of_view(as_numpy=True)
         icov2 = icov2.cpu().numpy()
 
         # Define MCMC
@@ -118,7 +121,7 @@ class MCMCModule(BaseModule):
         initial_guess = [-3.4e-7, 3.4e-7]
         initial_guess.extend(flux_init)
         ndim = len(initial_guess)
-        nwalkers = 10 * ndim
+        nwalkers = 4 * ndim
         nsteps = 100
 
         spectra_flux_densities = []
@@ -341,13 +344,5 @@ class MCMCModule(BaseModule):
 
         # return context
 
-        # Save spectrum
-        self.spectrum_out.spectral_flux_density = spectra_flux_densities
-        self.spectrum_out.err_low = err_lows
-        self.spectrum_out.err_high = err_highs
-        self.spectrum_out.wavelengths = self.wavelengths
-        self.spectrum_out.bins = config.phringe._director._wavelength_bin_widths.cpu().numpy()
-
         print('Done')
-
         return self.spectrum_out
