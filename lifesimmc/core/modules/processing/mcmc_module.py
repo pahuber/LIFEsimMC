@@ -47,6 +47,12 @@ class MCMCModule(BaseModule):
         cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
         spectrum = self.get_resource_from_name(self.spectrum_in)
 
+        if cov is not None:
+            icov2 = cov.icov2
+        else:
+            icov2 = torch.diag(torch.ones(data.shape[1], device=config.phringe._director._device)).unsqueeze(0).repeat(
+                data.shape[0], 1, 1)
+
         def get_model(time, x_pos, y_pos, *flux):
             """Return the data model for all wavelengths."""
 
@@ -57,7 +63,8 @@ class MCMCModule(BaseModule):
             flux = torch.tensor(flux).to(config.phringe._director._device)
             x_pos = torch.tensor(x_pos).to(config.phringe._director._device)
             y_pos = torch.tensor(y_pos).to(config.phringe._director._device)
-            model = icov2i @ config.phringe.get_template(time, self.wavelengths, x_pos, y_pos, flux).cpu().numpy()
+            model = icov2i @ config.phringe.get_template(time, self.wavelengths, x_pos, y_pos, flux).cpu().numpy()[
+                self.i]
             # for i, wavelength in enumerate(self.wavelengths):
             #     self.wavelength = wavelength
             #     model[i] = get_model_single(time, flux[i], x_pos, y_pos) * wl_bin[i] * dit
@@ -67,7 +74,7 @@ class MCMCModule(BaseModule):
 
         def lnlike(theta, x, y, yerr):
             posx, posy, *flux = theta
-            model = get_model(x, posx, posy, *flux)[self.i]
+            model = get_model(x, posx, posy, *flux)
             # inv_sigma2 = 1.0 / (yerr ** 2 + model ** 2 * np.exp(2 * lnf))
             # return -0.5 * (np.sum((y - model) ** 2 * inv_sigma2 - np.log(inv_sigma2)))
 
@@ -104,14 +111,14 @@ class MCMCModule(BaseModule):
         time = config.phringe.get_time_steps().to(config.phringe._director._device)
         self.wavelengths = config.phringe.get_wavelength_bin_centers().to(config.phringe._director._device)
         self.fovs = config.phringe.get_field_of_view().cpu().numpy()
-        icov2 = cov.icov2.cpu().numpy() if cov is not None else None
+        icov2 = icov2.cpu().numpy()
 
         # Define MCMC
         flux_init = spectrum.spectra[0].spectral_flux_density.cpu().numpy().tolist()
         initial_guess = [-3.4e-7, 3.4e-7]
         initial_guess.extend(flux_init)
         ndim = len(initial_guess)
-        nwalkers = 4 * ndim
+        nwalkers = 10 * ndim
         nsteps = 100
 
         spectra_flux_densities = []
@@ -144,7 +151,7 @@ class MCMCModule(BaseModule):
 
             # Plot initial guess and data in two imshow subplots that are on top of each other
             plt.subplot(2, 1, 1)
-            plt.imshow(get_model(time, *initial_guess)[p], label='Initial guess')
+            plt.imshow(get_model(time, *initial_guess), label='Initial guess')
             plt.colorbar()
             plt.title('Initial guess')
             plt.subplot(2, 1, 2)
@@ -232,6 +239,8 @@ class MCMCModule(BaseModule):
             err_low_pos = err_low[:2]
             err_high_pos = err_high[:2]
 
+            print(best_pos)
+
             spectrum = Spectrum(best_flux, err_low_flux, err_high_flux, self.wavelengths,
                                 config.phringe._director._wavelength_bin_widths.cpu().numpy())
             self.spectrum_out.spectra.append(spectrum)
@@ -254,7 +263,7 @@ class MCMCModule(BaseModule):
 
             # # Plot data and fit
             plt.subplot(3, 1, 1)
-            plt.imshow(get_model(time, *best)[p], label='Fit', cmap='Greys')
+            plt.imshow(get_model(time, *best), label='Fit', cmap='Greys')
             plt.colorbar()
             plt.title('Fit')
             plt.subplot(3, 1, 2)
@@ -262,7 +271,7 @@ class MCMCModule(BaseModule):
             plt.colorbar()
             plt.title('Data')
             plt.subplot(3, 1, 3)
-            plt.imshow(data - get_model(time, *best)[p], label='Diff')
+            plt.imshow(data - get_model(time, *best), label='Diff')
             plt.colorbar()
             plt.title('Diff')
             plt.savefig('data_fit.pdf')

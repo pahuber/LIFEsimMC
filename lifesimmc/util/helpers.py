@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-Template = namedtuple('Template', 'x y data')
+Template = namedtuple('Template', 'x y data ix iy')
 
 Spectrum = namedtuple('Spectrum', 'spectral_flux_density err_low err_high wavelengths bins')
 

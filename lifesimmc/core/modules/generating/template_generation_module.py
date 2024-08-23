@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
+import torch
 from tqdm.contrib.itertools import product
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -16,12 +18,14 @@ class TemplateGenerationModule(BaseModule):
             self,
             r_config_in: str,
             r_template_out: str,
+            fov: float = None,
             write_to_fits: bool = True,
             create_copy: bool = True
     ):
         """Constructor method."""
         self.config_in = r_config_in
         self.template_out = r_template_out
+        self.fov = fov
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
         self.template_out = TemplateResource(r_template_out)
@@ -45,27 +49,28 @@ class TemplateGenerationModule(BaseModule):
         time = config.phringe.get_time_steps().to(device)
         wavelength = config.phringe.get_wavelength_bin_centers().to(device)
         flux = config.phringe.get_spectral_flux_density('Earth').to(device)
-        coord = [source for source in config.phringe._director._sources if source.name == 'Earth'][
-            0].sky_coordinates
+        flux = torch.ones(flux.shape, device=device)
+        # coord = [source for source in config.phringe._director._sources if source.name == 'Earth'][
+        #     0].sky_coordinates[1, 0]
+        # TODO: implement choosable fov
+        fov_max = config.phringe.get_field_of_view()[
+                      0] / 2 if self.fov is None else self.fov / 2
+        coord = np.linspace(-fov_max, fov_max, config.simulation.grid_size)
 
-        for index_x, index_y in product(
-                range(config.simulation.grid_size),
-                range(config.simulation.grid_size)
-        ):
+        for (ix, x), (iy, y) in product(enumerate(coord), enumerate(coord), total=len(coord) ** 2):
             # Set the planet position to the current position in the grid
             # scene_template.planets[0].grid_position = (index_x, index_y)
             #
 
-            # Get the current planet position in radians
-            posx = coord[0, index_x, index_y].to(device)
-            posy = coord[1, index_x, index_y].to(device)
+            # # Get the current planet position in radians
+            posx = torch.tensor(x, device=device)
+            posy = torch.tensor(y, device=device)
 
             # Generate the data
             data = config.phringe.get_template(time, wavelength, posx, posy, flux)
 
-            template = Template(x=index_x, y=index_y, data=data)
+            template = Template(x=posx, y=posy, data=data, ix=ix, iy=iy)
             templates.append(template)
-
         self.template_out._templates += templates
 
         print('Done')

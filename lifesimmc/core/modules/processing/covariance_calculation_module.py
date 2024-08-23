@@ -7,10 +7,18 @@ from phringe.api import PHRINGE
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.covariance_resource import CovarianceResource
+from lifesimmc.util.matrix import cov_inv_sqrt
 
 
 class CovarianceCalculationModule(BaseModule):
     """Class representation of the base module."""
+
+    def nanmean_filter(values):
+        valid_values = values[~np.isnan(values)]
+        if valid_values.size > 0:
+            return np.mean(valid_values)
+        else:
+            return np.nan  # If no neighbors are valid, return NaN
 
     def __init__(self, config_in: str, cov_out: str):
         """Constructor method."""
@@ -28,47 +36,30 @@ class CovarianceCalculationModule(BaseModule):
         simulation = copy(config.simulation)
         simulation.has_planet_signal = False
 
-        is_invertible = False
-        counter = 0
+        phringe = PHRINGE()
+        phringe.run(
+            config_file_path=config.config_file_path,
+            simulation=simulation,
+            instrument=config.instrument,
+            observation_mode=config.observation_mode,
+            scene=config.scene,
+            gpu=self.gpu,
+            write_fits=False,
+            create_copy=False
+        )
 
-        while not is_invertible and counter <= 10:
+        data = phringe.get_data()
 
-            phringe = PHRINGE()
-            phringe.run(
-                config_file_path=config.config_file_path,
-                simulation=simulation,
-                instrument=config.instrument,
-                observation_mode=config.observation_mode,
-                scene=config.scene,
-                gpu=self.gpu,
-                write_fits=False,
-                create_copy=False
+        self.cov_out.cov = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
+        self.cov_out.icov2 = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
+
+        for i in range(len(data)):
+            self.cov_out.cov[i] = data[i].cov()
+
+            self.cov_out.icov2[i] = torch.tensor(
+                cov_inv_sqrt(self.cov_out.cov[i].cpu().numpy()),
+                device=config.phringe._director._device
             )
-
-            data = phringe.get_data()
-
-            # Calculate covariance matrix for each differential output
-            self.cov_out.cov = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
-            self.cov_out.icov2 = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
-
-            for i in range(len(data)):
-                self.cov_out.cov[i] = data[i].cov()
-
-                if not (self.cov_out.cov[i] < 0).any():
-                    try:
-                        self.cov_out.icov2[i] = torch.tensor(np.linalg.inv(np.sqrt(self.cov_out.cov[i].cpu().numpy())),
-                                                             device=config.phringe._director._device)
-                        is_invertible = True
-                    except np.linalg.LinAlgError:
-                        is_invertible = False
-                else:
-                    is_invertible = False
-                    break
-
-            counter += 1
-
-        if counter == 10:
-            raise ValueError('Covariance matrix could not be calculated. Please check the data.')
 
         print('Done')
         return self.cov_out

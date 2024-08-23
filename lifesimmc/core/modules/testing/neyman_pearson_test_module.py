@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 from scipy.stats import norm
 
@@ -8,8 +9,8 @@ from lifesimmc.core.resources.test_resource import TestResource
 
 
 class NeymanPearsonTestModule(BaseModule):
-    def __init__(self, r_config_in: str, r_cov_in: str, r_data_in: str, r_spectrum_in: str, r_test_out: str,
-                 pfa: float):
+    def __init__(self, r_config_in: str, r_data_in: str, r_spectrum_in: str, r_test_out: str,
+                 pfa: float, r_cov_in: str = None):
         self.config_in = r_config_in
         self.cov_in = r_cov_in
         self.data_in = r_data_in
@@ -21,10 +22,16 @@ class NeymanPearsonTestModule(BaseModule):
         print("Performing Neyman-Pearson test...")
 
         config = self.get_resource_from_name(self.config_in)
-        cov = self.get_resource_from_name(self.cov_in)
+        cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
         data = self.get_resource_from_name(self.data_in).get_data()
         spectrum = self.get_resource_from_name(self.spectrum_in).spectrum[0].spectral_flux_density
         num_of_diff_outputs = len(data)
+
+        if cov is not None:
+            icov2 = cov.icov2
+        else:
+            icov2 = torch.diag(torch.ones(data.shape[1], device=config.phringe._director._device)).unsqueeze(0).repeat(
+                data.shape[0], 1, 1)
 
         # flux = torch.tensor(flux).to(config.phringe._director._device)
         x_pos = -3e-7
@@ -33,7 +40,7 @@ class NeymanPearsonTestModule(BaseModule):
         time = config.phringe.get_time_steps().to(config.phringe._director._device)
         self.wavelengths = config.phringe.get_wavelength_bin_centers().to(config.phringe._director._device)
         self.fovs = config.phringe.get_field_of_view().cpu().numpy()
-        icov2 = cov.icov2.cpu().numpy() if cov is not None else None
+        icov2 = icov2.cpu().numpy()
 
         self.test_out.test_statistic = []
         self.test_out.xsi = []

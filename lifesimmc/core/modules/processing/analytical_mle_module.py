@@ -1,23 +1,28 @@
 from itertools import product
 
 import torch
+from matplotlib import pyplot as plt
 from torch import Tensor
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.config_resource import ConfigResource
+from lifesimmc.core.resources.coordinate_resource import CoordinateResource
 from lifesimmc.core.resources.image_resource import ImageResource
 from lifesimmc.core.resources.spectrum_resource import SpectrumResource
 from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
+from lifesimmc.util.helpers import Spectrum
 
 
 class AnalyticalMLEModule(BaseModule):
-    def __init__(self, r_config_in: str, r_data_in: str, r_template_in: str, r_image_out: str, r_spectrum_out: str):
+    def __init__(self, r_config_in: str, r_data_in: str, r_template_in: str, r_image_out: str, r_spectrum_out: str,
+                 r_coordinate_out: str):
         self.config_in = r_config_in
         self.data_in = r_data_in
         self.template_in = r_template_in
         self.image_out = ImageResource(r_image_out)
         self.spectrum_out = SpectrumResource(r_spectrum_out)
+        self.coordinate_out = CoordinateResource(r_coordinate_out)
 
     def _calculate_maximum_likelihood(self, data: Tensor, templates: list, config: ConfigResource) -> tuple:
         """Calculate the maximum likelihood estimate for the flux in units of photons at the position of the maximum of
@@ -42,11 +47,11 @@ class AnalyticalMLEModule(BaseModule):
         for index_x, index_y in product(range(config.simulation.grid_size), range(config.simulation.grid_size)):
 
             template = \
-                [template for template in templates if template.x == index_x and template.y == index_y][
+                [template for template in templates if template.ix == index_x and template.iy == index_y][
                     0]
-
-            template_data = torch.einsum('ijk, ij->ijk', template.data,
-                                         1 / torch.sqrt(torch.mean(template.data ** 2, axis=2)))
+            template_data = template.data.to(config.phringe._director._device)
+            # template_data = torch.einsum('ijk, ij->ijk', template.data,
+            #                              1 / torch.sqrt(torch.mean(template.data ** 2, axis=2)))
 
             matrix_c = self._get_matrix_c(data, template_data).to(config.phringe._director._device)
             matrix_b = self._get_matrix_b(data, template_data).to(config.phringe._director._device)
@@ -102,7 +107,7 @@ class AnalyticalMLEModule(BaseModule):
         data_variance = torch.var(data, axis=2)
         return torch.sum(data * template_data, axis=2) / data_variance
 
-    def _get_optimum_flux_at_cost_function_maximum(self, cost_functions, optimum_fluxes, config) -> Tensor:
+    def _get_optimum_flux_at_cost_function_maximum(self, cost_functions, optimum_fluxes, config, templates) -> Tensor:
         """Calculate the optimum flux at the position of the maximum of the cost function.
 
         :param cost_functions: The cost functions
@@ -118,15 +123,24 @@ class AnalyticalMLEModule(BaseModule):
             dtype=torch.float32
         )
 
+        coordinates = []
+
         for index_output in range(len(optimum_flux_at_maximum)):
             index_x, index_y = get_indices_of_maximum_of_2d_array(cost_functions[index_output])
             optimum_flux_at_maximum[index_output] = optimum_fluxes[index_output, index_x, index_y]
+            template = \
+                [template for template in templates if template.ix == index_x and template.iy == index_y][
+                    0]
+            x, y = template.x, template.y
+            coordinates.append((x, y))
+            plt.imshow(template.data[0].cpu().numpy())
+            plt.show()
 
-        return optimum_flux_at_maximum
+        return optimum_flux_at_maximum, coordinates
 
     def apply(self, resources: list[BaseResource]) -> SpectrumResource:
 
-        print('Estimating fluxes using analytical maximum likelihood...')
+        print('Performing analytical MLE...')
 
         config = self.get_resource_from_name(self.config_in)
         data = self.get_resource_from_name(self.data_in).get_data()
@@ -135,14 +149,25 @@ class AnalyticalMLEModule(BaseModule):
         cost_functions, optimum_fluxes = self._calculate_maximum_likelihood(data, templates, config)
 
         # Get the optimum flux at the position of the maximum of the cost function
-        optimum_flux_at_maximum = self._get_optimum_flux_at_cost_function_maximum(
+        optimum_flux_at_maximum, coordinates = self._get_optimum_flux_at_cost_function_maximum(
             cost_functions,
             optimum_fluxes,
-            config
+            config,
+            templates
         )
 
+        plt.plot(optimum_flux_at_maximum[0].cpu().numpy())
+        plt.show()
+
+        # TODO: for all differential outputs
         self.image_out.image = cost_functions
-        self.spectrum_out.spectral_flux_density = optimum_flux_at_maximum
+
+        for index_output in range(len(optimum_flux_at_maximum)):
+            spectrum = Spectrum(optimum_flux_at_maximum, None, None, config.phringe.get_wavelength_bin_centers(),
+                                config.phringe._director._wavelength_bin_widths)
+            self.spectrum_out.spectra.append(spectrum)
+
+        self.coordinate_out.coordinates = coordinates
 
         # plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')
         # plt.colorbar()
@@ -152,4 +177,4 @@ class AnalyticalMLEModule(BaseModule):
         # plt.show()
 
         print('Done')
-        return self.spectrum_out, self.image_out
+        return self.spectrum_out, self.image_out, self.coordinate_out

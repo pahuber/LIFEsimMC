@@ -1,8 +1,5 @@
 from typing import Union
 
-import numpy as np
-import torch
-
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
@@ -40,13 +37,11 @@ class WhiteningModule(BaseModule):
         data = self.get_resource_from_name(self.data_in).get_data() if self.data_in is not None else None
         templates = self.get_resource_from_name(
             self.template_in).get_templates() if self.template_in is not None else None
-        icov2 = torch.zeros(cov.cov.shape)
+        icov2 = cov.icov2
 
         # For all differential outputs
-        for i in range(data.shape[0]):
-            icov2[i] = torch.tensor(
-                np.linalg.inv(np.sqrt(cov.cov[i].cpu().numpy()))
-            )
+        # for i in range(data.shape[0]):
+        #     icov2[i] = icov2
 
         if data is not None:
             for i in range(data.shape[0]):
@@ -59,7 +54,7 @@ class WhiteningModule(BaseModule):
                 template_data = template.data.to(config.phringe._director._device)
                 for i in range(len(template_data)):
                     template_data[i] = icov2[i] @ template_data[i]
-                template = Template(template.x, template.y, template_data)
+                template = Template(ix=template.ix, iy=template.iy, data=template_data, x=template.x, y=template.y)
                 self.template_out.add_template(template)
 
         print('Done')
