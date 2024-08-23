@@ -24,7 +24,7 @@ class NeymanPearsonTestModule(BaseModule):
         config = self.get_resource_from_name(self.config_in)
         cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
         data = self.get_resource_from_name(self.data_in).get_data()
-        spectrum = self.get_resource_from_name(self.spectrum_in).spectrq[0].spectral_flux_density
+        spectrum = self.get_resource_from_name(self.spectrum_in).spectra[0].spectral_flux_density
         num_of_diff_outputs = len(data)
 
         if cov is not None:

@@ -1,7 +1,6 @@
 from typing import Union
 
 import numpy as np
-import torch
 from lmfit import minimize, Parameters
 from matplotlib import pyplot as plt
 
@@ -27,23 +26,24 @@ class NumericalMLEModule(BaseModule):
         if cov is not None:
             icov2 = cov.icov2
         else:
-            icov2 = torch.diag(torch.ones(data.shape[1], device=config.phringe._director._device)).unsqueeze(0).repeat(
+            icov2 = np.diag(np.ones(data.shape[1])).unsqueeze(0).repeat(
                 data.shape[0], 1, 1)
 
-        times = config.phringe.get_time_steps(as_numpy=False)
-        wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=False)
-        wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=False)
+        times = config.phringe.get_time_steps(as_numpy=True)
+        wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=True)
+        wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=True)
 
         params = Parameters()
-        posx = -3.45e-7
-        posy = 3.45e-7
+        posx = -3.4e-7
+        posy = 3.4e-7
 
-        flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=False)
-        hfov_max = np.sqrt(2) * config.phringe.get_field_of_view(as_numpy=False)[-1] / 2
+        flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=True)
+        hfov_max = np.sqrt(2) * config.phringe.get_field_of_view(as_numpy=True)[-1] / 2 / 14  # TODO: Check this
+        # print(hfov_max)
 
         for i in range(len(flux_init)):
-            params.add(f'flux_{i}', value=1 * flux_init[i].cpu().numpy(), min=0, max=1e7)
-            # params.add(f'flux_{i}', value=5e5, min=0, max=1e9)
+            # params.add(f'flux_{i}', value=0.9 * flux_init[i], min=0, max=1e7)
+            params.add(f'flux_{i}', value=5e5, min=0, max=1e7)
         params.add('pos_x', value=posx, min=-hfov_max, max=hfov_max)
         params.add('pos_y', value=posy, min=-hfov_max, max=hfov_max)
 
@@ -51,15 +51,14 @@ class NumericalMLEModule(BaseModule):
 
         for i in range(len(config.instrument.differential_outputs)):
             def residual_data(params, target):
-                posx = params['pos_x'].value.to(config.phringe._director._device)
-                posy = params['pos_y'].value.to(config.phringe._director._device)
-                flux = torch.tensor(
-                    [params[f'flux_{z}'].value for z in range(len(flux_init))],
-                    device=config.phringe._director._device
+                posx = np.array(params['pos_x'].value)
+                posy = np.array(params['pos_y'].value)
+                flux = np.array(
+                    [params[f'flux_{z}'].value for z in range(len(flux_init))]
                 )
                 model = (icov2i @
-                         config.phringe.get_template_torch(times, wavelengths, wavelength_bin_widths, posx, posy, flux)[
-                         self.i, :, :, 0, 0].cpu().numpy())
+                         config.phringe.get_template_numpy(times, wavelengths, wavelength_bin_widths, posx, posy, flux)[
+                         self.i, :, :, 0, 0])
                 return model - target
 
             icov2i = icov2[i]
