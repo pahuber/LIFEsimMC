@@ -6,8 +6,8 @@ import torch
 from matplotlib import pyplot as plt
 
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource
-from lifesimmc.util.helpers import Spectrum
+from lifesimmc.core.resources.coordinate_resource import CoordinateResource
+from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
 
 sys.path.append("/home/huberph/lifesimmc")
 from lifesimmc.core.modules.base_module import BaseModule
@@ -16,13 +16,27 @@ from lifesimmc.core.modules.base_module import BaseModule
 class MCMCModule(BaseModule):
     """Module to estimate the flux using a parametric maximum likelihood estimation"""
 
-    def __init__(self, r_config_in: str, r_data_in: str, r_spectrum_in: str, r_spectrum_out: str, r_cov_in: str = None):
+    def __init__(
+            self,
+            n_config_in: str,
+            n_data_in: str,
+            n_coordinate_in: str,
+            n_spectrum_in: str,
+            n_coordinate_out: str,
+            n_spectrum_out: str,
+            walkers_multiplier: int = 4,
+            steps: int = 100,
+            n_cov_in: str = None):
         """Constructor method."""
-        self.config_in = r_config_in
-        self.data_in = r_data_in
-        self.spectrum_in = r_spectrum_in
-        self.spectrum_out = SpectrumResource(r_spectrum_out)
-        self.cov_in = r_cov_in
+        self.n_config_in = n_config_in
+        self.n_data_in = n_data_in
+        self.n_coordinate_in = n_coordinate_in
+        self.n_spectrum_in = n_spectrum_in
+        self.n_coordinate_out = n_coordinate_out
+        self.n_spectrum_out = n_spectrum_out
+        self.n_walkers_multiplier = walkers_multiplier
+        self.n_steps = steps
+        self.n_cov_in = n_cov_in
 
     def get_scaled_blackbody_spectrum(self, wavelengths, temperature: float, radius: float) -> np.ndarray:
         """Get a scaled blackbody spectrum.
@@ -37,21 +51,24 @@ class MCMCModule(BaseModule):
                 np.exp((h * c / (
                         k * wavelengths * temperature))) - 1) / c * wavelengths / h * solid_angle
 
-    def apply(self, resources: list[BaseResource]):
+    def apply(self, resources: list[BaseResource]) -> tuple:
         """Apply module
         """
         print('Estimating flux using MCMC...')
 
-        config = self.get_resource_from_name(self.config_in)
-        data = self.get_resource_from_name(self.data_in).get_data().cpu().numpy().astype(np.float64)
-        cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
-        spectrum = self.get_resource_from_name(self.spectrum_in)
+        r_config_in = self.get_resource_from_name(self.n_config_in)
+        data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy().astype(np.float64)
+        r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
+        rc_spectrum_in = self.get_resource_from_name(self.n_spectrum_in)
+        rc_spectrum_out = SpectrumResourceCollection(self.n_spectrum_out)
+        r_coordinates_out = CoordinateResource(self.n_coordinate_out)
 
-        if cov is not None:
-            icov2 = cov.icov2
+        if r_cov_in is not None:
+            i_cov_sqrt = r_cov_in.i_cov_sqrt
         else:
-            icov2 = torch.diag(torch.ones(data.shape[1], device=config.phringe._director._device)).unsqueeze(0).repeat(
-                data.shape[0], 1, 1)
+            i_cov_sqrt = torch.diag(
+                torch.ones(data_in.shape[1], device=r_config_in.phringe._director._device)).unsqueeze(0).repeat(
+                data_in.shape[0], 1, 1)
 
         def get_model(time, x_pos, y_pos, *flux):
             """Return the data model for all wavelengths."""
@@ -60,12 +77,13 @@ class MCMCModule(BaseModule):
             # wl_bin = self.wl_bin
             # # eta_t = self.eta_t
             # model = np.zeros((len(self.wavelengths), len(time)))
-            flux = torch.tensor(flux).to(config.phringe._director._device)
-            x_pos = torch.tensor(x_pos).to(config.phringe._director._device)
-            y_pos = torch.tensor(y_pos).to(config.phringe._director._device)
+            flux = torch.tensor(flux).to(r_config_in.phringe._director._device)
+            x_pos = torch.tensor(x_pos).to(r_config_in.phringe._director._device)
+            y_pos = torch.tensor(y_pos).to(r_config_in.phringe._director._device)
             model = icov2i @ \
-                    config.phringe.get_template_torch(time, self.wavelengths, self.wavelength_bin_widths, x_pos, y_pos,
-                                                      flux).cpu().numpy()[
+                    r_config_in.phringe.get_template_torch(time, self.wavelengths, self.wavelength_bin_widths, x_pos,
+                                                           y_pos,
+                                                           flux).cpu().numpy()[
                     self.i, :, :, 0, 0]
             # for i, wavelength in enumerate(self.wavelengths):
             #     self.wavelength = wavelength
@@ -110,45 +128,49 @@ class MCMCModule(BaseModule):
         #########################################################################
         # Working
 
-        time = config.phringe.get_time_steps(as_numpy=False)
-        self.wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=False)
-        self.wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=False)
-        self.fovs = config.phringe.get_field_of_view(as_numpy=True)
-        icov2 = icov2.cpu().numpy()
+        time = r_config_in.phringe.get_time_steps(as_numpy=False)
+        self.wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False)
+        self.wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False)
+        self.fovs = r_config_in.phringe.get_field_of_view(as_numpy=True)
+        i_cov_sqrt = i_cov_sqrt.cpu().numpy()
 
         # Define MCMC
-        flux_init = spectrum.spectra[0].spectral_flux_density.cpu().numpy().tolist()
-        initial_guess = [-3.4e-7, 3.4e-7]
+        flux_init = rc_spectrum_in.collection[
+            0].spectral_irradiance.cpu().numpy().tolist()  # TODO: specify which spectrum to use
+
+        r_coordinates_in = self.get_resource_from_name(self.n_coordinate_in)
+
+        initial_guess = [r_coordinates_in.x, r_coordinates_in.y]
         initial_guess.extend(flux_init)
         ndim = len(initial_guess)
-        nwalkers = 4 * ndim
-        nsteps = 100
+        nwalkers = self.n_walkers_multiplier * ndim
+        nsteps = self.n_steps
 
         spectra_flux_densities = []
         err_lows = []
         err_highs = []
 
-        for p in range(len(config.instrument.differential_outputs)):
+        for p in range(len(r_config_in.instrument.differential_outputs)):
             self.i = p
-            icov2i = icov2[p]
-            data = data[p]
+            icov2i = i_cov_sqrt[p]
+            data_in = data_in[p]
             # Define data uncertainty
             # yerr = np.ones(len(data)) * 1.5 * np.max(abs(get_model(time, *initial_guess)))
-            yerr = np.ones(len(data)) * 0.1 * np.max(abs(data))
+            yerr = np.ones(len(data_in)) * 0.1 * np.max(abs(data_in))
             # yerr = 0.8 * (data - get_model(time, *initial_guess))
             # print(yerr.shape)
-            # yerr = 0.001 * data
+            # yerr = 0.1 * data
 
             # Initialize walkers
             pos = np.zeros((nwalkers, ndim))
-            pos_posx = initial_guess[0] + 1e-8 * np.random.randn(nwalkers)
-            pos_posy = initial_guess[1] + 1e-8 * np.random.randn(nwalkers)
+            pos_posx = initial_guess[0] + 1e-10 * np.random.randn(nwalkers)
+            pos_posy = initial_guess[1] + 1e-10 * np.random.randn(nwalkers)
             # pos_a = initial_guess[2] + 1e-4 * np.random.randn(nwalkers)
             pos[:, 0] = pos_posx
             pos[:, 1] = pos_posy
             # pos[:, 2] = pos_a
             for i in range(2, len(initial_guess)):
-                pos_flux = initial_guess[i] + 1e4 * np.random.randn(nwalkers)
+                pos_flux = initial_guess[i] + 1e3 * np.random.randn(nwalkers)
                 pos[:, i] = pos_flux
             # pos = [np.array(initial_guess) + 1e-8 * np.random.randn(ndim) for i in range(nwalkers)]
 
@@ -158,7 +180,7 @@ class MCMCModule(BaseModule):
             plt.colorbar()
             plt.title('Initial guess')
             plt.subplot(2, 1, 2)
-            plt.imshow(data, label='Data')
+            plt.imshow(data_in, label='Data')
             plt.colorbar()
             plt.title('Data')
             plt.savefig('init.pdf')
@@ -166,7 +188,7 @@ class MCMCModule(BaseModule):
             plt.close()
 
             # Run MCMC
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(time, data, yerr))
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(time, data_in, yerr))
             sampler.run_mcmc(pos, nsteps, progress=True)
 
             # Working
@@ -232,7 +254,7 @@ class MCMCModule(BaseModule):
                 # err_low.append(q[0])
                 # err_high.append(q[1])
 
-            best = np.abs(best)
+            # best = np.abs(best)
             err_low = np.abs(err_low)
             err_high = np.abs(err_high)
             best_flux = best[3:]
@@ -242,11 +264,23 @@ class MCMCModule(BaseModule):
             err_low_pos = err_low[:2]
             err_high_pos = err_high[:2]
 
-            print(best_pos)
+            rc_spectrum_out.collection.append(
+                SpectrumResource(
+                    name='',
+                    spectral_irradiance=torch.tensor(best_flux),
+                    err_low=torch.tensor(err_low_flux),
+                    err_high=torch.tensor(err_high_flux),
+                    wavelength_bin_centers=torch.tensor(self.wavelengths),
+                    wavelength_bin_widths=r_config_in.phringe._director._wavelength_bin_widths
+                )
+            )
 
-            spectrum = Spectrum(best_flux, err_low_flux, err_high_flux, self.wavelengths,
-                                config.phringe._director._wavelength_bin_widths.cpu().numpy())
-            self.spectrum_out.spectra.append(spectrum)
+            r_coordinates_out.x = best_pos[0]
+            r_coordinates_out.y = best_pos[1]
+            r_coordinates_out.err_low_x = err_low_pos[0]
+            r_coordinates_out.err_high_x = err_high_pos[0]
+            r_coordinates_out.err_low_y = err_low_pos[1]
+            r_coordinates_out.err_high_y = err_high_pos[1]
 
             # TODO: automate this for all extractions
             # for q, extraction in enumerate(context.extractions):
@@ -270,11 +304,11 @@ class MCMCModule(BaseModule):
             plt.colorbar()
             plt.title('Fit')
             plt.subplot(3, 1, 2)
-            plt.imshow(data, label='Data')
+            plt.imshow(data_in, label='Data')
             plt.colorbar()
             plt.title('Data')
             plt.subplot(3, 1, 3)
-            plt.imshow(data - get_model(time, *best), label='Diff')
+            plt.imshow(data_in - get_model(time, *best), label='Diff')
             plt.colorbar()
             plt.title('Diff')
             plt.savefig('data_fit.pdf')
@@ -308,7 +342,7 @@ class MCMCModule(BaseModule):
             # plt.close()
 
             # Plot SNR
-            bins = config.phringe._director._wavelength_bin_widths.cpu().numpy()[:-1]
+            bins = r_config_in.phringe._director._wavelength_bin_widths.cpu().numpy()[:-1]
             err_mean_flux = np.mean([err_low_flux, err_high_flux], axis=0)
             snr = best_flux / err_mean_flux
             snr2 = np.sqrt(np.asarray(best_flux) ** 2 / err_mean_flux)
@@ -345,4 +379,4 @@ class MCMCModule(BaseModule):
         # return context
 
         print('Done')
-        return self.spectrum_out
+        return rc_spectrum_out, r_coordinates_out

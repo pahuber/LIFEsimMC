@@ -13,16 +13,24 @@ from lifesimmc.core.resources.config_resource import ConfigResource
 
 
 class ConfigLoaderModule(BaseModule):
-    """Class representation of the configuration loader module."""
+    """Class representation of the configuration loader module.
+
+        :param n_config_out: The name of the output configuration resource
+        :param config_file_path: The path to the configuration file
+        :param simulation: The simulation object
+        :param observation_mode: The observation mode object
+        :param instrument: The instrument object
+        :param scene: The scene object
+    """
 
     @overload
-    def __init__(self, r_config_out: str, config_file_path: Path):
+    def __init__(self, n_config_out: str, config_file_path: Path):
         ...
 
     @overload
     def __init__(
             self,
-            r_config_out: str,
+            n_config_out: str,
             simulation: Simulation,
             observation_mode: ObservationMode,
             instrument: Instrument,
@@ -32,7 +40,7 @@ class ConfigLoaderModule(BaseModule):
 
     def __init__(
             self,
-            r_config_out: str,
+            n_config_out: str,
             config_file_path: Path = None,
             simulation: Simulation = None,
             observation_mode: ObservationMode = None,
@@ -41,13 +49,15 @@ class ConfigLoaderModule(BaseModule):
     ):
         """Constructor method.
 
+        :param n_config_out: The name of the output configuration resource
         :param config_file_path: The path to the configuration file
         :param simulation: The simulation object
         :param observation_mode: The observation mode object
         :param instrument: The instrument object
+        :param scene: The scene object
         """
         super().__init__()
-        self.r_config_out = ConfigResource(name=r_config_out)
+        self.n_config_out = n_config_out
         self.config_file_path = config_file_path
         self.simulation = simulation
         self.observation_mode = observation_mode
@@ -56,6 +66,9 @@ class ConfigLoaderModule(BaseModule):
 
     def apply(self, resources: list[ConfigResource]) -> ConfigResource:
         """Load the configuration file.
+
+        :param resources: The resources to apply the module to
+        :return: The configuration resource
         """
         print('Loading configuration...')
         config_dict = load_config(self.config_file_path) if self.config_file_path else None
@@ -67,12 +80,15 @@ class ConfigLoaderModule(BaseModule):
         ) if not self.observation_mode else self.observation_mode
         scene = Scene(**config_dict['scene']) if not self.scene else self.scene
 
-        self.r_config_out.config_file_path = self.config_file_path
-        self.r_config_out.simulation = simulation
-        self.r_config_out.observation_mode = observation_mode
-        self.r_config_out.instrument = instrument
-        self.r_config_out.scene = scene
-        self.r_config_out.phringe = PHRINGE()
+        r_config_out = ConfigResource(
+            name=self.n_config_out,
+            config_file_path=self.config_file_path,
+            instrument=instrument,
+            observation_mode=observation_mode,
+            phringe=PHRINGE(),
+            scene=scene,
+            simulation=simulation,
+        )
 
         print('Done')
-        return self.r_config_out
+        return r_config_out

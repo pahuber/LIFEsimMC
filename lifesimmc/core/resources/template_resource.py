@@ -1,15 +1,38 @@
 from copy import deepcopy
+from dataclasses import dataclass, field
 
-from lifesimmc.core.resources.base_resource import BaseResource
+from torch import Tensor
+
+from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
 
 
+@dataclass
 class TemplateResource(BaseResource):
-    def __init__(self, name: str):
-        super().__init__(name)
-        self._templates = []
+    """Class representation of a template resource.
 
-    def get_templates(self):
-        return deepcopy(self._templates)
+    :param x_coord: The x-coordinate of the template.
+    :param y_coord: The y-coordinate of the template.
+    :param x_index: The x-index of the template.
+    :param y_index: The y-index of the template.
+    :param data: The data of the template.
+    """
+    x_coord: float = None
+    y_coord: float = None
+    x_index: int = None
+    y_index: int = None
+    _data: Tensor = None
 
-    def add_template(self, template):
-        self._templates.append(template)
+    def get_data(self):
+        return deepcopy(self._data)
+
+    def set_data(self, data: Tensor):
+        self._data = data
+
+
+@dataclass
+class TemplateResourceCollection(BaseResourceCollection):
+    """Class representation of a collection of template resources.
+
+    :param collection: The collection of template resources.
+    """
+    collection: list[TemplateResource] = field(default_factory=list)

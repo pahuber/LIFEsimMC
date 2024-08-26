@@ -18,14 +18,14 @@ config_file_path = Path("config.py")
 pipeline = Pipeline(gpu=4)
 
 # Load configuration
-module = ConfigLoaderModule(r_config_out='conf', config_file_path=config_file_path)
+module = ConfigLoaderModule(n_config_out='conf', config_file_path=config_file_path)
 pipeline.add_module(module)
 
 # Generate data
 module = DataGenerationModule(
-    r_config_in='conf',
-    r_data_out='data',
-    r_spectrum_out='speci',
+    n_config_in='conf',
+    n_data_out='data',
+    n_spectrum_out='speci',
     write_to_fits=False,
     create_copy=False
 )
@@ -33,8 +33,8 @@ pipeline.add_module(module)
 
 # Generate templates
 module = TemplateGenerationModule(
-    r_config_in='conf',
-    r_template_out='temp',
+    n_config_in='conf',
+    n_template_out='temp',
     write_to_fits=False,
     create_copy=False
 )
@@ -46,46 +46,46 @@ pipeline.add_module(module)
 # pipeline.add_module(module)
 
 # Calculate covariance of data
-module = CovarianceCalculationModule(config_in='conf', cov_out='cov')
+module = CovarianceCalculationModule(n_config_in='conf', n_cov_out='cov')
 pipeline.add_module(module)
 
 # Whiten data and templates
 module = WhiteningModule(
-    r_config_in='conf',
-    r_cov_in='cov',
-    r_data_in='data',
-    r_template_in='temp',
-    r_data_out='dataw',
-    r_template_out='tempw'
+    n_config_in='conf',
+    n_cov_in='cov',
+    n_data_in='data',
+    n_template_in='temp',
+    n_data_out='dataw',
+    n_template_out='tempw'
 )
 pipeline.add_module(module)
 
 # Estimate flux using analytical MLE
 module = AnalyticalMLEModule(
-    r_config_in='conf',
-    r_data_in='dataw',
-    r_template_in='tempw',
-    r_image_out='imag',
-    r_spectrum_out='speca'
+    n_config_in='conf',
+    n_data_in='dataw',
+    n_template_in='tempw',
+    n_image_out='imag',
+    n_spectrum_out='speca'
 )
 pipeline.add_module(module)
 
 # Estimate flux using numerical MLE
 module = NumericalMLEModule(
-    r_config_in='conf',
-    r_data_in='dataw',
-    r_cov_in='cov',
-    r_spectrum_out='specn'
+    n_config_in='conf',
+    n_data_in='dataw',
+    n_cov_in='cov',
+    n_spectrum_out='specn'
 )
 # pipeline.add_module(module)
 
 # Estimate flux using MCMC # TODO: BB, Full, init positions
 module = MCMCModule(
-    r_config_in='conf',
-    r_data_in='dataw',
-    r_cov_in='cov',
-    r_spectrum_in='speci',
-    r_spectrum_out='specm'
+    n_config_in='conf',
+    n_data_in='dataw',
+    n_cov_in='cov',
+    n_spectrum_in='speci',
+    n_spectrum_out='specm'
 )
 # pipeline.add_module(module)
 

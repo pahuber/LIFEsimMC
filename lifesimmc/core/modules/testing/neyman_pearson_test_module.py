@@ -24,7 +24,7 @@ class NeymanPearsonTestModule(BaseModule):
         config = self.get_resource_from_name(self.config_in)
         cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
         data = self.get_resource_from_name(self.data_in).get_data()
-        spectrum = self.get_resource_from_name(self.spectrum_in).spectra[0].spectral_flux_density
+        flux = self.get_resource_from_name(self.spectrum_in).spectra[0].spectral_flux_density
         num_of_diff_outputs = len(data)
 
         if cov is not None:
@@ -34,11 +34,13 @@ class NeymanPearsonTestModule(BaseModule):
                 data.shape[0], 1, 1)
 
         # flux = torch.tensor(flux).to(config.phringe._director._device)
-        x_pos = -3e-7
-        y_pos = 3e-7
-        flux = spectrum
-        time = config.phringe.get_time_steps(as_numpy=False)
-        self.wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=False)
+        x_pos = np.array(-3.3e-7)
+        y_pos = np.array(3.3e-7)
+        flux = flux.cpu().numpy() if isinstance(flux, torch.Tensor) else flux
+        flux = np.ones(config.phringe.get_wavelength_bin_centers(as_numpy=True).shape)
+        time = config.phringe.get_time_steps(as_numpy=True)
+        self.wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=True)
+        self.wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=True)
         self.fovs = config.phringe.get_field_of_view(as_numpy=True)
         icov2 = icov2.cpu().numpy()
 
@@ -49,8 +51,14 @@ class NeymanPearsonTestModule(BaseModule):
             dataf = data[i].flatten()
             ndim = dataf.numel()
             icov2i = icov2[i]
-            model = (icov2i @ config.phringe.get_template(time, self.wavelengths, x_pos, y_pos,
-                                                          flux).cpu().numpy())[:, :, :, 0, 0].flatten()
+            model = (icov2i @ config.phringe.get_template_numpy(
+                time,
+                self.wavelengths,
+                self.wavelength_bin_widths,
+                x_pos,
+                y_pos,
+                flux
+            )[i, :, :, 0, 0]).flatten()
             xtx = (model.T.dot(model)) / ndim
             # pfa = 0.0001
             xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)

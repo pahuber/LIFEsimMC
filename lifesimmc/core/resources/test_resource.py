@@ -2,8 +2,7 @@ from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class TestResource(BaseResource):
-
-    def __init__(self, name: str):
-        super().__init__(name)
-        self.test_statistic = None
-        self.xsi = None
+    """Class representation of a test resource.
+    """
+    test_statistic: float = None
+    xsi: float = None

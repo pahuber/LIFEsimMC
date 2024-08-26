@@ -1,44 +1,55 @@
 from typing import Union
 
 import numpy as np
+import torch
 from lmfit import minimize, Parameters
-from matplotlib import pyplot as plt
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource
-from lifesimmc.util.helpers import Spectrum
+from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
 
 
 class NumericalMLEModule(BaseModule):
-    def __init__(self, r_config_in: str, r_data_in: str, r_spectrum_out: str, r_cov_in: Union[str, None] = None):
-        self.config_in = r_config_in
-        self.data_in = r_data_in
-        self.cov_in = r_cov_in if r_cov_in is not None else None
-        self.spectrum_out = SpectrumResource(r_spectrum_out)
+    def __init__(
+            self,
+            n_config_in: str,
+            n_data_in: str,
+            n_coordinate_in: str,
+            n_spectrum_out: str,
+            n_cov_in: Union[str, None] = None):
+        self.n_config_in = n_config_in
+        self.n_data_in = n_data_in
+        self.n_coordinate_in = n_coordinate_in
+        self.n_cov_in = n_cov_in
+        self.n_spectrum_out = n_spectrum_out
 
-    def apply(self, resources: list[BaseResource]) -> SpectrumResource:
+    def apply(self, resources: list[BaseResource]) -> SpectrumResourceCollection:
         print('Performing numerical MLE...')
 
-        config = self.get_resource_from_name(self.config_in)
-        data = self.get_resource_from_name(self.data_in).get_data().cpu().numpy()
-        cov = self.get_resource_from_name(self.cov_in) if self.cov_in is not None else None
-        if cov is not None:
-            icov2 = cov.icov2
-        else:
-            icov2 = np.diag(np.ones(data.shape[1])).unsqueeze(0).repeat(
-                data.shape[0], 1, 1)
+        r_config_in = self.get_resource_from_name(self.n_config_in)
+        data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy()
+        r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
+        rc_spectrum_out = SpectrumResourceCollection(self.n_spectrum_out)
 
-        times = config.phringe.get_time_steps(as_numpy=True)
-        wavelengths = config.phringe.get_wavelength_bin_centers(as_numpy=True)
-        wavelength_bin_widths = config.phringe.get_wavelength_bin_widths(as_numpy=True)
+        if r_cov_in is not None:
+            i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()
+        else:
+            diag_matrix = np.eye(data_in.shape[1])
+            i_cov_sqrt = np.tile(diag_matrix, (data_in.shape[0], 1, 1))
+
+        times = r_config_in.phringe.get_time_steps(as_numpy=True)
+        wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True)
+        wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True)
+
+        r_coordinates_in = self.get_resource_from_name(self.n_coordinate_in)
 
         params = Parameters()
-        posx = -3.4e-7
-        posy = 3.4e-7
+        posx = np.array(r_coordinates_in.x)
+        posy = np.array(r_coordinates_in.y)
 
-        flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=True)
-        hfov_max = np.sqrt(2) * config.phringe.get_field_of_view(as_numpy=True)[-1] / 2 / 14  # TODO: Check this
+        # flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=True)
+        flux_init = np.ones(wavelengths.shape) * 1e5
+        hfov_max = np.sqrt(2) * r_config_in.phringe.get_field_of_view(as_numpy=True)[-1] / 2 / 14  # TODO: Check this
         # print(hfov_max)
 
         for i in range(len(flux_init)):
@@ -47,84 +58,56 @@ class NumericalMLEModule(BaseModule):
         params.add('pos_x', value=posx, min=-hfov_max, max=hfov_max)
         params.add('pos_y', value=posy, min=-hfov_max, max=hfov_max)
 
-        icov2 = icov2.cpu().numpy()
-
-        for i in range(len(config.instrument.differential_outputs)):
+        for i in range(len(r_config_in.instrument.differential_outputs)):
             def residual_data(params, target):
                 posx = np.array(params['pos_x'].value)
                 posy = np.array(params['pos_y'].value)
                 flux = np.array(
                     [params[f'flux_{z}'].value for z in range(len(flux_init))]
                 )
-                model = (icov2i @
-                         config.phringe.get_template_numpy(times, wavelengths, wavelength_bin_widths, posx, posy, flux)[
+                model = (i_cov_sqrt_i @
+                         r_config_in.phringe.get_template_numpy(times, wavelengths, wavelength_bin_widths, posx, posy,
+                                                                flux)[
                          self.i, :, :, 0, 0])
                 return model - target
 
-            icov2i = icov2[i]
+            i_cov_sqrt_i = i_cov_sqrt[i]
             self.i = i
-            out = minimize(residual_data, params, args=(data[i],), method='leastsq')
-            cov = out.covar
-            # print(out.params)
-            # plt.plot(out.residual)
-            # plt.show()
-            # print(out.params)
-            # print(out.uvars)
-            # print(out.errorbars)
+            out = minimize(residual_data, params, args=(data_in[i],), method='leastsq')
+            r_cov_in = out.covar
 
-            fluxes = [out.params[f'flux_{z}'].value for z in range(len(flux_init))]
-            plt.plot(range(len(fluxes[:-1])), fluxes[:-1], color='black',
-                     label='Fit')
-            plt.show()
-
-            if cov is None:
-                print("Covariance matrix could not be estimated. Try different method.")
-                break
-
-            stds = np.sqrt(np.diag(cov))
-
-            fluxes = [out.params[f'flux_{i}'].value for i in range(len(flux_init))]
+            fluxes = np.array([out.params[f'flux_{i}'].value for i in range(len(flux_init))])
             posx = out.params['pos_x'].value
             posy = out.params['pos_y'].value
 
-            flux_err = [stds[i] for i in range(len(flux_init))]
+            if r_cov_in is None:
+                print("Covariance matrix could not be estimated. Try different method.")
+                rc_spectrum_out.collection.append(
+                    SpectrumResource(
+                        name='',
+                        spectral_irradiance=torch.tensor(fluxes),
+                        wavelength_bin_centers=torch.tensor(wavelengths),
+                        wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
+                    )
+                )
+                break
+
+            stds = np.sqrt(np.diag(r_cov_in))
+
+            flux_err = np.array([stds[i] for i in range(len(flux_init))])
             posx_err = stds[-2]
             posy_err = stds[-1]
 
-            self.spectrum_out.spectra.append(
-                Spectrum(fluxes, flux_err, flux_err, config.phringe.get_wavelength_bin_centers(as_numpy=False),
-                         config.phringe.get_wavelength_bin_widths(as_numpy=False)))
-
-            # best_fit = get_model(xdata, out.params['pos_x'].value, out.params['pos_y'].value,
-            #                      *[out.params[f'flux_{i}'].value for i in range(len(flux_real))])
-            # Plot best flux and snr in a 2x1 grid
-            # flux_init = flux_init.cpu().numpy()
-            # plt.subplot(2, 1, 1)
-            # plt.plot(flux_init[:-1], linestyle='dashed', label='True', color='black')
-            # plt.errorbar(range(len(fluxes[:-1])), fluxes[:-1], yerr=flux_err[:-1], fmt='o', color='black',
-            #              label='Fit')
-            # plt.plot(range(len(fluxes[:-1])), fluxes[:-1], fmt='o', color='black',
-            #          label='Fit')
-            # plt.fill_between(
-            #     range(len(flux_init[:-1])),
-            #     np.array(flux_init[:-1]) - np.array(flux_err[:-1]),
-            #     np.array(flux_init[:-1]) + np.array(flux_err[:-1]),
-            #     color="k", alpha=0.2, label='1-$\sigma$'
-            # )
-            # plt.legend()
-            # plt.ylim(0, 1e6)
-            #
-            # # snr
-            # bins = config.phringe._director._wavelength_bin_widths.cpu().numpy()[:-1]
-            # snr = fluxes / np.array(flux_err)
-            # snr_total = np.round(np.sqrt(np.sum(snr ** 2)), 1)
-            #
-            # plt.subplot(2, 1, 2)
-            # plt.step(bins, snr[:-1], where='mid')
-            # plt.title(f'SNR: {snr_total}')
-            #
-            # plt.tight_layout()
-            # plt.show()
+            rc_spectrum_out.collection.append(
+                SpectrumResource(
+                    name='',
+                    spectral_irradiance=torch.tensor(fluxes),
+                    wavelength_bin_centers=torch.tensor(wavelengths),
+                    wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
+                    err_low=torch.tensor(flux_err),
+                    err_high=torch.tensor(flux_err)
+                )
+            )
 
         print('Done')
-        return self.spectrum_out
+        return rc_spectrum_out

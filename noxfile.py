@@ -54,7 +54,7 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
         for bindir in (repr(session.bin), shlex.quote(session.bin))
     ]
 
-    virtualenv = session.env.get("VIRTUAL_ENV")
+    virtualenv = session.env.get_content("VIRTUAL_ENV")
     if virtualenv is None:
         return
 

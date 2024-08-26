@@ -8,20 +8,26 @@ from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.config_resource import ConfigResource
 from lifesimmc.core.resources.coordinate_resource import CoordinateResource
 from lifesimmc.core.resources.image_resource import ImageResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource
+from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
 from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
-from lifesimmc.util.helpers import Spectrum
 
 
 class AnalyticalMLEModule(BaseModule):
-    def __init__(self, r_config_in: str, r_data_in: str, r_template_in: str, r_image_out: str, r_spectrum_out: str,
-                 r_coordinate_out: str):
-        self.config_in = r_config_in
-        self.data_in = r_data_in
-        self.template_in = r_template_in
-        self.image_out = ImageResource(r_image_out)
-        self.spectrum_out = SpectrumResource(r_spectrum_out)
-        self.coordinate_out = CoordinateResource(r_coordinate_out)
+    def __init__(
+            self,
+            n_config_in: str,
+            n_data_in: str,
+            n_template_in: str,
+            n_image_out: str,
+            n_spectrum_out: str,
+            n_coordinate_out: str
+    ):
+        self.n_config_in = n_config_in
+        self.n_data_in = n_data_in
+        self.n_template_in = n_template_in
+        self.n_image_out = n_image_out
+        self.n_spectrum_out = n_spectrum_out
+        self.n_coordinate_out = n_coordinate_out
 
     def _calculate_maximum_likelihood(self, data: Tensor, templates: list, config: ConfigResource) -> tuple:
         """Calculate the maximum likelihood estimate for the flux in units of photons at the position of the maximum of
@@ -46,9 +52,9 @@ class AnalyticalMLEModule(BaseModule):
         for index_x, index_y in product(range(config.simulation.grid_size), range(config.simulation.grid_size)):
 
             template = \
-                [template for template in templates if template.ix == index_x and template.iy == index_y][
+                [template for template in templates if template.x_index == index_x and template.y_index == index_y][
                     0]
-            template_data = template.data.to(config.phringe._director._device)
+            template_data = template.get_data().to(config.phringe._director._device)[:, :, :, 0, 0]
             # template_data = torch.einsum('ijk, ij->ijk', template.data,
             #                              1 / torch.sqrt(torch.mean(template.data ** 2, axis=2)))
 
@@ -128,52 +134,62 @@ class AnalyticalMLEModule(BaseModule):
             index_x, index_y = get_indices_of_maximum_of_2d_array(cost_functions[index_output])
             optimum_flux_at_maximum[index_output] = optimum_fluxes[index_output, index_x, index_y]
             template = \
-                [template for template in templates if template.ix == index_x and template.iy == index_y][
+                [template for template in templates if template.x_index == index_x and template.y_index == index_y][
                     0]
-            x, y = template.x, template.y
+            x, y = template.x_coord, template.y_coord
             coordinates.append((x, y))
 
         return optimum_flux_at_maximum, coordinates
 
-    def apply(self, resources: list[BaseResource]) -> SpectrumResource:
+    def apply(self, resources: list[BaseResource]) -> tuple[
+        SpectrumResourceCollection,
+        ImageResource,
+        CoordinateResource
+    ]:
+        """Perform analytical MLE on a grid of templates to crate a cost function map/image. For each grid point
+        estimate the flux and return the flux of the grid point with the maximum of the cost function.
 
+        :param resources: The resources to apply the module to
+        :return: The resource
+        """
         print('Performing analytical MLE...')
 
-        config = self.get_resource_from_name(self.config_in)
-        data = self.get_resource_from_name(self.data_in).get_data()
-        templates = self.get_resource_from_name(self.template_in).get_templates()
+        r_config_in = self.get_resource_from_name(self.n_config_in)
+        data_in = self.get_resource_from_name(self.n_data_in).get_data()
+        templates_in = self.get_resource_from_name(self.n_template_in).collection
 
-        cost_functions, optimum_fluxes = self._calculate_maximum_likelihood(data, templates, config)
+        cost_functions, optimum_fluxes = self._calculate_maximum_likelihood(data_in, templates_in, r_config_in)
 
         # Get the optimum flux at the position of the maximum of the cost function
         optimum_flux_at_maximum, coordinates = self._get_optimum_flux_at_cost_function_maximum(
             cost_functions,
             optimum_fluxes,
-            config,
-            templates
+            r_config_in,
+            templates_in
         )
 
-        # TODO: for all differential outputs
-        self.image_out.image = cost_functions
+        r_image_out = ImageResource(self.n_image_out)
+        r_image_out.image = cost_functions
+
+        rc_spectrum_out = SpectrumResourceCollection(self.n_spectrum_out)
 
         for index_output in range(len(optimum_flux_at_maximum)):
-            spectrum = Spectrum(
-                optimum_flux_at_maximum,
-                None,
-                None,
-                config.phringe.get_wavelength_bin_centers(as_numpy=False),
-                config.phringe.get_wavelength_bin_widths(as_numpy=False)
+            spectrum = SpectrumResource(
+                '',
+                optimum_flux_at_maximum[index_output],
+                r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False),
+                r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False)
             )
-            self.spectrum_out.spectra.append(spectrum)
+            rc_spectrum_out.collection.append(spectrum)
 
-        self.coordinate_out.coordinates = coordinates
+        r_coordinates_out = CoordinateResource(self.n_coordinate_out, x=coordinates[0][0], y=coordinates[0][1])
 
         # plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')
         # plt.colorbar()
         # plt.show()
         #
-        # plt.plot(self.spectrum_out.spectral_flux_density[0])
+        # plt.plot(optimum_flux_at_maximum[0])
         # plt.show()
 
         print('Done')
-        return self.spectrum_out, self.image_out, self.coordinate_out
+        return rc_spectrum_out, r_image_out, r_coordinates_out

@@ -1,5 +1,7 @@
+from typing import Union
+
 from lifesimmc.core.modules.base_module import BaseModule
-from lifesimmc.core.resources.base_resource import BaseResource
+from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
 
 
 class Pipeline:
@@ -20,7 +22,7 @@ class Pipeline:
         module.gpu = self.gpu
         self._modules.append(module)
 
-    def get_resource(self, name: str) -> BaseResource:
+    def get_resource(self, name: str) -> Union[BaseResource, BaseResourceCollection, None]:
         """Get a resource by name.
 
         :param name: The name of the resource
@@ -29,6 +31,7 @@ class Pipeline:
         for resource in self._resources:
             if resource.name == name:
                 return resource
+        print(f"Resource {name} not found.")
         return None
 
     def run(self):
