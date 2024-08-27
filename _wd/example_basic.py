@@ -25,7 +25,7 @@ pipeline.add_module(module)
 module = DataGenerationModule(
     n_config_in='conf',
     n_data_out='data',
-    n_spectrum_out='speci',
+    n_flux_out='speci',
     write_to_fits=False,
     create_copy=False
 )
@@ -66,7 +66,7 @@ module = AnalyticalMLEModule(
     n_data_in='dataw',
     n_template_in='tempw',
     n_image_out='imag',
-    n_spectrum_out='speca'
+    n_flux_out='speca'
 )
 pipeline.add_module(module)
 
@@ -75,7 +75,7 @@ module = NumericalMLEModule(
     n_config_in='conf',
     n_data_in='dataw',
     n_cov_in='cov',
-    n_spectrum_out='specn'
+    n_flux_out='specn'
 )
 # pipeline.add_module(module)
 
@@ -84,8 +84,8 @@ module = MCMCModule(
     n_config_in='conf',
     n_data_in='dataw',
     n_cov_in='cov',
-    n_spectrum_in='speci',
-    n_spectrum_out='specm'
+    n_flux_in='speci',
+    n_flux_out='specm'
 )
 # pipeline.add_module(module)
 
@@ -98,7 +98,7 @@ module = NeymanPearsonTestModule(
     n_config_in='conf',
     n_cov_in='cov',
     n_data_in='dataw',
-    n_spectrum_in='speci',
+    n_flux_in='speci',
     n_test_out='testn',
     pfa=0.05
 )

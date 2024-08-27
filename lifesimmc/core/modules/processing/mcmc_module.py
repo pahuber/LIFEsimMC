@@ -3,11 +3,10 @@ import sys
 import emcee
 import numpy as np
 import torch
-from matplotlib import pyplot as plt
 
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.coordinate_resource import CoordinateResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
+from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
 
 sys.path.append("/home/huberph/lifesimmc")
 from lifesimmc.core.modules.base_module import BaseModule
@@ -21,9 +20,9 @@ class MCMCModule(BaseModule):
             n_config_in: str,
             n_data_in: str,
             n_coordinate_in: str,
-            n_spectrum_in: str,
+            n_flux_in: str,
             n_coordinate_out: str,
-            n_spectrum_out: str,
+            n_flux_out: str,
             walkers_multiplier: int = 4,
             steps: int = 100,
             n_cov_in: str = None):
@@ -31,9 +30,9 @@ class MCMCModule(BaseModule):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_coordinate_in = n_coordinate_in
-        self.n_spectrum_in = n_spectrum_in
+        self.n_flux_in = n_flux_in
         self.n_coordinate_out = n_coordinate_out
-        self.n_spectrum_out = n_spectrum_out
+        self.n_flux_out = n_flux_out
         self.n_walkers_multiplier = walkers_multiplier
         self.n_steps = steps
         self.n_cov_in = n_cov_in
@@ -59,9 +58,9 @@ class MCMCModule(BaseModule):
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy().astype(np.float64)
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        rc_spectrum_in = self.get_resource_from_name(self.n_spectrum_in)
-        rc_spectrum_out = SpectrumResourceCollection(
-            self.n_spectrum_out,
+        rc_flux_in = self.get_resource_from_name(self.n_flux_in)
+        rc_flux_out = FluxResourceCollection(
+            self.n_flux_out,
             'Collection of SpectrumResources, one for each differential output'
         )
         r_coordinates_out = CoordinateResource(self.n_coordinate_out)
@@ -138,7 +137,7 @@ class MCMCModule(BaseModule):
         i_cov_sqrt = i_cov_sqrt.cpu().numpy()
 
         # Define MCMC
-        flux_init = rc_spectrum_in.collection[
+        flux_init = rc_flux_in.collection[
             0].spectral_irradiance.cpu().numpy().tolist()  # TODO: specify which spectrum to use
 
         r_coordinates_in = self.get_resource_from_name(self.n_coordinate_in)
@@ -160,6 +159,7 @@ class MCMCModule(BaseModule):
             # Define data uncertainty
             # yerr = np.ones(len(data)) * 1.5 * np.max(abs(get_model(time, *initial_guess)))
             yerr = np.ones(len(data_in)) * 0.1 * np.max(abs(data_in))
+            yerr = np.var(data_in, axis=1)
             # yerr = 0.8 * (data - get_model(time, *initial_guess))
             # print(yerr.shape)
             # yerr = 0.1 * data
@@ -204,14 +204,14 @@ class MCMCModule(BaseModule):
 
             # Plot chains
             samples = sampler.get_chain()
-            fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
+            # fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
             labels = ["flux", "pos x", "pos y"]
-            for i in range(ndim):
-                ax = axes[i]
-                # ax.plot(samples[:, :, i], "k", alpha=0.3)
-                # ax.set_xlim(0, len(samples))
-                # ax.set_ylabel(labels[i])
-                # ax.yaxis.set_label_coords(-0.1, 0.5)
+            # for i in range(ndim):
+            # ax = axes[i]
+            # ax.plot(samples[:, :, i], "k", alpha=0.3)
+            # ax.set_xlim(0, len(samples))
+            # ax.set_ylabel(labels[i])
+            # ax.yaxis.set_label_coords(-0.1, 0.5)
             # axes[-1].set_xlabel("step number")
             # plt.show()
             # plt.close()
@@ -260,15 +260,15 @@ class MCMCModule(BaseModule):
             # best = np.abs(best)
             err_low = np.abs(err_low)
             err_high = np.abs(err_high)
-            best_flux = best[3:]
-            err_low_flux = err_low[3:]
-            err_high_flux = err_high[3:]
+            best_flux = best[2:]
+            err_low_flux = err_low[2:]
+            err_high_flux = err_high[2:]
             best_pos = best[:2]
             err_low_pos = err_low[:2]
             err_high_pos = err_high[:2]
 
-            rc_spectrum_out.collection.append(
-                SpectrumResource(
+            rc_flux_out.collection.append(
+                FluxResource(
                     name='',
                     spectral_irradiance=torch.tensor(best_flux),
                     err_low=torch.tensor(err_low_flux),
@@ -382,4 +382,4 @@ class MCMCModule(BaseModule):
         # return context
 
         print('Done')
-        return rc_spectrum_out, r_coordinates_out
+        return rc_flux_out, r_coordinates_out

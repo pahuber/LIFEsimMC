@@ -3,7 +3,7 @@ from typing import Union
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
+from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
 
 
 class DataGenerationModule(BaseModule):
@@ -11,7 +11,7 @@ class DataGenerationModule(BaseModule):
 
         :param n_config_in: The name of the input configuration resource
         :param n_data_out: The name of the output data resource
-        :param n_spectrum_out: The name of the output spectrum resource collection
+        :param n_flux_out: The name of the output spectrum resource collection
         :param write_to_fits: Whether to write the data to a FITS file
         :param create_copy: Whether to create a copy of the configuration and spectrum files
     """
@@ -20,7 +20,7 @@ class DataGenerationModule(BaseModule):
             self,
             n_config_in: str,
             n_data_out: str,
-            n_spectrum_out: Union[str, tuple[str]],
+            n_flux_out: Union[str, tuple[str]],
             write_to_fits: bool = True,
             create_copy: bool = True
     ):
@@ -28,18 +28,18 @@ class DataGenerationModule(BaseModule):
 
         :param n_config_in: The name of the input configuration resource
         :param n_data_out: The name of the output data resource
-        :param n_spectrum_out: The name of the output spectrum resource collection
+        :param n_flux_out: The name of the output spectrum resource collection
         :param write_to_fits: Whether to write the data to a FITS file
         :param create_copy: Whether to create a copy of the configuration and spectrum files
         """
         super().__init__()
         self.config_in = n_config_in
         self.n_data_out = n_data_out
-        self.n_spectrum_out = n_spectrum_out
+        self.n_flux_out = n_flux_out
         self.write_to_fits = write_to_fits
         self.create_copy = create_copy
 
-    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, SpectrumResourceCollection]:
+    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, FluxResourceCollection]:
         """Use PHRINGE to generate synthetic data.
 
         :param resources: The resources to apply the module to
@@ -63,14 +63,14 @@ class DataGenerationModule(BaseModule):
         r_data_out = DataResource(self.n_data_out)
         r_data_out.set_data(r_config_in.phringe.get_data(as_numpy=False))
 
-        rc_spectrum_out = SpectrumResourceCollection(
-            name=self.n_spectrum_out,
+        rc_flux_out = FluxResourceCollection(
+            name=self.n_flux_out,
             description='Collection of SpectrumResources; one for each planet in the scene'
         )
 
         for planet in r_config_in.phringe._director._planets:
-            rc_spectrum_out.collection.append(
-                SpectrumResource(
+            rc_flux_out.collection.append(
+                FluxResource(
                     name='',
                     spectral_irradiance=planet.spectral_flux_density,
                     wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False),
@@ -80,4 +80,4 @@ class DataGenerationModule(BaseModule):
             )
 
         print('Done')
-        return r_data_out, rc_spectrum_out
+        return r_data_out, rc_flux_out

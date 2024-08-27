@@ -14,7 +14,7 @@ class NeymanPearsonTestModule(BaseModule):
     :param n_config_in: Name of the input configuration resource.
     :param n_cov_in: Name of the input covariance resource.
     :param n_data_in: Name of the input data resource.
-    :param n_spectrum_in: Name of the input spectrum resource.
+    :param n_flux_in: Name of the input spectrum resource.
     :param n_test_out: Name of the output test resource.
     :param pfa: Probability of false alarm.
     """
@@ -24,7 +24,7 @@ class NeymanPearsonTestModule(BaseModule):
             n_config_in: str,
             n_coordinate_in: str,
             n_data_in: str,
-            n_spectrum_in: str,
+            n_flux_in: str,
             n_test_out: str,
             pfa: float,
             n_cov_in: str = None
@@ -35,7 +35,7 @@ class NeymanPearsonTestModule(BaseModule):
         :param n_cov_in: Name of the input covariance resource.
         :param n_coordinate_in: Name of the input coordinate resource.
         :param n_data_in: Name of the input data resource.
-        :param n_spectrum_in: Name of the input spectrum resource.
+        :param n_flux_in: Name of the input spectrum resource.
         :param n_test_out: Name of the output test resource.
         :param pfa: Probability of false alarm.
         """
@@ -43,7 +43,7 @@ class NeymanPearsonTestModule(BaseModule):
         self.n_cov_in = n_cov_in
         self.n_coordinate_in = n_coordinate_in
         self.n_data_in = n_data_in
-        self.n_spectrum_in = n_spectrum_in
+        self.n_flux_in = n_flux_in
         self.n_test_out = n_test_out
         self.pfa = pfa
 
@@ -59,7 +59,7 @@ class NeymanPearsonTestModule(BaseModule):
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
         r_coordinate_in = self.get_resource_from_name(self.n_coordinate_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        flux_in = self.get_resource_from_name(self.n_spectrum_in).spectra[0].spectral_irradiance.cpu().numpy()
+        flux_in = self.get_resource_from_name(self.n_flux_in).collection[0].spectral_irradiance.cpu().numpy()
         num_of_diff_outputs = len(data_in)
 
         if r_cov_in is not None:

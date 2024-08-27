@@ -6,7 +6,7 @@ from lmfit import minimize, Parameters
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
+from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
 
 
 class NumericalMLEModule(BaseModule):
@@ -15,22 +15,22 @@ class NumericalMLEModule(BaseModule):
             n_config_in: str,
             n_data_in: str,
             n_coordinate_in: str,
-            n_spectrum_out: str,
+            n_flux_out: str,
             n_cov_in: Union[str, None] = None):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_coordinate_in = n_coordinate_in
         self.n_cov_in = n_cov_in
-        self.n_spectrum_out = n_spectrum_out
+        self.n_flux_out = n_flux_out
 
-    def apply(self, resources: list[BaseResource]) -> SpectrumResourceCollection:
+    def apply(self, resources: list[BaseResource]) -> FluxResourceCollection:
         print('Performing numerical MLE...')
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy()
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        rc_spectrum_out = SpectrumResourceCollection(
-            self.n_spectrum_out,
+        rc_flux_out = FluxResourceCollection(
+            self.n_flux_out,
             'Collection of SpectrumResources, one for each differential output'
         )
 
@@ -85,8 +85,8 @@ class NumericalMLEModule(BaseModule):
 
             if r_cov_in is None:
                 print("Covariance matrix could not be estimated. Try different method.")
-                rc_spectrum_out.collection.append(
-                    SpectrumResource(
+                rc_flux_out.collection.append(
+                    FluxResource(
                         name='',
                         spectral_irradiance=torch.tensor(fluxes),
                         wavelength_bin_centers=torch.tensor(wavelengths),
@@ -101,8 +101,8 @@ class NumericalMLEModule(BaseModule):
             posx_err = stds[-2]
             posy_err = stds[-1]
 
-            rc_spectrum_out.collection.append(
-                SpectrumResource(
+            rc_flux_out.collection.append(
+                FluxResource(
                     name='',
                     spectral_irradiance=torch.tensor(fluxes),
                     wavelength_bin_centers=torch.tensor(wavelengths),
@@ -113,4 +113,4 @@ class NumericalMLEModule(BaseModule):
             )
 
         print('Done')
-        return rc_spectrum_out
+        return rc_flux_out

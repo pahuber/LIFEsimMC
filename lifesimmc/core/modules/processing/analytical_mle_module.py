@@ -7,8 +7,8 @@ from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.config_resource import ConfigResource
 from lifesimmc.core.resources.coordinate_resource import CoordinateResource
+from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
 from lifesimmc.core.resources.image_resource import ImageResource
-from lifesimmc.core.resources.spectrum_resource import SpectrumResource, SpectrumResourceCollection
 from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
 
 
@@ -19,14 +19,14 @@ class AnalyticalMLEModule(BaseModule):
             n_data_in: str,
             n_template_in: str,
             n_image_out: str,
-            n_spectrum_out: str,
+            n_flux_out: str,
             n_coordinate_out: str
     ):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_image_out = n_image_out
-        self.n_spectrum_out = n_spectrum_out
+        self.n_flux_out = n_flux_out
         self.n_coordinate_out = n_coordinate_out
 
     def _calculate_maximum_likelihood(self, data: Tensor, templates: list, config: ConfigResource) -> tuple:
@@ -142,7 +142,7 @@ class AnalyticalMLEModule(BaseModule):
         return optimum_flux_at_maximum, coordinates
 
     def apply(self, resources: list[BaseResource]) -> tuple[
-        SpectrumResourceCollection,
+        FluxResourceCollection,
         ImageResource,
         CoordinateResource
     ]:
@@ -171,19 +171,19 @@ class AnalyticalMLEModule(BaseModule):
         r_image_out = ImageResource(self.n_image_out)
         r_image_out.image = cost_functions
 
-        rc_spectrum_out = SpectrumResourceCollection(
-            self.n_spectrum_out,
+        rc_flux_out = FluxResourceCollection(
+            self.n_flux_out,
             'Collection of SpectrumResources, one for each differential output'
         )
 
         for index_output in range(len(optimum_flux_at_maximum)):
-            spectrum = SpectrumResource(
+            flux = FluxResource(
                 '',
                 optimum_flux_at_maximum[index_output],
                 r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False),
                 r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False)
             )
-            rc_spectrum_out.collection.append(spectrum)
+            rc_flux_out.collection.append(flux)
 
         # TODO: Output coordinates for each differential output
         r_coordinates_out = CoordinateResource(self.n_coordinate_out, x=coordinates[0][0], y=coordinates[0][1])
@@ -196,4 +196,4 @@ class AnalyticalMLEModule(BaseModule):
         # plt.show()
 
         print('Done')
-        return rc_spectrum_out, r_image_out, r_coordinates_out
+        return rc_flux_out, r_image_out, r_coordinates_out

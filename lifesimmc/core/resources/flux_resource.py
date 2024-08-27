@@ -6,10 +6,10 @@ from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCol
 
 
 @dataclass
-class SpectrumResource(BaseResource):
-    """Class representation of a spectrum resource.
+class FluxResource(BaseResource):
+    """Class representation of a flux resource.
 
-    :param spectral_irradiance: Spectral irradiance of the spectrum.
+    :param spectral_irradiance: Spectral irradiance.
     :param err_low: Lower bound of the error.
     :param err_high: Upper bound of the error.
     :param wavelength_bin_centers: Wavelength bin centers.
@@ -24,9 +24,9 @@ class SpectrumResource(BaseResource):
 
 
 @dataclass
-class SpectrumResourceCollection(BaseResourceCollection):
-    """Class representation of a collection of spectrum resources.
+class FluxResourceCollection(BaseResourceCollection):
+    """Class representation of a collection of flux resources.
 
-    :param collection: The collection of spectrum resources.
+    :param collection: The collection of flux resources.
     """
-    collection: list[SpectrumResource] = field(default_factory=list)
+    collection: list[FluxResource] = field(default_factory=list)
