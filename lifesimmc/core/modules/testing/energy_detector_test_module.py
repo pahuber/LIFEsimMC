@@ -33,7 +33,10 @@ class EnergyDetectorTestModule(BaseModule):
         print("Performing energy detector test...")
 
         data = self.get_resource_from_name(self.n_data_in).get_data()
-        rc_test_out = TestResourceCollection(self.n_test_out)
+        rc_test_out = TestResourceCollection(
+            self.n_test_out,
+            'Collection of TestResources, one for each differential output'
+        )
         num_of_diff_outputs = len(data)
 
         for i in range(num_of_diff_outputs):

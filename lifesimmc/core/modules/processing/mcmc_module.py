@@ -208,11 +208,11 @@ class MCMCModule(BaseModule):
             labels = ["flux", "pos x", "pos y"]
             for i in range(ndim):
                 ax = axes[i]
-                ax.plot(samples[:, :, i], "k", alpha=0.3)
-                ax.set_xlim(0, len(samples))
+                # ax.plot(samples[:, :, i], "k", alpha=0.3)
+                # ax.set_xlim(0, len(samples))
                 # ax.set_ylabel(labels[i])
                 # ax.yaxis.set_label_coords(-0.1, 0.5)
-            axes[-1].set_xlabel("step number")
+            # axes[-1].set_xlabel("step number")
             # plt.show()
             # plt.close()
 
@@ -273,7 +273,7 @@ class MCMCModule(BaseModule):
                     spectral_irradiance=torch.tensor(best_flux),
                     err_low=torch.tensor(err_low_flux),
                     err_high=torch.tensor(err_high_flux),
-                    wavelength_bin_centers=torch.tensor(self.wavelengths),
+                    wavelength_bin_centers=self.wavelengths,
                     wavelength_bin_widths=r_config_in.phringe._director._wavelength_bin_widths
                 )
             )
