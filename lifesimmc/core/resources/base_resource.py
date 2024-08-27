@@ -18,5 +18,5 @@ class BaseResourceCollection:
     :param collection: The collection of resources
     """
     name: str
-    description: str = None
+    description: str
     collection: list[BaseResource] = field(default_factory=list)

@@ -60,7 +60,10 @@ class MCMCModule(BaseModule):
         data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy().astype(np.float64)
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
         rc_spectrum_in = self.get_resource_from_name(self.n_spectrum_in)
-        rc_spectrum_out = SpectrumResourceCollection(self.n_spectrum_out)
+        rc_spectrum_out = SpectrumResourceCollection(
+            self.n_spectrum_out,
+            'Collection of SpectrumResources, one for each differential output'
+        )
         r_coordinates_out = CoordinateResource(self.n_coordinate_out)
 
         if r_cov_in is not None:
@@ -175,17 +178,17 @@ class MCMCModule(BaseModule):
             # pos = [np.array(initial_guess) + 1e-8 * np.random.randn(ndim) for i in range(nwalkers)]
 
             # Plot initial guess and data in two imshow subplots that are on top of each other
-            plt.subplot(2, 1, 1)
-            plt.imshow(get_model(time, *initial_guess), label='Initial guess')
-            plt.colorbar()
-            plt.title('Initial guess')
-            plt.subplot(2, 1, 2)
-            plt.imshow(data_in, label='Data')
-            plt.colorbar()
-            plt.title('Data')
-            plt.savefig('init.pdf')
-            plt.show()
-            plt.close()
+            # plt.subplot(2, 1, 1)
+            # plt.imshow(get_model(time, *initial_guess), label='Initial guess')
+            # plt.colorbar()
+            # plt.title('Initial guess')
+            # plt.subplot(2, 1, 2)
+            # plt.imshow(data_in, label='Data')
+            # plt.colorbar()
+            # plt.title('Data')
+            # plt.savefig('init.pdf')
+            # plt.show()
+            # plt.close()
 
             # Run MCMC
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(time, data_in, yerr))
@@ -210,8 +213,8 @@ class MCMCModule(BaseModule):
                 # ax.set_ylabel(labels[i])
                 # ax.yaxis.set_label_coords(-0.1, 0.5)
             axes[-1].set_xlabel("step number")
-            plt.show()
-            plt.close()
+            # plt.show()
+            # plt.close()
 
             # Flatten samples
             # discard = int(nsteps * 0.2)
@@ -299,22 +302,22 @@ class MCMCModule(BaseModule):
             # print(err_high_flux)
 
             # # Plot data and fit
-            plt.subplot(3, 1, 1)
-            plt.imshow(get_model(time, *best), label='Fit', cmap='Greys')
-            plt.colorbar()
-            plt.title('Fit')
-            plt.subplot(3, 1, 2)
-            plt.imshow(data_in, label='Data')
-            plt.colorbar()
-            plt.title('Data')
-            plt.subplot(3, 1, 3)
-            plt.imshow(data_in - get_model(time, *best), label='Diff')
-            plt.colorbar()
-            plt.title('Diff')
-            plt.savefig('data_fit.pdf')
-            plt.show()
-            plt.savefig('data_fit.svg')
-            plt.close()
+            # plt.subplot(3, 1, 1)
+            # plt.imshow(get_model(time, *best), label='Fit', cmap='Greys')
+            # plt.colorbar()
+            # plt.title('Fit')
+            # plt.subplot(3, 1, 2)
+            # plt.imshow(data_in, label='Data')
+            # plt.colorbar()
+            # plt.title('Data')
+            # plt.subplot(3, 1, 3)
+            # plt.imshow(data_in - get_model(time, *best), label='Diff')
+            # plt.colorbar()
+            # plt.title('Diff')
+            # plt.savefig('data_fit.pdf')
+            # plt.show()
+            # plt.savefig('data_fit.svg')
+            # plt.close()
 
             # Plot data and true spectrum and error bars
             # wl = config.phringe.get_wavelength_bin_centers().cpu().numpy()
@@ -342,26 +345,26 @@ class MCMCModule(BaseModule):
             # plt.close()
 
             # Plot SNR
-            bins = r_config_in.phringe._director._wavelength_bin_widths.cpu().numpy()[:-1]
-            err_mean_flux = np.mean([err_low_flux, err_high_flux], axis=0)
-            snr = best_flux / err_mean_flux
-            snr2 = np.sqrt(np.asarray(best_flux) ** 2 / err_mean_flux)
-            snr3 = best_flux / np.sqrt(err_mean_flux)
-
-            snr_total = np.sqrt(np.sum(snr ** 2))
-            snr_total = np.sum(best_flux) / np.sqrt(np.sum(err_mean_flux ** 2))
-            snr_total2 = np.sqrt(np.sum(snr2 ** 2))
-            snr_total3 = np.sqrt(np.sum(snr3 ** 2))
-
-            plt.step(bins, snr, label='SNR')
-            # plt.plot(snr2, label='SNR2')
-            plt.title(f'SNR {snr_total}')
-            plt.xlabel('Wavelength ($\mu$m)')
-            plt.ylabel('SNR')
-            # plt.legend()
-            plt.savefig('snr.pdf')
-            plt.show()
-            plt.close()
+            # bins = r_config_in.phringe._director._wavelength_bin_widths.cpu().numpy()[:-1]
+            # err_mean_flux = np.mean([err_low_flux, err_high_flux], axis=0)
+            # snr = best_flux / err_mean_flux
+            # snr2 = np.sqrt(np.asarray(best_flux) ** 2 / err_mean_flux)
+            # snr3 = best_flux / np.sqrt(err_mean_flux)
+            #
+            # snr_total = np.sqrt(np.sum(snr ** 2))
+            # snr_total = np.sum(best_flux) / np.sqrt(np.sum(err_mean_flux ** 2))
+            # snr_total2 = np.sqrt(np.sum(snr2 ** 2))
+            # snr_total3 = np.sqrt(np.sum(snr3 ** 2))
+            #
+            # plt.step(bins, snr, label='SNR')
+            # # plt.plot(snr2, label='SNR2')
+            # plt.title(f'SNR {snr_total}')
+            # plt.xlabel('Wavelength ($\mu$m)')
+            # plt.ylabel('SNR')
+            # # plt.legend()
+            # plt.savefig('snr.pdf')
+            # plt.show()
+            # plt.close()
 
             # inds = np.random.randint(len(flat_samples), size=100)
             # for ind in inds:

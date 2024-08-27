@@ -57,7 +57,10 @@ class WhiteningModule(BaseModule):
             self.n_template_in).collection if self.n_template_in is not None else None
 
         r_data_out = DataResource(self.n_data_out) if self.n_data_out is not None else None
-        rc_template_out = TemplateResourceCollection(self.n_template_out) if self.n_template_out is not None else None
+        rc_template_out = TemplateResourceCollection(
+            self.n_template_out,
+            'Collection of TemplateResources, one for each point in the grid'
+        ) if self.n_template_out is not None else None
 
         if data_in is not None:
             for i in range(data_in.shape[0]):

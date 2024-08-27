@@ -171,7 +171,10 @@ class AnalyticalMLEModule(BaseModule):
         r_image_out = ImageResource(self.n_image_out)
         r_image_out.image = cost_functions
 
-        rc_spectrum_out = SpectrumResourceCollection(self.n_spectrum_out)
+        rc_spectrum_out = SpectrumResourceCollection(
+            self.n_spectrum_out,
+            'Collection of SpectrumResources, one for each differential output'
+        )
 
         for index_output in range(len(optimum_flux_at_maximum)):
             spectrum = SpectrumResource(
@@ -182,6 +185,7 @@ class AnalyticalMLEModule(BaseModule):
             )
             rc_spectrum_out.collection.append(spectrum)
 
+        # TODO: Output coordinates for each differential output
         r_coordinates_out = CoordinateResource(self.n_coordinate_out, x=coordinates[0][0], y=coordinates[0][1])
 
         # plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')

@@ -55,7 +55,10 @@ class TemplateGenerationModule(BaseModule):
             template_dir = Path(datetime.now().strftime("%Y%m%d_%H%M%S.%f"))
             template_dir.mkdir(parents=True, exist_ok=True)
 
-        rc_template_out = TemplateResourceCollection(self.n_template_out)
+        rc_template_out = TemplateResourceCollection(
+            self.n_template_out,
+            'Collection of TemplateResources, one for each point in the grid'
+        )
 
         # Swipe the planet position through every point in the grid and generate the data for each position
         print('Generating templates...')

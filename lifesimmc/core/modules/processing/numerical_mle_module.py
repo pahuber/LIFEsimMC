@@ -29,7 +29,10 @@ class NumericalMLEModule(BaseModule):
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy()
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        rc_spectrum_out = SpectrumResourceCollection(self.n_spectrum_out)
+        rc_spectrum_out = SpectrumResourceCollection(
+            self.n_spectrum_out,
+            'Collection of SpectrumResources, one for each differential output'
+        )
 
         if r_cov_in is not None:
             i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()

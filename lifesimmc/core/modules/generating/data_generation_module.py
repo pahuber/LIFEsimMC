@@ -64,9 +64,9 @@ class DataGenerationModule(BaseModule):
         r_data_out.set_data(r_config_in.phringe.get_data(as_numpy=False))
 
         rc_spectrum_out = SpectrumResourceCollection(
-            name=self.n_spectrum_out
+            name=self.n_spectrum_out,
+            description='Collection of SpectrumResources; one for each planet in the scene'
         )
-        rc_spectrum_out.description = 'List of SpectrumResources; one for each planet in the scene'
 
         for planet in r_config_in.phringe._director._planets:
             rc_spectrum_out.collection.append(

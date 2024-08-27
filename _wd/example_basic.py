@@ -90,16 +90,16 @@ module = MCMCModule(
 # pipeline.add_module(module)
 
 # Perform energy detector test
-module = EnergyDetectorTestModule(r_data_in='dataw', r_test_out='teste', pfa=0.05)
+module = EnergyDetectorTestModule(n_data_in='dataw', n_test_out='teste', pfa=0.05)
 pipeline.add_module(module)
 
 # Perform Neyman-Pearson test
 module = NeymanPearsonTestModule(
-    r_config_in='conf',
-    r_cov_in='cov',
-    r_data_in='dataw',
-    r_spectrum_in='speci',
-    r_test_out='testn',
+    n_config_in='conf',
+    n_cov_in='cov',
+    n_data_in='dataw',
+    n_spectrum_in='speci',
+    n_test_out='testn',
     pfa=0.05
 )
 pipeline.add_module(module)
