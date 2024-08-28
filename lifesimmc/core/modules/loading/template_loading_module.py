@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from lifesimmc.core.base_module import BaseModule
+from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.context import Context
 from lifesimmc.io.fits_reader import FITSReader
 from lifesimmc.util.helpers import Template
