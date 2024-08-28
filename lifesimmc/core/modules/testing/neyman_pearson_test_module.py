@@ -95,10 +95,10 @@ class NeymanPearsonTestModule(BaseModule):
                 y_pos,
                 flux_in
             )[i, :, :, 0, 0]).flatten()
-            xtx = (model.T.dot(model)) / ndim
+            xtx = (model.T.dot(model))  # / ndim
             # pfa = 0.0001
             xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)
-            test = (dataf @ model) / ndim
+            test = (dataf @ model)  # / ndim
 
             r_test_out = TestResource(
                 name='',

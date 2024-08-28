@@ -159,7 +159,8 @@ class MCMCModule(BaseModule):
             # Define data uncertainty
             # yerr = np.ones(len(data)) * 1.5 * np.max(abs(get_model(time, *initial_guess)))
             yerr = np.ones(len(data_in)) * 0.1 * np.max(abs(data_in))
-            yerr = np.var(data_in, axis=1)
+            yerr = np.sqrt(np.var(data_in, axis=1))
+            # print(yerr)
             # yerr = 0.8 * (data - get_model(time, *initial_guess))
             # print(yerr.shape)
             # yerr = 0.1 * data

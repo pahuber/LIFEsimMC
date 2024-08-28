@@ -43,7 +43,7 @@ class EnergyDetectorTestModule(BaseModule):
             dataf = data[i].flatten()
             ndim = dataf.numel()
 
-            test = (dataf @ dataf) / ndim
+            test = (dataf @ dataf)  # / ndim
             xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
 
             r_test_out = TestResource(

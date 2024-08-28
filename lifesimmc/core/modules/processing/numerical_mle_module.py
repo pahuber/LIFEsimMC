@@ -76,6 +76,7 @@ class NumericalMLEModule(BaseModule):
 
             i_cov_sqrt_i = i_cov_sqrt[i]
             self.i = i
+            # var_i = np.var(data_in[i])
             out = minimize(residual_data, params, args=(data_in[i],), method='leastsq')
             r_cov_in = out.covar
 
