@@ -100,7 +100,9 @@ class MCMCModule(BaseModule):
             # inv_sigma2 = 1.0 / (yerr ** 2 + model ** 2 * np.exp(2 * lnf))
             # return -0.5 * (np.sum((y - model) ** 2 * inv_sigma2 - np.log(inv_sigma2)))
 
-            return -0.5 * np.sum(np.einsum('ij, i -> ij', (y - model) ** 2, 1 / yerr ** 2))
+            # return -0.5 * np.sum(np.einsum('ij, i -> ij', (y - model) ** 2, 1 / yerr ** 2))
+            l = model.shape
+            return -0.5 * np.sum((y - model) ** 2)
 
             # return -0.5 * np.sum(((y - model) ** 2 / yerr ** 2))
 
@@ -146,6 +148,7 @@ class MCMCModule(BaseModule):
         initial_guess.extend(flux_init)
         ndim = len(initial_guess)
         nwalkers = self.n_walkers_multiplier * ndim
+        print(nwalkers)
         nsteps = self.n_steps
 
         spectra_flux_densities = []
@@ -206,13 +209,13 @@ class MCMCModule(BaseModule):
             # Plot chains
             samples = sampler.get_chain()
             # fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
-            labels = ["flux", "pos x", "pos y"]
+            # labels = ["flux", "pos x", "pos y"]
             # for i in range(ndim):
-            # ax = axes[i]
-            # ax.plot(samples[:, :, i], "k", alpha=0.3)
-            # ax.set_xlim(0, len(samples))
-            # ax.set_ylabel(labels[i])
-            # ax.yaxis.set_label_coords(-0.1, 0.5)
+            #     ax = axes[i]
+            #     ax.plot(samples[:, :, i], "k", alpha=0.3)
+            #     ax.set_xlim(0, len(samples))
+            #     # ax.set_ylabel(labels[i])
+            #     ax.yaxis.set_label_coords(-0.1, 0.5)
             # axes[-1].set_xlabel("step number")
             # plt.show()
             # plt.close()
@@ -246,6 +249,10 @@ class MCMCModule(BaseModule):
                 median = quantiles[1]
                 err_l1 = quantiles[0] - median
                 err_h1 = quantiles[2] - median
+                # median = quantiles[1]
+                # q = np.diff(quantiles)
+                # err_l1 = q[0]
+                # err_h1 = q[1]
 
                 # best1.append(median)
                 # err_low1.append(err_l1)
