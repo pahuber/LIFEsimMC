@@ -57,7 +57,8 @@ class DataGenerationModule(BaseModule):
             scene=r_config_in.scene,
             gpu=self.gpu,
             write_fits=self.write_to_fits,
-            create_copy=self.create_copy
+            create_copy=self.create_copy,
+            extra_memory=50
         )
 
         r_data_out = DataResource(self.n_data_out)
