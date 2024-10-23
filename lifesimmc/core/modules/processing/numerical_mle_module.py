@@ -6,6 +6,7 @@ from lmfit import minimize, Parameters
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
+from lifesimmc.core.resources.coordinate_resource import CoordinateResource
 from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
 
 
@@ -14,53 +15,64 @@ class NumericalMLEModule(BaseModule):
             self,
             n_config_in: str,
             n_data_in: str,
+            n_flux_in: str,
             n_coordinate_in: str,
             n_flux_out: str,
+            n_coordinate_out: str,
             n_cov_in: Union[str, None] = None):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
+        self.n_flux_in = n_flux_in
         self.n_coordinate_in = n_coordinate_in
         self.n_cov_in = n_cov_in
         self.n_flux_out = n_flux_out
+        self.n_coordinate_out = n_coordinate_out
 
-    def apply(self, resources: list[BaseResource]) -> FluxResourceCollection:
+    def apply(self, resources: list[BaseResource]) -> Union[FluxResourceCollection, CoordinateResource]:
         print('Performing numerical MLE...')
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy()
+        rc_flux_in = self.get_resource_from_name(self.n_flux_in)
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
+        r_coordinates_in = self.get_resource_from_name(self.n_coordinate_in)
         rc_flux_out = FluxResourceCollection(
             self.n_flux_out,
             'Collection of SpectrumResources, one for each differential output'
         )
+        r_coordinate_out = CoordinateResource(self.n_coordinate_out)
 
+        times = r_config_in.phringe.get_time_steps(as_numpy=True)
+        wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True)
+        wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True)
+
+        # Handle case where no covariance matrix is given, i.e. no whitening is performed
         if r_cov_in is not None:
             i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()
         else:
             diag_matrix = np.eye(data_in.shape[1])
             i_cov_sqrt = np.tile(diag_matrix, (data_in.shape[0], 1, 1))
 
-        times = r_config_in.phringe.get_time_steps(as_numpy=True)
-        wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True)
-        wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True)
-
-        r_coordinates_in = self.get_resource_from_name(self.n_coordinate_in)
-
+        # Set up parameters and initial conditions
         params = Parameters()
         posx = np.array(r_coordinates_in.x)
         posy = np.array(r_coordinates_in.y)
 
         # flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=True)
-        flux_init = np.ones(wavelengths.shape) * 1e5
-        hfov_max = np.sqrt(2) * r_config_in.phringe.get_field_of_view(as_numpy=True)[-1] / 2 / 14  # TODO: Check this
+        # flux_init = np.ones(wavelengths.shape) * 1e5
+        flux_init = rc_flux_in.collection[
+            0].spectral_irradiance.cpu().numpy().tolist()  # TODO: specify which spectrum to use
+
+        hfov_max = np.sqrt(2) * r_config_in.phringe.get_field_of_view(as_numpy=True)[-1] / 2  # TODO: /14 Check this
         # print(hfov_max)
 
         for i in range(len(flux_init)):
             # params.add(f'flux_{i}', value=0.9 * flux_init[i], min=0, max=1e7)
-            params.add(f'flux_{i}', value=5e5, min=0, max=1e7)
+            params.add(f'flux_{i}', value=5e5)  # , min=0, max=1e7)
         params.add('pos_x', value=posx, min=-hfov_max, max=hfov_max)
         params.add('pos_y', value=posy, min=-hfov_max, max=hfov_max)
 
+        # Perform MLE for each differential output
         for i in range(len(r_config_in.instrument.differential_outputs)):
             def residual_data(params, target):
                 posx = np.array(params['pos_x'].value)
@@ -72,6 +84,7 @@ class NumericalMLEModule(BaseModule):
                          r_config_in.phringe.get_template_numpy(times, wavelengths, wavelength_bin_widths, posx, posy,
                                                                 flux)[
                          self.i, :, :, 0, 0])
+                # return (model[:, model.shape[1] - target.shape[1]:] - target)
                 return model - target
 
             i_cov_sqrt_i = i_cov_sqrt[i]
@@ -113,5 +126,13 @@ class NumericalMLEModule(BaseModule):
                 )
             )
 
+            # update this for all outputs
+            r_coordinate_out.x = posx
+            r_coordinate_out.y = posy
+            r_coordinate_out.x_err_low = posx_err
+            r_coordinate_out.x_err_high = posx_err
+            r_coordinate_out.y_err_low = posy_err
+            r_coordinate_out.y_err_high = posy_err
+
         print('Done')
-        return rc_flux_out
+        return rc_flux_out, r_coordinate_out
