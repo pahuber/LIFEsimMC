@@ -1,5 +1,7 @@
 from typing import Union
 
+from tqdm import tqdm
+
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
@@ -23,7 +25,8 @@ class WhiteningModule(BaseModule):
             n_data_in: str = None,
             n_template_in: str = None,
             n_data_out: str = None,
-            n_template_out: str = None
+            n_template_out: str = None,
+            overwrite: bool = False
     ):
         """Constructor method.
 
@@ -33,6 +36,7 @@ class WhiteningModule(BaseModule):
         :param n_config_in: The name of the configuration resource
         :param n_data_out: The name of the output data resource
         :param n_template_out: The name of the output template resource
+        :param overwrite: Whether to overwrite/delete the existing resources
         """
         self.n_cov_in = n_cov_in
         self.n_data_in = n_data_in
@@ -40,6 +44,7 @@ class WhiteningModule(BaseModule):
         self.n_config_in = n_config_in
         self.n_data_out = n_data_out
         self.n_template_out = n_template_out
+        self.overwrite = overwrite
 
     def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
         """Whiten the data using the covariance matrix.
@@ -69,7 +74,8 @@ class WhiteningModule(BaseModule):
 
         if rc_template_out is not None:
             rc_template_out._templates = []
-            for template in templates_in:
+            for it in tqdm(range(len(templates_in))):
+                template = templates_in[it]
                 i_cov_sqrt = i_cov_sqrt.to(r_config_in.phringe._director._device)
                 template_data = template.get_data().to(r_config_in.phringe._director._device)
                 for i in range(len(template_data)):
@@ -84,6 +90,8 @@ class WhiteningModule(BaseModule):
                         _data=template_data
                     )
                 )
+                if self.overwrite:
+                    templates_in[it] = None
 
         print('Done')
         if self.n_data_out is not None and self.n_template_out is not None:
