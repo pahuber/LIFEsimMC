@@ -95,10 +95,12 @@ class NeymanPearsonTestModule(BaseModule):
                 y_pos,
                 flux_in
             )[i, :, :, 0, 0]).flatten()
-            xtx = (model.T.dot(model))  # / ndim
+            xtx = (model.T.dot(model))
+            dim = xtx.size
+            # xtx /= dim
+            test = (dataf @ model)
             # pfa = 0.0001
             xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)
-            test = (dataf @ model)  # / ndim
 
             r_test_out = TestResource(
                 name='',
@@ -116,6 +118,14 @@ class NeymanPearsonTestModule(BaseModule):
             plt.fill_between(zdet, norm.pdf(zdet, loc=0, scale=np.sqrt(xtx)), alpha=0.3,
                              label=f"$P_{{FA}}$")  # , hatch="//"
             # plt.fill_between(z[], )
+            plt.plot(z, norm.pdf(z, loc=xtx, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}}| \mathcal{{H}}_1$)")
+            plt.fill_between(zdet, norm.pdf(zdet, loc=xtx, scale=np.sqrt(xtx)), alpha=0.3, label=f"$P_{{Det}}$")
+            plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
+            plt.xlabel(f"$T_{{NP}}$")
+            plt.ylabel(f"$PDF(T_{{NP}})$")
+            plt.legend()
+            plt.show()
+
             plt.plot(z, norm.pdf(z, loc=xtx, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}}| \mathcal{{H}}_1$)")
             plt.fill_between(zdet, norm.pdf(zdet, loc=xtx, scale=np.sqrt(xtx)), alpha=0.3, label=f"$P_{{Det}}$")
             plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
