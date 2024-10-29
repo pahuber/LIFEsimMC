@@ -110,7 +110,7 @@ class NeymanPearsonTestModule(BaseModule):
             rc_test_out.collection.append(r_test_out)
             # print(f"Test statistic: {test}, Xsi: {xsi}")
 
-            z = np.linspace(-0.5 * xtx, 4 * xsi, 1000)
+            z = np.linspace(-0.5 * xtx, 10 * xsi, 1000)
             zdet = z[z > xsi]
             zndet = z[z < xsi]
             fig = plt.figure(dpi=150)
@@ -126,11 +126,21 @@ class NeymanPearsonTestModule(BaseModule):
             plt.legend()
             plt.show()
 
-            plt.plot(z, norm.pdf(z, loc=xtx, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}}| \mathcal{{H}}_1$)")
-            plt.fill_between(zdet, norm.pdf(zdet, loc=xtx, scale=np.sqrt(xtx)), alpha=0.3, label=f"$P_{{Det}}$")
-            plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
-            plt.xlabel(f"$T_{{NP}}$")
-            plt.ylabel(f"$PDF(T_{{NP}})$")
+            Pfas = np.logspace(-10, -0.2, 100)
+            Pdet_NP_Pfa = 1 - norm.cdf((np.sqrt(xtx) * norm.ppf(1 - Pfas) - xtx) / np.sqrt(xtx))
+            # Pdet_E_Pfa = 1 - ncx2.cdf(ncx2.ppf(1 - Pfas, ndim, 0.), ndim, xTx)
+            fig = plt.figure(dpi=150)
+            plt.plot(Pfas, Pdet_NP_Pfa, label=f"ROC($T_{{NP}}$)")
+            # plt.plot(Pfas, Pdet_E_Pfa, label=f"ROC($T_{{E}}$)")
+            plt.plot(Pfas, Pfas, color="gray", linestyle="--", label="Random")
+            plt.axvline(self.pfa, color="gray", label=f"$P_{{FA}}={self.pfa:.3f}$")
+            # plt.gca().set_aspect("equal")
+            # plt.xscale("log")
+            # plt.yscale("log")
+            plt.xlabel(f"$P_{{FA}}(\\xi)$")
+            plt.ylabel(f"$P_{{Det}}(\\xi)$")
+            plt.ylim(0, 1)
+            plt.xlim(0, None)
             plt.legend()
             plt.show()
 
