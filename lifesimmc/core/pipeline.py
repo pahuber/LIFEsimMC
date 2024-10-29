@@ -7,8 +7,9 @@ from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCol
 class Pipeline:
     """Class representation of the pipeline."""
 
-    def __init__(self, gpu: int = None):
+    def __init__(self, seed: int = None, gpu: int = None):
         """Constructor method."""
+        self.seed = seed
         self.gpu = gpu
         self._modules = []
         self._resources = []
@@ -19,6 +20,7 @@ class Pipeline:
         :param module: The module to add
         """
         module.resources = self._resources
+        module.seed = self.seed
         module.gpu = self.gpu
         self._modules.append(module)
 
