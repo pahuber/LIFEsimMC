@@ -9,6 +9,7 @@ class BaseModule(ABC):
 
     def __init__(self):
         """Constructor method."""
+        self.seed = None
         self.gpu = None
 
     def get_resource_from_name(self, name: str):
