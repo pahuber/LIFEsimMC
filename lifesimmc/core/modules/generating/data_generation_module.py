@@ -55,10 +55,11 @@ class DataGenerationModule(BaseModule):
             observation_mode=r_config_in.observation_mode,
             instrument=r_config_in.instrument,
             scene=r_config_in.scene,
+            seed=self.seed,
             gpu=self.gpu,
             write_fits=self.write_to_fits,
             create_copy=self.create_copy,
-            extra_memory=50
+            extra_memory=20
         )
 
         r_data_out = DataResource(self.n_data_out)
