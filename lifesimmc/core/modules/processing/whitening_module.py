@@ -56,7 +56,7 @@ class WhiteningModule(BaseModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_cov_in = self.get_resource_from_name(self.n_cov_in)
-        i_cov_sqrt = r_cov_in.i_cov_sqrt
+        # i_cov_sqrt = r_cov_in.i_cov_sqrt
         data_in = self.get_resource_from_name(self.n_data_in).get_data() if self.n_data_in is not None else None
         templates_in = self.get_resource_from_name(
             self.n_template_in).collection if self.n_template_in is not None else None
@@ -66,6 +66,8 @@ class WhiteningModule(BaseModule):
             self.n_template_out,
             'Collection of TemplateResources, one for each point in the grid'
         ) if self.n_template_out is not None else None
+
+        i_cov_sqrt = r_cov_in.i_cov_sqrt
 
         if data_in is not None:
             for i in range(data_in.shape[0]):

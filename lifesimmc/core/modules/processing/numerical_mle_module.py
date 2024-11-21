@@ -15,10 +15,10 @@ class NumericalMLEModule(BaseModule):
             self,
             n_config_in: str,
             n_data_in: str,
-            n_flux_in: str,
             n_coordinate_in: str,
             n_flux_out: str,
-            n_coordinate_out: str,
+            n_coordinate_out: str = None,
+            n_flux_in: str = None,
             n_cov_in: Union[str, None] = None):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
@@ -33,9 +33,10 @@ class NumericalMLEModule(BaseModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data().cpu().numpy()
-        rc_flux_in = self.get_resource_from_name(self.n_flux_in)
+        rc_flux_in = self.get_resource_from_name(self.n_flux_in) if self.n_flux_in is not None else None
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        r_coordinates_in = self.get_resource_from_name(self.n_coordinate_in)
+        r_coordinates_in = self.get_resource_from_name(
+            self.n_coordinate_in) if self.n_coordinate_in is not None else None
         rc_flux_out = FluxResourceCollection(
             self.n_flux_out,
             'Collection of SpectrumResources, one for each differential output'
@@ -53,22 +54,25 @@ class NumericalMLEModule(BaseModule):
             diag_matrix = np.eye(data_in.shape[1])
             i_cov_sqrt = np.tile(diag_matrix, (data_in.shape[0], 1, 1))
 
-        # Set up parameters and initial conditions
-        params = Parameters()
-        posx = np.array(r_coordinates_in.x)
-        posy = np.array(r_coordinates_in.y)
-
         # flux_init = config.phringe.get_spectral_flux_density('Earth', as_numpy=True)
         # flux_init = np.ones(wavelengths.shape) * 1e5
-        flux_init = rc_flux_in.collection[
-            0].spectral_irradiance.cpu().numpy().tolist()  # TODO: specify which spectrum to use
+        if rc_flux_in is not None:
+            flux_init = rc_flux_in.collection[
+                0].spectral_irradiance.cpu().numpy().tolist()  # TODO: specify which spectrum to use
+        else:
+            flux_init = np.ones(wavelengths.shape)
 
         hfov_max = np.sqrt(2) * r_config_in.phringe.get_field_of_view(as_numpy=True)[-1] / 2  # TODO: /14 Check this
         # print(hfov_max)
 
+        # Set up parameters and initial conditions
+        params = Parameters()
+        posx = np.array(r_coordinates_in.x) if r_coordinates_in is not None else np.array(hfov_max / 2)
+        posy = np.array(r_coordinates_in.y) if r_coordinates_in is not None else np.array(hfov_max / 2)
+
         for i in range(len(flux_init)):
             # params.add(f'flux_{i}', value=0.9 * flux_init[i], min=0, max=1e7)
-            params.add(f'flux_{i}', value=5e5)  # , min=0, max=1e7)
+            params.add(f'flux_{i}', value=flux_init[i])  # , min=0, max=1e7)
         params.add('pos_x', value=posx, min=-hfov_max, max=hfov_max)
         params.add('pos_y', value=posy, min=-hfov_max, max=hfov_max)
 
@@ -91,7 +95,7 @@ class NumericalMLEModule(BaseModule):
             self.i = i
             # var_i = np.var(data_in[i])
             out = minimize(residual_data, params, args=(data_in[i],), method='leastsq')
-            r_cov_in = out.covar
+            cov_out = out.covar
 
             fluxes = np.array([out.params[f'flux_{i}'].value for i in range(len(flux_init))])
             posx = out.params['pos_x'].value
@@ -109,7 +113,30 @@ class NumericalMLEModule(BaseModule):
                 )
                 break
 
-            stds = np.sqrt(np.diag(r_cov_in))
+            stds = np.sqrt(np.diag(cov_out))
+            ############
+            # cov_out = cov_out[:10, :10]
+            # plt.imshow(cov_out)
+            # plt.colorbar()
+            # plt.show()
+            # mean = np.zeros(cov_out.shape[0])
+            # data_fake = np.random.multivariate_normal(mean, cov_out, 1000)
+            # df = pd.DataFrame(data_fake)
+            # sns.pairplot(df)
+            # plt.show()
+            # std_dev = np.sqrt(np.diag(cov_out))
+            #
+            # # Step 2: Create the correlation matrix by dividing each element by the product of corresponding standard deviations
+            # correlation_matrix = cov_out / np.outer(std_dev, std_dev)
+            #
+            # # Step 3: Fill diagonal with 1s since correlation of a variable with itself is 1
+            # np.fill_diagonal(correlation_matrix, 1)
+            #
+            # plt.imshow(correlation_matrix)
+            # plt.colorbar()
+            # plt.show()
+
+            ############
 
             flux_err = np.array([stds[i] for i in range(len(flux_init))])
             posx_err = stds[-2]
@@ -122,7 +149,8 @@ class NumericalMLEModule(BaseModule):
                     wavelength_bin_centers=torch.tensor(wavelengths),
                     wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
                     err_low=torch.tensor(flux_err),
-                    err_high=torch.tensor(flux_err)
+                    err_high=torch.tensor(flux_err),
+                    cov=cov_out
                 )
             )
 

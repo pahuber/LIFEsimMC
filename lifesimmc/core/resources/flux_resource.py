@@ -21,6 +21,7 @@ class FluxResource(BaseResource):
     err_low: Tensor = None
     err_high: Tensor = None
     planet_name: str = None
+    cov: Tensor = None
 
 
 @dataclass

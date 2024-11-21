@@ -9,6 +9,8 @@ class TestResource(BaseResource):
     """
     test_statistic: float = None
     xsi: float = None
+    xtx: float = None
+    ndim: int = None
 
 
 @dataclass

@@ -20,7 +20,8 @@ class AnalyticalMLEModule(BaseModule):
             n_template_in: str,
             n_image_out: str,
             n_flux_out: str,
-            n_coordinate_out: str
+            n_coordinate_out: str,
+            use_true_position: bool = False
     ):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
@@ -28,6 +29,7 @@ class AnalyticalMLEModule(BaseModule):
         self.n_image_out = n_image_out
         self.n_flux_out = n_flux_out
         self.n_coordinate_out = n_coordinate_out
+        self.use_true_position = use_true_position
 
     def _calculate_maximum_likelihood(self, data: Tensor, templates: list, config: ConfigResource) -> tuple:
         """Calculate the maximum likelihood estimate for the flux in units of photons at the position of the maximum of
@@ -131,13 +133,34 @@ class AnalyticalMLEModule(BaseModule):
         coordinates = []
 
         for index_output in range(len(optimum_flux_at_maximum)):
-            index_x, index_y = get_indices_of_maximum_of_2d_array(cost_functions[index_output])
+            if self.use_true_position:
+                sky_brightness_distribution = config.phringe._director._planets[
+                    0].sky_brightness_distribution  # TODO: Handel multiple planets
+                # Get indices of only pixel that is not zero
+                index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
+                # index_x, index_y = index_x[0].item(), index_y[0].item()
+                x_coord = config.phringe._director._planets[0].sky_coordinates[
+                    0, index_x[0].item(), index_y[0].item()].cpu().numpy()
+                y_coord = config.phringe._director._planets[0].sky_coordinates[
+                    1, index_x[0].item(), index_y[0].item()].cpu().numpy()
+                # print(index_x, index_y)
+                # plt.imshow(sky_brightness_distribution[0].cpu().numpy())
+                # plt.colorbar()
+                # plt.show()
+                # sky_brightness_distribution[0, index_x, index_y] *= 10000
+                # plt.imshow(sky_brightness_distribution[0].cpu().numpy())
+                # plt.colorbar()
+                # plt.show()
+
+            else:
+                index_x, index_y = get_indices_of_maximum_of_2d_array(cost_functions[index_output])
+                template = \
+                    [template for template in templates if template.x_index == index_x and template.y_index == index_y][
+                        0]
+                x_coord, y_coord = template.x_coord, template.y_coord
+
             optimum_flux_at_maximum[index_output] = optimum_fluxes[index_output, index_x, index_y]
-            template = \
-                [template for template in templates if template.x_index == index_x and template.y_index == index_y][
-                    0]
-            x, y = template.x_coord, template.y_coord
-            coordinates.append((x, y))
+            coordinates.append((x_coord, y_coord))
 
         return optimum_flux_at_maximum, coordinates
 
@@ -160,7 +183,7 @@ class AnalyticalMLEModule(BaseModule):
 
         cost_functions, optimum_fluxes = self._calculate_maximum_likelihood(data_in, templates_in, r_config_in)
 
-        # Get the optimum flux at the position of the maximum of the cost function
+        # Get the optimum flux at the position of the maximum of the cost function or at the true planet position
         optimum_flux_at_maximum, coordinates = self._get_optimum_flux_at_cost_function_maximum(
             cost_functions,
             optimum_fluxes,
