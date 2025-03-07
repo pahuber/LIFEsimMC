@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy.stats import norm
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -85,12 +84,24 @@ class NeymanPearsonTestModule(BaseModule):
                 self.wavelength_bin_widths,
                 x_pos,
                 y_pos,
-                flux_in
+                r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()  # flux_in
             )[i, :, :, 0, 0]).flatten()
+
+            # print(np.linalg.norm(model))
+            #
+            # model /= np.linalg.norm(model)
+            # print(np.linalg.norm(model))
 
             test = (dataf @ model)
             xtx = model @ model
+            # test = model @ model
+            # xtx = dataf @ model
+            # print(xtx)
             xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)
+            P_Det = 1 - norm.cdf((xsi - xtx) / np.sqrt(xtx))
+
+            # print(f"SNR: {test / xsi}")
+            # print(f"Significance: {test / np.sqrt(xtx)}")
 
             r_test_out = TestResource(
                 name='',
@@ -98,25 +109,32 @@ class NeymanPearsonTestModule(BaseModule):
                 xsi=xsi,
                 xtx=xtx,
                 ndim=ndim,
+                p_det=P_Det
             )
             rc_test_out.collection.append(r_test_out)
 
             # Plot the test statistic
-            z = np.linspace(-0.5 * xtx, 15 * xsi, 1000)
-            zdet = z[z > xsi]
-            zndet = z[z < xsi]
-            fig = plt.figure(dpi=150)
-            plt.plot(z, norm.pdf(z, loc=0, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}} | \mathcal{{H}}_0$)")
-            plt.fill_between(zdet, norm.pdf(zdet, loc=0, scale=np.sqrt(xtx)), alpha=0.3,
-                             label=f"$P_{{FA}}$")  # , hatch="//"
-            # plt.fill_between(z[], )
-            plt.plot(z, norm.pdf(z, loc=xtx, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}}| \mathcal{{H}}_1$)")
-            plt.fill_between(zdet, norm.pdf(zdet, loc=xtx, scale=np.sqrt(xtx)), alpha=0.3, label=f"$P_{{Det}}$")
-            plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
-            plt.xlabel(f"$T_{{NP}}$")
-            plt.ylabel(f"$PDF(T_{{NP}})$")
-            plt.legend()
-            plt.show()
+            # z = np.linspace(-0.5 * xtx, 15 * xsi, 1000)
+            # zdet = z[z > xsi]
+            # zndet = z[z < xsi]
+            # fig = plt.figure(dpi=150)
+            # plt.plot(z, norm.pdf(z, loc=0, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}} | \mathcal{{H}}_0$)")
+            # plt.fill_between(zdet, norm.pdf(zdet, loc=0, scale=np.sqrt(xtx)), alpha=0.3,
+            #                  label=f"$P_{{FA}}$")  # , hatch="//"
+            # # plt.fill_between(z[], )
+            # plt.plot(z, norm.pdf(z, loc=xtx, scale=np.sqrt(xtx)), label=f"Pdf($T_{{NP}}| \mathcal{{H}}_1$)")
+            # plt.fill_between(zdet, norm.pdf(zdet, loc=xtx, scale=np.sqrt(xtx)), alpha=0.3, label=f"$P_{{Det}}$")
+            # plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
+            # plt.xlabel(f"$T_{{NP}}$")
+            # plt.ylabel(f"$PDF(T_{{NP}})$")
+            # plt.legend()
+            # plt.show()
+
+            # calculate p det the detection probability as the are beneath the curve
+            # p_det = norm.cdf(xsi, loc=xtx, scale=np.sqrt(xtx))
+            # print(f"Detection probability: {1 - p_det}")
+
+            # print(f"Detection Probability: {P_Det:.4f}")
 
         print('Done')
         return rc_test_out

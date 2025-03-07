@@ -2,12 +2,17 @@ from copy import copy
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
+from numpy.linalg import pinv
 from phringe.api import PHRINGE
-from scipy.linalg import inv, sqrtm
+from scipy.linalg import sqrtm
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.covariance_resource import CovarianceResource
+
+
+# from numpy.linalg import pinv
 
 
 class CovarianceCalculationModule(BaseModule):
@@ -55,6 +60,7 @@ class CovarianceCalculationModule(BaseModule):
             if seed > 2 ** 32:
                 seed = seed // 10
 
+        self.seed = seed
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
@@ -75,7 +81,6 @@ class CovarianceCalculationModule(BaseModule):
             extra_memory=20
         )
 
-        # Calculate covariance from first 5% of the data
         data = phringe.get_data(as_numpy=False)
         cov_out = CovarianceResource(self.n_cov_out)
         cov_out.cov = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
@@ -84,13 +89,21 @@ class CovarianceCalculationModule(BaseModule):
         for i in range(len(data)):
             cov_out.cov[i] = torch.cov(data[i])
 
+            # plt.imshow(cov_out.cov[i].cpu().numpy())
+            # plt.colorbar()
+            # plt.show()
+
             if self.diagonal_only:
                 cov_out.cov[i] = torch.diag(torch.diag(cov_out.cov[i]))
 
             cov_out.i_cov_sqrt[i] = torch.tensor(
-                inv(sqrtm(cov_out.cov[i].cpu().numpy())),
+                sqrtm(pinv(cov_out.cov[i].cpu().numpy())),
                 device=config_in.phringe._director._device
             )
+
+        plt.imshow(cov_out.i_cov_sqrt[0].cpu().numpy())
+        plt.colorbar()
+        plt.show()
 
         print('Done')
         return cov_out

@@ -1,6 +1,3 @@
-import numpy as np
-import torch
-from matplotlib import pyplot as plt
 from scipy.stats import ncx2
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -78,71 +75,88 @@ class EnergyDetectorTestModule(BaseModule):
         time = r_config_in.phringe.get_time_steps(as_numpy=True)
         self.wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True)
         self.wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True)
+        i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()
 
         # Generate a purely diagonal covariance matrix if none is given
-        if not self.use_theoretical:
-            i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()
-            flux_in = r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()
-            x_pos = r_config_in.scene.planets[0].angular_separation_from_star_x.cpu().numpy()[0]
-            y_pos = r_config_in.scene.planets[0].angular_separation_from_star_y.cpu().numpy()[0]
-
-        else:
-            i_cov_sqrt = torch.diag(
-                torch.ones(data.shape[1], device=r_config_in.phringe._director._device)
-            ).unsqueeze(0).repeat(data.shape[0], 1, 1).cpu().numpy()
-            x_pos = np.array(r_coordinate_in.x)
-            y_pos = np.array(r_coordinate_in.y)
-            # TODO: Handle multiple planets
-            flux_in = self.get_resource_from_name(self.n_flux_in).collection[0].spectral_irradiance.cpu().numpy() \
-                if self.n_flux_in is not None else None
+        # if not self.use_theoretical:
+        #     flux_in = r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()
+        #     x_pos = r_config_in.scene.planets[0].angular_separation_from_star_x.cpu().numpy()[0]
+        #     y_pos = r_config_in.scene.planets[0].angular_separation_from_star_y.cpu().numpy()[0]
+        #
+        # else:
+        #     i_cov_sqrt = torch.diag(
+        #         torch.ones(data.shape[1], device=r_config_in.phringe._director._device)
+        #     ).unsqueeze(0).repeat(data.shape[0], 1, 1).cpu().numpy()
+        #     x_pos = np.array(r_coordinate_in.x)
+        #     y_pos = np.array(r_coordinate_in.y)
+        #     # TODO: Handle multiple planets
+        #     flux_in = self.get_resource_from_name(self.n_flux_in).collection[0].spectral_irradiance.cpu().numpy() \
+        #         if self.n_flux_in is not None else None
 
         for i in range(num_of_diff_outputs):
             dataf = data[i].flatten()
             ndim = dataf.numel()
+            test = (dataf @ dataf)
+            xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
 
-            icov2i = i_cov_sqrt[i]
-            model = (icov2i @ r_config_in.phringe.get_template_numpy(
-                time,
-                self.wavelengths,
-                self.wavelength_bin_widths,
-                x_pos,
-                y_pos,
-                flux_in
-            )[i, :, :, 0, 0]).flatten()
+            # icov2i = i_cov_sqrt[i]
+            # model = (icov2i @ r_config_in.phringe.get_template_numpy(
+            #     time,
+            #     self.wavelengths,
+            #     self.wavelength_bin_widths,
+            #     x_pos,
+            #     y_pos,
+            #     flux_in
+            # )[i, :, :, 0, 0]).flatten()
 
             # Calculate test statistic
-            if self.use_theoretical:
-                test = (dataf @ dataf)
-            else:
-                test = (model @ model)
+            # if self.use_theoretical:
+            # else:
+            #     test = (model @ model)
 
             # Calculate threshold
+            model = r_config_in.phringe.get_template_numpy(
+                r_config_in.phringe.get_time_steps(as_numpy=True),
+                r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True),
+                r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True),
+                r_coordinate_in.x,
+                r_coordinate_in.y,
+                r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()
+            )
+            model = (i_cov_sqrt @ model[0, :, :, 0, 0]).flatten()
+
             xtx = (model @ model)
-            xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
+            P_Det = ncx2.sf(xsi, df=ndim, nc=xtx)
 
             r_test_out = TestResource(
                 name='',
                 test_statistic=test,
                 xsi=xsi,
-                xtx=xtx,
-                ndim=ndim
+                xtx=None,  # xtx,
+                ndim=ndim,
+                p_det=P_Det
             )
             rc_test_out.collection.append(r_test_out)
 
-            # Plotting test
-            z = np.linspace(0.9 * xsi, 1.1 * xsi, 1000)
-            zdet = z[z > xsi]
-            zndet = z[z < xsi]
-            fig = plt.figure(dpi=150)
-            plt.plot(z, ncx2.pdf(z, df=ndim, nc=0), label=f"PDF($T_{{E}} | \mathcal{{H}}_0$)")
-            plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=0), alpha=0.3, label=f"$P_{{FA}}$")  # , hatch="//"
-            plt.plot(z, ncx2.pdf(z, df=ndim, nc=xtx), label=f"PDF($T_{{E}}| \mathcal{{H}}_1$)")
-            plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=xtx), alpha=0.3, label=f"$P_{{Det}}$")
-            plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
-            plt.xlabel(f"$T_{{E}}$")
-            plt.ylabel(f"$PDF(T_{{E}})$")
-            plt.legend()
-            plt.show()
+            # # Plotting test
+            # z = np.linspace(0.9 * xsi, 1.1 * xsi, 1000)
+            # zdet = z[z > xsi]
+            # zndet = z[z < xsi]
+            # fig = plt.figure(dpi=150)
+            # plt.plot(z, ncx2.pdf(z, df=ndim, nc=0), label=f"PDF($T_{{E}} | \mathcal{{H}}_0$)")
+            # plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=0), alpha=0.3, label=f"$P_{{FA}}$")  # , hatch="//"
+            # plt.plot(z, ncx2.pdf(z, df=ndim, nc=xtx), label=f"PDF($T_{{E}}| \mathcal{{H}}_1$)")
+            # plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=xtx), alpha=0.3, label=f"$P_{{Det}}$")
+            # plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
+            # plt.xlabel(f"$T_{{E}}$")
+            # plt.ylabel(f"$PDF(T_{{E}})$")
+            # plt.legend()
+            # plt.show()
+
+            # calculate p_det the detection probability as the are under the curve
+            # p_det = ncx2.cdf(xsi, df=ndim, nc=xtx)
+            # print(f"Detection probability: {1 - p_det}")
+            # print(f"Detection Probability: {P_Det:.4f}")
 
         print('Done')
         return rc_test_out

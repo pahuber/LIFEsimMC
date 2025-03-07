@@ -1,20 +1,21 @@
 from itertools import product
 
+import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from torch import Tensor
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.config_resource import ConfigResource
 from lifesimmc.core.resources.coordinate_resource import CoordinateResource
-from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
+from lifesimmc.core.resources.flux_resource import FluxResourceCollection
 from lifesimmc.core.resources.image_resource import ImageResource
 from lifesimmc.util.grid import get_indices_of_maximum_of_2d_array
 
 
-class AnalyticalMLEModule(BaseModule):
-    def \
-            __init__(
+class FalseColorImageModule(BaseModule):
+    def __init__(
             self,
             n_config_in: str,
             n_data_in: str,
@@ -50,6 +51,34 @@ class AnalyticalMLEModule(BaseModule):
             ),
             device=config.phringe._director._device
         )
+        red = torch.zeros(
+            (
+                len(config.instrument.differential_outputs),
+                config.simulation.grid_size,
+                config.simulation.grid_size,
+                len(config.instrument.wavelength_bin_centers)
+            ),
+            device=config.phringe._director._device
+        )
+        blue = torch.zeros(
+            (
+                len(config.instrument.differential_outputs),
+                config.simulation.grid_size,
+                config.simulation.grid_size,
+                len(config.instrument.wavelength_bin_centers)
+            ),
+            device=config.phringe._director._device
+        )
+        green = torch.zeros(
+            (
+                len(config.instrument.differential_outputs),
+                config.simulation.grid_size,
+                config.simulation.grid_size,
+                len(config.instrument.wavelength_bin_centers)
+            ),
+            device=config.phringe._director._device
+        )
+
         optimum_flux = torch.zeros(cost_function.shape, device=config.phringe._director._device)
 
         for index_x, index_y in product(range(config.simulation.grid_size), range(config.simulation.grid_size)):
@@ -80,10 +109,32 @@ class AnalyticalMLEModule(BaseModule):
                 cost_function[index_output, index_x, index_y] = (optimum_flux[index_output, index_x, index_y] *
                                                                  matrix_c[index_output])
 
+        # Get indices of wl list that correspond to the values that split the wavelengths into three equal parts
+        wl = config.instrument.wavelength_bin_centers
+        wl_min = wl[0]
+        wl_max = wl[-1]
+
+        wl_1_3 = wl_min + (wl_max - wl_min) / 3
+        wl_2_3 = wl_min + 2 * (wl_max - wl_min) / 3
+
+        i_min = 0
+        i_max = len(wl) - 1
+        i_1_3 = min(range(len(wl)), key=lambda i: abs(wl[i] - wl_1_3))
+        i_2_3 = min(range(len(wl)), key=lambda i: abs(wl[i] - wl_2_3))
+
+        print(i_min, i_1_3, i_2_3, i_max)
+        print(wl[i_min], wl[i_1_3], wl[i_2_3], wl[i_max])
+
+        # Sum first third of wavelengths to red channel, second third to green channel and last third to blue channel
+
+        red = torch.sum(torch.nan_to_num(cost_function[:, :, :, i_min:i_1_3], 0), axis=3)
+        green = torch.sum(torch.nan_to_num(cost_function[:, :, :, i_1_3:i_2_3], 0), axis=3)
+        blue = torch.sum(torch.nan_to_num(cost_function[:, :, :, i_2_3:i_max], 0), axis=3)
+
         # Sum cost function over all wavelengths
         cost_function = torch.sum(torch.nan_to_num(cost_function, 0), axis=3)
         # cost_function[torch.isnan(cost_function)] = 0
-        return cost_function, optimum_flux
+        return cost_function, optimum_flux, red, green, blue
 
     def _get_matrix_b(self, data: Tensor, template_data: Tensor) -> Tensor:
         """Calculate the matrix B according to equation B.3.
@@ -115,7 +166,8 @@ class AnalyticalMLEModule(BaseModule):
         data_variance = torch.var(data, axis=2)
         return torch.sum(data * template_data, axis=2) / data_variance
 
-    def _get_optimum_flux_at_cost_function_maximum(self, cost_functions, optimum_fluxes, config, templates) -> Tensor:
+    def _get_optimum_flux_at_cost_function_maximum(self, cost_functions, optimum_fluxes, red, green, blue, config,
+                                                   templates) -> Tensor:
         """Calculate the optimum flux at the position of the maximum of the cost function.
 
         :param cost_functions: The cost functions
@@ -161,9 +213,12 @@ class AnalyticalMLEModule(BaseModule):
                 x_coord, y_coord = template.x_coord, template.y_coord
 
             optimum_flux_at_maximum[index_output] = optimum_fluxes[index_output, index_x, index_y]
+            red = red[index_output, index_x, index_y]
+            green = green[index_output, index_x, index_y]
+            blue = blue[index_output, index_x, index_y]
             coordinates.append((x_coord, y_coord))
 
-        return optimum_flux_at_maximum, coordinates
+        return optimum_flux_at_maximum, coordinates, red, green, blue
 
     def apply(self, resources: list[BaseResource]) -> tuple[
         FluxResourceCollection,
@@ -182,15 +237,19 @@ class AnalyticalMLEModule(BaseModule):
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
         templates_in = self.get_resource_from_name(self.n_template_in).collection
 
-        cost_functions, optimum_fluxes = self._calculate_maximum_likelihood(data_in, templates_in, r_config_in)
+        cost_functions, optimum_fluxes, red, green, blue = self._calculate_maximum_likelihood(data_in, templates_in,
+                                                                                              r_config_in)
 
-        # Get the optimum flux at the position of the maximum of the cost function or at the true planet position
-        optimum_flux_at_maximum, coordinates = self._get_optimum_flux_at_cost_function_maximum(
-            cost_functions,
-            optimum_fluxes,
-            r_config_in,
-            templates_in
-        )
+        # # Get the optimum flux at the position of the maximum of the cost function or at the true planet position
+        # optimum_flux_at_maximum, coordinates, red, green, blue = self._get_optimum_flux_at_cost_function_maximum(
+        #     cost_functions,
+        #     optimum_fluxes,
+        #     red,
+        #     green,
+        #     blue,
+        #     r_config_in,
+        #     templates_in
+        # )
 
         r_image_out = ImageResource(self.n_image_out)
         r_image_out.image = cost_functions
@@ -200,24 +259,58 @@ class AnalyticalMLEModule(BaseModule):
             'Collection of SpectrumResources, one for each differential output'
         )
 
-        for index_output in range(len(optimum_flux_at_maximum)):
-            flux = FluxResource(
-                '',
-                optimum_flux_at_maximum[index_output],
-                r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False),
-                r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False)
-            )
-            rc_flux_out.collection.append(flux)
+        # for index_output in range(len(optimum_flux_at_maximum)):
+        #     flux = FluxResource(
+        #         '',
+        #         optimum_flux_at_maximum[index_output],
+        #         r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False),
+        #         r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False)
+        #     )
+        #     rc_flux_out.collection.append(flux)
 
         # TODO: Output coordinates for each differential output
-        r_coordinates_out = CoordinateResource(self.n_coordinate_out, x=coordinates[0][0], y=coordinates[0][1])
+        # r_coordinates_out = CoordinateResource(self.n_coordinate_out, x=coordinates[0][0], y=coordinates[0][1])
 
-        # plt.imshow(self.image_out.image[0].cpu().numpy(), cmap='magma')
+        # Plot RGB channels together like a real image to form false colro iamge
+        r = red.cpu().numpy()[0]
+        g = green.cpu().numpy()[0]
+        b = blue.cpu().numpy()[0]
+
+        plt.imshow(r)
+        plt.colorbar()
+        plt.show()
+
+        plt.imshow(g)
+        plt.colorbar()
+        plt.show()
+
+        plt.imshow(b)
+        plt.colorbar()
+        plt.show()
+
+        # normalize to 255
+        r = (r - r.min()) / (r.max() - r.min())
+        g = (g - g.min()) / (g.max() - g.min())
+        b = (b - b.min()) / (b.max() - b.min())
+
+        # # Set all values smaller than 0.8 to 0
+        # t = 0.4
+        # r[r < t] = 0
+        # g[g < t] = 0
+        # b[b < t] = 0
+
+        import cv2
+        bgr = cv2.merge([b, g, r])
+
+        # save to numpy file
+        np.save('bgr_old.npy', bgr)
+
+        # Plot the RGB image
+        plt.imshow(bgr)
+        plt.axis('off')
+        plt.title('RGB Image')
         # plt.colorbar()
-        # plt.show()
-        #
-        # plt.plot(optimum_flux_at_maximum[0])
-        # plt.show()
+        plt.show()
 
         print('Done')
-        return rc_flux_out, r_image_out, r_coordinates_out
+        return rc_flux_out, r_image_out

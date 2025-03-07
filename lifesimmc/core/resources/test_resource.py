@@ -11,6 +11,7 @@ class TestResource(BaseResource):
     xsi: float = None
     xtx: float = None
     ndim: int = None
+    p_det: float = None
 
 
 @dataclass

@@ -15,8 +15,8 @@ class NumericalMLEModule(BaseModule):
             self,
             n_config_in: str,
             n_data_in: str,
-            n_coordinate_in: str,
             n_flux_out: str,
+            n_coordinate_in: str = None,
             n_coordinate_out: str = None,
             n_flux_in: str = None,
             n_cov_in: Union[str, None] = None):
