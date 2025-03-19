@@ -138,6 +138,11 @@ class AnalyticalMLEModule(BaseModule):
                 sky_brightness_distribution = config.phringe._director._planets[
                     0].sky_brightness_distribution  # TODO: Handel multiple planets
                 # Get indices of only pixel that is not zero
+
+                # if orbital motion is modeled, just use the initial position
+                if sky_brightness_distribution.ndim == 4:
+                    sky_brightness_distribution = sky_brightness_distribution[0]
+
                 index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
                 # index_x, index_y = index_x[0].item(), index_y[0].item()
                 x_coord = config.phringe._director._planets[0].sky_coordinates[

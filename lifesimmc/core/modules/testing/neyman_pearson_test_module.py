@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from scipy.stats import norm
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -20,12 +21,12 @@ class NeymanPearsonTestModule(BaseModule):
     def __init__(
             self,
             n_config_in: str,
-            n_coordinate_in: str,
             n_data_in: str,
             n_cov_in: str,
-            n_flux_in: str,
             n_test_out: str,
-            pfa: float
+            pfa: float,
+            n_coordinate_in: str = None,
+            n_flux_in: str = None,
     ):
         """Constructor method.
 
@@ -55,15 +56,29 @@ class NeymanPearsonTestModule(BaseModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        r_coordinate_in = self.get_resource_from_name(self.n_coordinate_in)
+        # r_coordinate_in = self.get_resource_from_name(self.n_coordinate_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        flux_in = self.get_resource_from_name(self.n_flux_in).collection[0].spectral_irradiance.cpu().numpy()
+        # flux_in = self.get_resource_from_name(self.n_flux_in).collection[0].spectral_irradiance.cpu().numpy()
 
         num_of_diff_outputs = len(data_in)
         i_cov_sqrt = r_cov_in.i_cov_sqrt
         i_cov_sqrt = i_cov_sqrt.cpu().numpy()
-        x_pos = np.array(r_coordinate_in.x)
-        y_pos = np.array(r_coordinate_in.y)
+        # x_pos = np.array(r_coordinate_in.x)
+        # y_pos = np.array(r_coordinate_in.y)
+        sky_brightness_distribution = r_config_in.phringe._director._planets[
+            0].sky_brightness_distribution  # TODO: Handel multiple planets
+
+        # if orbital motion is modeled, just use the initial position
+        if sky_brightness_distribution.ndim == 4:
+            sky_brightness_distribution = sky_brightness_distribution[0]
+            
+        # Get indices of only pixel that is not zero
+        index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
+        # index_x, index_y = index_x[0].item(), index_y[0].item()
+        x_pos = r_config_in.phringe._director._planets[0].sky_coordinates[
+            0, index_x[0].item(), index_y[0].item()].cpu().numpy()
+        y_pos = r_config_in.phringe._director._planets[0].sky_coordinates[
+            1, index_x[0].item(), index_y[0].item()].cpu().numpy()
         time = r_config_in.phringe.get_time_steps(as_numpy=True)
         self.wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True)
         self.wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True)
@@ -93,6 +108,10 @@ class NeymanPearsonTestModule(BaseModule):
             # print(np.linalg.norm(model))
 
             test = (dataf @ model)
+
+            data_h0 = dataf - model
+            test_h0 = (data_h0 @ model)
+
             xtx = model @ model
             # test = model @ model
             # xtx = dataf @ model
@@ -107,7 +126,7 @@ class NeymanPearsonTestModule(BaseModule):
                 name='',
                 test_statistic=test,
                 xsi=xsi,
-                xtx=xtx,
+                xtx=test_h0,
                 ndim=ndim,
                 p_det=P_Det
             )

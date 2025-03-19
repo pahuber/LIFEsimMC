@@ -1,3 +1,6 @@
+import numpy as np
+import torch
+from matplotlib import pyplot as plt
 from scipy.stats import ncx2
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -96,7 +99,7 @@ class EnergyDetectorTestModule(BaseModule):
         for i in range(num_of_diff_outputs):
             dataf = data[i].flatten()
             ndim = dataf.numel()
-            test = (dataf @ dataf)
+            test = (dataf.T @ dataf)
             xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
 
             # icov2i = i_cov_sqrt[i]
@@ -113,17 +116,35 @@ class EnergyDetectorTestModule(BaseModule):
             # if self.use_theoretical:
             # else:
             #     test = (model @ model)
+            sky_brightness_distribution = r_config_in.phringe._director._planets[
+                0].sky_brightness_distribution  # TODO: Handel multiple planets
+
+            # if orbital motion is modeled, just use the initial position
+            if sky_brightness_distribution.ndim == 4:
+                sky_brightness_distribution = sky_brightness_distribution[0]
+
+            # Get indices of only pixel that is not zero
+            index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
+            # index_x, index_y = index_x[0].item(), index_y[0].item()
+            x_coord = r_config_in.phringe._director._planets[0].sky_coordinates[
+                0, index_x[0].item(), index_y[0].item()].cpu().numpy()
+            y_coord = r_config_in.phringe._director._planets[0].sky_coordinates[
+                1, index_x[0].item(), index_y[0].item()].cpu().numpy()
 
             # Calculate threshold
             model = r_config_in.phringe.get_template_numpy(
                 r_config_in.phringe.get_time_steps(as_numpy=True),
                 r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True),
                 r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True),
-                r_coordinate_in.x,
-                r_coordinate_in.y,
+                x_coord,
+                y_coord,
                 r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()
             )
             model = (i_cov_sqrt @ model[0, :, :, 0, 0]).flatten()
+
+            data_h0 = dataf - model
+
+            test_h0 = (data_h0.T @ data_h0)
 
             xtx = (model @ model)
             P_Det = ncx2.sf(xsi, df=ndim, nc=xtx)
@@ -132,26 +153,26 @@ class EnergyDetectorTestModule(BaseModule):
                 name='',
                 test_statistic=test,
                 xsi=xsi,
-                xtx=None,  # xtx,
+                xtx=test_h0,  # xtx,
                 ndim=ndim,
                 p_det=P_Det
             )
             rc_test_out.collection.append(r_test_out)
 
-            # # Plotting test
-            # z = np.linspace(0.9 * xsi, 1.1 * xsi, 1000)
-            # zdet = z[z > xsi]
-            # zndet = z[z < xsi]
-            # fig = plt.figure(dpi=150)
-            # plt.plot(z, ncx2.pdf(z, df=ndim, nc=0), label=f"PDF($T_{{E}} | \mathcal{{H}}_0$)")
-            # plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=0), alpha=0.3, label=f"$P_{{FA}}$")  # , hatch="//"
-            # plt.plot(z, ncx2.pdf(z, df=ndim, nc=xtx), label=f"PDF($T_{{E}}| \mathcal{{H}}_1$)")
-            # plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=xtx), alpha=0.3, label=f"$P_{{Det}}$")
-            # plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
-            # plt.xlabel(f"$T_{{E}}$")
-            # plt.ylabel(f"$PDF(T_{{E}})$")
-            # plt.legend()
-            # plt.show()
+            # Plotting test
+            z = np.linspace(0.9 * xsi, 1.1 * xsi, 1000)
+            zdet = z[z > xsi]
+            zndet = z[z < xsi]
+            fig = plt.figure(dpi=150)
+            plt.plot(z, ncx2.pdf(z, df=ndim, nc=0), label=f"PDF($T_{{E}} | \mathcal{{H}}_0$)")
+            plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=0), alpha=0.3, label=f"$P_{{FA}}$")  # , hatch="//"
+            plt.plot(z, ncx2.pdf(z, df=ndim, nc=xtx), label=f"PDF($T_{{E}}| \mathcal{{H}}_1$)")
+            plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=xtx), alpha=0.3, label=f"$P_{{Det}}$")
+            plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
+            plt.xlabel(f"$T_{{E}}$")
+            plt.ylabel(f"$PDF(T_{{E}})$")
+            plt.legend()
+            plt.show()
 
             # calculate p_det the detection probability as the are under the curve
             # p_det = ncx2.cdf(xsi, df=ndim, nc=xtx)
