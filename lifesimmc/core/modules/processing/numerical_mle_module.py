@@ -70,10 +70,10 @@ class NumericalMLEModule(BaseModule):
         posx = np.array(r_coordinates_in.x) if r_coordinates_in is not None else np.array(hfov_max / 2)
         posy = np.array(r_coordinates_in.y) if r_coordinates_in is not None else np.array(hfov_max / 2)
 
-        # Handle orbital motion
-        if posx.size > 1:
-            posx = posx[0]
-            posy = posy[0]
+        # # Handle orbital motion
+        # if posx.size > 1:
+        #     posx = posx[0]
+        #     posy = posy[0]
 
         for i in range(len(flux_init)):
             # params.add(f'flux_{i}', value=0.9 * flux_init[i], min=0, max=1e7)

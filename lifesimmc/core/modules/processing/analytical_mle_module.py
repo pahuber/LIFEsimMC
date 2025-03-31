@@ -145,10 +145,18 @@ class AnalyticalMLEModule(BaseModule):
 
                 index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
                 # index_x, index_y = index_x[0].item(), index_y[0].item()
-                x_coord = config.phringe._director._planets[0].sky_coordinates[
-                    0, index_x[0].item(), index_y[0].item()].cpu().numpy()
-                y_coord = config.phringe._director._planets[0].sky_coordinates[
-                    1, index_x[0].item(), index_y[0].item()].cpu().numpy()
+
+                # if has orbital motion, use position a at initial time
+                if config.phringe._director._planets[0].sky_coordinates.ndim == 4:
+                    x_coord = config.phringe._director._planets[0].sky_coordinates[
+                        0, 0, index_x[0].item(), index_y[0].item()].cpu().numpy()
+                    y_coord = config.phringe._director._planets[0].sky_coordinates[
+                        1, 0, index_x[0].item(), index_y[0].item()].cpu().numpy()
+                else:
+                    x_coord = config.phringe._director._planets[0].sky_coordinates[
+                        0, index_x[0].item(), index_y[0].item()].cpu().numpy()
+                    y_coord = config.phringe._director._planets[0].sky_coordinates[
+                        1, index_x[0].item(), index_y[0].item()].cpu().numpy()
                 # print(index_x, index_y)
                 # plt.imshow(sky_brightness_distribution[0].cpu().numpy())
                 # plt.colorbar()
