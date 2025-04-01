@@ -2,17 +2,13 @@ from copy import copy
 
 import numpy as np
 import torch
-from matplotlib import pyplot as plt
 from numpy.linalg import pinv
-from phringe.api import PHRINGE
+from phringe.main import PHRINGE
 from scipy.linalg import sqrtm
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.covariance_resource import CovarianceResource
-
-
-# from numpy.linalg import pinv
 
 
 class CovarianceCalculationModule(BaseModule):
@@ -39,7 +35,7 @@ class CovarianceCalculationModule(BaseModule):
         self.diagonal_only = diagonal_only
 
     def apply(self, resources: list[BaseResource]) -> tuple:
-        """Calculate the covariance of the data without the planet signal. This is done by generating a new data set
+        """Calculate the covariance of the diff_counts without the planet signal. This is done by generating a new diff_counts set
         without a planet. In reality, this could be achieved e.g. by observing a reference star.
 
         :param resources: The resources to apply the module to
@@ -48,16 +44,14 @@ class CovarianceCalculationModule(BaseModule):
         print('Calculating covariance matrix...')
 
         config_in = self.get_resource_from_name(self.n_config_in)
-
-        simulation = copy(config_in.simulation)
-        simulation.has_planet_signal = False
+        cov_out = CovarianceResource(self.n_cov_out)
 
         # Generate random number and update torcha nd numpy seeds
         if self.seed is None:
-            seed = torch.randint(0, 2 ** 32, (1,)).item()
+            seed = torch.randint(0, 2 ** 31, (1,)).item()
         else:
             seed = (self.seed + 1) * 2
-            if seed > 2 ** 32:
+            if seed > 2 ** 31:
                 seed = seed // 10
 
         self.seed = seed
@@ -66,44 +60,40 @@ class CovarianceCalculationModule(BaseModule):
         torch.cuda.manual_seed_all(seed)
         np.random.seed(seed)
 
-        phringe = PHRINGE()
-        phringe.run(
-            # config_file_path=config_in.config_file_path,
-            simulation=simulation,
-            instrument=config_in.instrument,
-            observation_mode=config_in.observation_mode,
-            scene=config_in.scene,
-            seed=seed,
-            # not the same as in data generation, but predictable
-            gpu=self.gpu,
-            write_fits=False,
-            create_copy=False,
+        phringe = PHRINGE(
+            seed=self.seed,
+            gpu_index=self.gpu_index,
+            grid_size=self.grid_size,
+            time_step_size=self.time_step_size,
+            device=self.device,
             extra_memory=20
         )
 
-        data = phringe.get_data(as_numpy=False)
-        cov_out = CovarianceResource(self.n_cov_out)
-        cov_out.cov = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
-        cov_out.i_cov_sqrt = torch.zeros((data.shape[0], data.shape[1], data.shape[1]))
+        phringe.set(config_in.instrument)
+        phringe.set(config_in.observation)
 
-        for i in range(len(data)):
-            cov_out.cov[i] = torch.cov(data[i])
+        # Remove all planets from the scene to calculate covariance only on noise
+        scene = copy(config_in.scene)
+        scene.planets = []
+        phringe.set(config_in.scene)
 
-            # plt.imshow(cov_out.cov[i].cpu().numpy())
-            # plt.colorbar()
-            # plt.show()
+        diff_counts = phringe.get_diff_counts()
+
+        cov_out.cov = torch.zeros((diff_counts.shape[0], diff_counts.shape[1], diff_counts.shape[1]),
+                                  device=self.device)
+        cov_out.i_cov_sqrt = torch.zeros((diff_counts.shape[0], diff_counts.shape[1], diff_counts.shape[1]),
+                                         device=self.device)
+
+        for i in range(len(diff_counts)):
+            cov_out.cov[i] = torch.cov(diff_counts[i])
 
             if self.diagonal_only:
                 cov_out.cov[i] = torch.diag(torch.diag(cov_out.cov[i]))
 
             cov_out.i_cov_sqrt[i] = torch.tensor(
                 sqrtm(pinv(cov_out.cov[i].cpu().numpy())),
-                device=config_in.phringe._director._device
+                device=self.device
             )
-
-        plt.imshow(cov_out.i_cov_sqrt[0].cpu().numpy())
-        plt.colorbar()
-        plt.show()
 
         print('Done')
         return cov_out

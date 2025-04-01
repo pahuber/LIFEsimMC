@@ -1,5 +1,8 @@
 from typing import Union
 
+import torch
+from phringe.main import PHRINGE
+
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
 
@@ -7,10 +10,20 @@ from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCol
 class Pipeline:
     """Class representation of the pipeline."""
 
-    def __init__(self, seed: int = None, gpu: int = None):
+    def __init__(
+            self,
+            seed: int = None,
+            gpu_index: int = None,
+            grid_size: int = 40,
+            time_step_size: float = None,
+            device: torch.device = None
+    ):
         """Constructor method."""
         self.seed = seed
-        self.gpu = gpu
+        self.gpu_index = gpu_index
+        self.grid_size = grid_size
+        self.time_step_size = time_step_size
+        self.device = PHRINGE()._get_device(self.gpu_index)
         self._modules = []
         self._resources = []
 
@@ -21,7 +34,10 @@ class Pipeline:
         """
         module.resources = self._resources
         module.seed = self.seed
-        module.gpu = self.gpu
+        module.gpu_index = self.gpu_index
+        module.grid_size = self.grid_size
+        module.time_step_size = self.time_step_size
+        module.device = self.device
         self._modules.append(module)
 
     def get_resource(self, name: str) -> Union[BaseResource, BaseResourceCollection, None]:

@@ -1,15 +1,21 @@
 from pathlib import Path
 from typing import overload
 
-from phringe.api import PHRINGE
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.observation_mode import ObservationMode
-from phringe.core.entities.scene import Scene
-from phringe.core.entities.simulation import Simulation
-from phringe.io.utils import load_config
+from phringe.entities.configuration import Configuration
+from phringe.entities.instrument import Instrument
+from phringe.entities.observation import Observation
+from phringe.entities.scene import Scene
+from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.config_resource import ConfigResource
+
+
+# from phringe.core.entities.instrument import Instrument
+# from phringe.core.entities.observation_mode import ObservationMode
+# from phringe.core.entities.scene import Scene
+# from phringe.core.entities.simulation import Simulation
+# from phringe.io.utils import load_config
 
 
 class ConfigLoaderModule(BaseModule):
@@ -18,7 +24,7 @@ class ConfigLoaderModule(BaseModule):
         :param n_config_out: The name of the output configuration resource
         :param config_file_path: The path to the configuration file
         :param simulation: The simulation object
-        :param observation_mode: The observation mode object
+        :param observation: The observation mode object
         :param instrument: The instrument object
         :param scene: The scene object
     """
@@ -31,8 +37,7 @@ class ConfigLoaderModule(BaseModule):
     def __init__(
             self,
             n_config_out: str,
-            simulation: Simulation,
-            observation_mode: ObservationMode,
+            observation: Observation,
             instrument: Instrument,
             scene: Scene
     ):
@@ -42,8 +47,7 @@ class ConfigLoaderModule(BaseModule):
             self,
             n_config_out: str,
             config_file_path: Path = None,
-            simulation: Simulation = None,
-            observation_mode: ObservationMode = None,
+            observation: Observation = None,
             instrument: Instrument = None,
             scene: Scene = None
     ):
@@ -52,15 +56,14 @@ class ConfigLoaderModule(BaseModule):
         :param n_config_out: The name of the output configuration resource
         :param config_file_path: The path to the configuration file
         :param simulation: The simulation object
-        :param observation_mode: The observation mode object
+        :param observation: The observation mode object
         :param instrument: The instrument object
         :param scene: The scene object
         """
         super().__init__()
         self.n_config_out = n_config_out
         self.config_file_path = config_file_path
-        self.simulation = simulation
-        self.observation_mode = observation_mode
+        self.observation = observation
         self.instrument = instrument
         self.scene = scene
 
@@ -71,23 +74,35 @@ class ConfigLoaderModule(BaseModule):
         :return: The configuration resource
         """
         print('Loading configuration...')
-        config_dict = load_config(self.config_file_path) if self.config_file_path else None
+        phringe = PHRINGE(
+            seed=self.seed,
+            gpu_index=self.gpu_index,
+            grid_size=self.grid_size,
+            time_step_size=self.time_step_size,
+            device=self.device,
+            extra_memory=20
+        )
 
-        simulation = Simulation(**config_dict['simulation']) if not self.simulation else self.simulation
-        instrument = Instrument(**config_dict['instrument']) if not self.instrument else self.instrument
-        observation_mode = ObservationMode(
-            **config_dict['observation_mode']
-        ) if not self.observation_mode else self.observation_mode
-        scene = Scene(**config_dict['scene']) if not self.scene else self.scene
+        if self.config_file_path:
+            config = Configuration(path=self.config_file_path)
+            phringe.set(config)
+
+        if self.instrument:
+            phringe.set(self.instrument)
+
+        if self.observation:
+            phringe.set(self.observation)
+
+        if self.scene:
+            phringe.set(self.scene)
 
         r_config_out = ConfigResource(
             name=self.n_config_out,
             config_file_path=self.config_file_path,
-            instrument=instrument,
-            observation_mode=observation_mode,
-            phringe=PHRINGE(),
-            scene=scene,
-            simulation=simulation,
+            phringe=phringe,
+            instrument=phringe._instrument,
+            observation=phringe._observation,
+            scene=phringe._scene,
         )
 
         print('Done')

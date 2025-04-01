@@ -48,35 +48,22 @@ class DataGenerationModule(BaseModule):
         print('Generating synthetic data...')
 
         r_config_in = self.get_resource_from_name(self.config_in)
-
-        r_config_in.phringe.run(
-            config_file_path=r_config_in.config_file_path,
-            simulation=r_config_in.simulation,
-            observation_mode=r_config_in.observation_mode,
-            instrument=r_config_in.instrument,
-            scene=r_config_in.scene,
-            seed=self.seed,
-            gpu=self.gpu,
-            write_fits=self.write_to_fits,
-            create_copy=self.create_copy,
-            extra_memory=20
-        )
-
         r_data_out = DataResource(self.n_data_out)
-        r_data_out.set_data(r_config_in.phringe.get_data(as_numpy=False))
-
         rc_flux_out = FluxResourceCollection(
             name=self.n_flux_out,
             description='Collection of SpectrumResources; one for each planet in the scene'
         )
 
-        for planet in r_config_in.phringe._director._planets:
+        diff_counts = r_config_in.phringe.get_diff_counts()
+        r_data_out.set_data(diff_counts)
+
+        for planet in r_config_in.phringe._scene.planets:
             rc_flux_out.collection.append(
                 FluxResource(
                     name='',
-                    spectral_irradiance=planet.spectral_flux_density,
-                    wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False),
-                    wavelength_bin_widths=r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False),
+                    spectral_irradiance=planet._spectral_energy_distribution,
+                    wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(),
+                    wavelength_bin_widths=r_config_in.phringe.get_wavelength_bin_widths(),
                     planet_name=planet.name
                 )
             )
