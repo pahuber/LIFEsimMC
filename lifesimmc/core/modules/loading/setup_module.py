@@ -18,7 +18,7 @@ from lifesimmc.core.resources.config_resource import ConfigResource
 # from phringe.io.utils import load_config
 
 
-class ConfigLoaderModule(BaseModule):
+class SetupModule(BaseModule):
     """Class representation of the configuration loader module.
 
         :param n_config_out: The name of the output configuration resource
