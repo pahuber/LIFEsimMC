@@ -39,7 +39,6 @@ class RGBImageModule(BaseModule):
         image = np.zeros(
             (
                 3,
-                len(r_config_in.instrument.differential_outputs),
                 r_config_in.simulation.grid_size,
                 r_config_in.simulation.grid_size
             )

@@ -8,13 +8,11 @@ from lifesimmc.core.resources.image_resource import ImageResource
 class CorrelationMapModule(BaseModule):
     def __init__(
             self,
-            n_config_in: str,
             n_data_in: str,
             n_template_in: str,
             n_image_out: str,
             n_cov_in: str = None,
     ):
-        self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_cov_in = n_cov_in
@@ -29,22 +27,20 @@ class CorrelationMapModule(BaseModule):
         """
         print('Calculating correlation map...')
 
-        r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
         template_counts_in = self.get_resource_from_name(self.n_template_in).get_data()
 
-        y = data_in.reshape(data_in.shape[0], -1)
+        y = data_in.flatten()
         x = template_counts_in.reshape(
-            template_counts_in.shape[0],
             -1,
             template_counts_in.shape[-1],
             template_counts_in.shape[-1]
         )
 
         image = (
-                torch.einsum('ij,ijkl->ikl', y, x)
-                / torch.sqrt(torch.einsum('ij, ij->', y, y))
-                / torch.sqrt(torch.einsum('ijkl,ijkl->', x, x))
+                torch.einsum('i,ijk->jk', y, x)
+                / torch.sqrt(torch.einsum('i, i->', y, y))
+                / torch.sqrt(torch.einsum('ijk,ijk->', x, x))
         )
 
         r_image_out = ImageResource(self.n_image_out)
