@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from pathlib import Path
 
+from phringe.entities.configuration import Configuration
 from phringe.entities.instrument import Instrument
 from phringe.entities.observation import Observation
 from phringe.entities.scene import Scene
@@ -13,13 +13,13 @@ from lifesimmc.core.resources.base_resource import BaseResource
 class ConfigResource(BaseResource):
     """Class representation of the configuration resource.
 
-    :param configuration: The path to the configuration file
+    :param phringe: The PHRINGE object
+    :param configuration: The configuration
     :param instrument: The instrument
     :param observation: The observation mode
-    :param phringe: The PHRINGE object
     :param scene: The scene
     """
-    configuration: Path = None
+    configuration: Configuration = None
     instrument: Instrument = None
     observation: Observation = None
     phringe: PHRINGE = None

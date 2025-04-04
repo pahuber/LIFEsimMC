@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Union
 
-from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
+from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class BaseModule(ABC):
@@ -25,7 +25,7 @@ class BaseModule(ABC):
         return resource
 
     @abstractmethod
-    def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, BaseResourceCollection, tuple]:
+    def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
         """Apply the module.
 
         :param resources: The resources to apply the module to

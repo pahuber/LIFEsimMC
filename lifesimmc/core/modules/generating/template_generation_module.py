@@ -12,31 +12,23 @@ class TemplateGenerationModule(BaseModule):
     :param n_config_in: The name of the input configuration resource
     :param n_template_out: The name of the output template resource collection
     :param fov: The field of view for which to generate the templates in radians
-    :param write_to_fits: Whether the generated templates should be written to FITS files
-    :param create_copy: Whether a copy of the input configuration should be created
     """
 
     def __init__(
             self,
             n_config_in: str,
             n_template_out: str,
-            fov: float,
-            write_to_fits: bool = True,
-            create_copy: bool = True
+            fov: float
     ):
         """Constructor method.
 
         :param n_config_in: The name of the input configuration resource
         :param n_template_out: The name of the output template resource collection
         :param fov: The field of view for which to generate the templates in radians
-        :param write_to_fits: Whether the generated templates should be written to FITS files
-        :param create_copy: Whether a copy of the input configuration should be created
         """
         self.n_config_in = n_config_in
         self.n_template_out = n_template_out
         self.fov = fov
-        self.write_to_fits = write_to_fits
-        self.create_copy = create_copy
 
     def apply(self, resources: list[BaseResource]) -> TemplateResource:
         """Generate templates for a planet at each point in the grid.

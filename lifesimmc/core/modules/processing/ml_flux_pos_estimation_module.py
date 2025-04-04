@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.coordinate_resource import CoordinateResource
-from lifesimmc.core.resources.flux_resource import FluxResource, FluxResourceCollection
+from lifesimmc.core.resources.flux_resource import FluxResource
 
 
 class MLFluxPosEstimationModule(BaseModule):
@@ -78,16 +78,12 @@ class MLFluxPosEstimationModule(BaseModule):
 
         return optimum_flux_at_maximum, x_coord, y_coord
 
-    def apply(self, resources: list[BaseResource]) -> Union[FluxResourceCollection, CoordinateResource]:
+    def apply(self, resources: list[BaseResource]) -> tuple[FluxResource, CoordinateResource]:
         print('Performing numerical MLE...')
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
         r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        rc_flux_out = FluxResourceCollection(
-            self.n_flux_out,
-            'Collection of SpectrumResources, one for each differential output'
-        )
         r_coordinate_out = CoordinateResource(self.n_coordinate_out)
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
@@ -143,35 +139,22 @@ class MLFluxPosEstimationModule(BaseModule):
         posx = out.params['pos_x'].value
         posy = out.params['pos_y'].value
 
-        if r_cov_in is None:
-            print("Covariance matrix could not be estimated. Try different method.")
-            rc_flux_out.collection.append(
-                FluxResource(
-                    name='',
-                    spectral_irradiance=torch.tensor(fluxes),
-                    wavelength_bin_centers=torch.tensor(wavelengths),
-                    wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
-                )
-            )
-
         stds = np.sqrt(np.diag(cov_out))
         flux_err = stds[0:-2]
         posx_err = stds[-2]
         posy_err = stds[-1]
 
-        rc_flux_out.collection.append(
-            FluxResource(
-                name='',
-                spectral_irradiance=torch.tensor(fluxes),
-                wavelength_bin_centers=torch.tensor(wavelengths),
-                wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
-                err_low=torch.tensor(flux_err),
-                err_high=torch.tensor(flux_err),
-                cov=cov_out
-            )
+        # TODO: Implement multi-planet signal extraction
+        r_flux_out = FluxResource(
+            name=self.n_flux_out,
+            spectral_irradiance=[torch.tensor(fluxes)],
+            wavelength_bin_centers=torch.tensor(wavelengths),
+            wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
+            err_low=[torch.tensor(flux_err)],
+            err_high=[torch.tensor(flux_err)],
+            covariance=[cov_out]
         )
 
-        # update this for all outputs
         r_coordinate_out.x = posx
         r_coordinate_out.y = posy
         r_coordinate_out.x_err_low = posx_err
@@ -180,4 +163,4 @@ class MLFluxPosEstimationModule(BaseModule):
         r_coordinate_out.y_err_high = posy_err
 
         print('Done')
-        return rc_flux_out, r_coordinate_out
+        return r_flux_out, r_coordinate_out

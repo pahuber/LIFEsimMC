@@ -4,7 +4,7 @@ import torch
 from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
-from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
+from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class Pipeline:
@@ -40,7 +40,7 @@ class Pipeline:
         module.device = self.device
         self._modules.append(module)
 
-    def get_resource(self, name: str) -> Union[BaseResource, BaseResourceCollection, None]:
+    def get_resource(self, name: str) -> Union[BaseResource, None]:
         """Get a resource by name.
 
         :param name: The name of the resource

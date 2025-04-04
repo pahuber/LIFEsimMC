@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import overload
 
 from phringe.entities.configuration import Configuration
@@ -9,13 +8,6 @@ from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.config_resource import ConfigResource
-
-
-# from phringe.core.entities.instrument import Instrument
-# from phringe.core.entities.observation_mode import ObservationMode
-# from phringe.core.entities.scene import Scene
-# from phringe.core.entities.simulation import Simulation
-# from phringe.io.utils import load_config
 
 
 class SetupModule(BaseModule):

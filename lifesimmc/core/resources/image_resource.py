@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from torch import Tensor
 
-from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
+from lifesimmc.core.resources.base_resource import BaseResource
 
 
 @dataclass
@@ -20,10 +20,3 @@ class ImageResource(BaseResource):
 
     def set_image(self, image: Tensor):
         self._image = image
-
-
-@dataclass
-class ImageResourceCollection(BaseResourceCollection):
-    """Class representation of the image resource collection.
-    """
-    collection: list[ImageResource] = field(default_factory=list)
