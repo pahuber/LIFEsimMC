@@ -1,7 +1,5 @@
 from typing import Union
 
-import torch
-
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
@@ -52,11 +50,7 @@ class DataGenerationModule(BaseModule):
 
         for planet in r_config_in.phringe._scene.planets:
             planet_name.append(planet.name)
-            spectral_irradiance.append(torch.tensor(
-                planet._spectral_energy_distribution,
-                dtype=torch.float32,
-                device=self.device)
-            )
+            spectral_irradiance.append(planet._spectral_energy_distribution)
 
         r_flux_out = FluxResource(
             name=self.n_flux_out,
