@@ -13,13 +13,13 @@ from lifesimmc.core.resources.base_resource import BaseResource
 class ConfigResource(BaseResource):
     """Class representation of the configuration resource.
 
-    :param config_file_path: The path to the configuration file
+    :param configuration: The path to the configuration file
     :param instrument: The instrument
     :param observation: The observation mode
     :param phringe: The PHRINGE object
     :param scene: The scene
     """
-    config_file_path: Path = None
+    configuration: Path = None
     instrument: Instrument = None
     observation: Observation = None
     phringe: PHRINGE = None

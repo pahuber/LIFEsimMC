@@ -22,15 +22,14 @@ class SetupModule(BaseModule):
     """Class representation of the configuration loader module.
 
         :param n_config_out: The name of the output configuration resource
-        :param config_file_path: The path to the configuration file
-        :param simulation: The simulation object
+        :param configuration: The configuration object
         :param observation: The observation mode object
         :param instrument: The instrument object
         :param scene: The scene object
     """
 
     @overload
-    def __init__(self, n_config_out: str, config_file_path: Path):
+    def __init__(self, n_config_out: str, configuration: Configuration):
         ...
 
     @overload
@@ -46,7 +45,7 @@ class SetupModule(BaseModule):
     def __init__(
             self,
             n_config_out: str,
-            config_file_path: Path = None,
+            configuration: Configuration = None,
             observation: Observation = None,
             instrument: Instrument = None,
             scene: Scene = None
@@ -54,15 +53,14 @@ class SetupModule(BaseModule):
         """Constructor method.
 
         :param n_config_out: The name of the output configuration resource
-        :param config_file_path: The path to the configuration file
-        :param simulation: The simulation object
+        :param configuration: The configuration object
         :param observation: The observation mode object
         :param instrument: The instrument object
         :param scene: The scene object
         """
         super().__init__()
         self.n_config_out = n_config_out
-        self.config_file_path = config_file_path
+        self.configuration = configuration
         self.observation = observation
         self.instrument = instrument
         self.scene = scene
@@ -83,9 +81,8 @@ class SetupModule(BaseModule):
             extra_memory=20
         )
 
-        if self.config_file_path:
-            config = Configuration(path=self.config_file_path)
-            phringe.set(config)
+        if self.configuration:
+            phringe.set(self.configuration)
 
         if self.instrument:
             phringe.set(self.instrument)
@@ -98,8 +95,8 @@ class SetupModule(BaseModule):
 
         r_config_out = ConfigResource(
             name=self.n_config_out,
-            config_file_path=self.config_file_path,
             phringe=phringe,
+            configuration=self.configuration,
             instrument=phringe._instrument,
             observation=phringe._observation,
             scene=phringe._scene,
