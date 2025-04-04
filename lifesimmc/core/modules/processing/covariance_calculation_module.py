@@ -74,7 +74,7 @@ class CovarianceCalculationModule(BaseModule):
 
         # Remove all planets from the scene to calculate covariance only on noise
         scene = copy(config_in.scene)
-        scene.planets = []
+        scene.params = []
         phringe.set(config_in.scene)
 
         diff_counts = phringe.get_diff_counts()

@@ -138,7 +138,7 @@ class EnergyDetectorTestModule(BaseModule):
                 r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True),
                 x_coord,
                 y_coord,
-                r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()
+                r_config_in.scene.params[0].spectral_flux_density.cpu().numpy()
             )
             model = (i_cov_sqrt @ model[0, :, :, 0, 0]).flatten()
 

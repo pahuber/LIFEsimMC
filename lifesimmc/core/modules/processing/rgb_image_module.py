@@ -6,20 +6,18 @@ from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.image_resource import ImageResource
 
 
-class RGBImageModule2(BaseModule):
+class RGBImageModule(BaseModule):
     def __init__(
             self,
             n_config_in: str,
             n_data_in: str,
             n_template_in: str,
-            n_cov_in: str,
             n_image_out: str,
             metric: int = 0,
     ):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
-        self.n_cov_in = n_cov_in
         self.n_image_out = n_image_out
         self.metric = metric
 
@@ -34,12 +32,6 @@ class RGBImageModule2(BaseModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
-        # r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        # rc_flux_out = FluxResourceCollection(
-        #     self.n_flux_out,
-        #     'Collection of SpectrumResources, one for each differential output'
-        # )
-
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
         template_data = r_templates_in.get_data()
 

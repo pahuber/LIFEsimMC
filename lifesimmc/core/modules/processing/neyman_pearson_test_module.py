@@ -71,7 +71,7 @@ class NeymanPearsonTestModule(BaseModule):
         # if orbital motion is modeled, just use the initial position
         if sky_brightness_distribution.ndim == 4:
             sky_brightness_distribution = sky_brightness_distribution[0]
-            
+
         # Get indices of only pixel that is not zero
         index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
         # index_x, index_y = index_x[0].item(), index_y[0].item()
@@ -99,7 +99,7 @@ class NeymanPearsonTestModule(BaseModule):
                 self.wavelength_bin_widths,
                 x_pos,
                 y_pos,
-                r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()  # flux_in
+                r_config_in.scene.params[0].spectral_flux_density.cpu().numpy()  # flux_in
             )[i, :, :, 0, 0]).flatten()
 
             # print(np.linalg.norm(model))

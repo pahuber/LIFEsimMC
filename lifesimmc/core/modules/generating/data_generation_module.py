@@ -3,7 +3,7 @@ from typing import Union
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
-from lifesimmc.core.resources.flux_resource import FluxResource
+from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 
 
 class DataGenerationModule(BaseModule):
@@ -11,27 +11,27 @@ class DataGenerationModule(BaseModule):
 
         :param n_config_in: The name of the input configuration resource
         :param n_data_out: The name of the output data resource
-        :param n_flux_out: The name of the output spectrum resource collection
+        :param n_planet_params_out: The name of the output spectrum resource collection
     """
 
     def __init__(
             self,
             n_config_in: str,
             n_data_out: str,
-            n_flux_out: Union[str, tuple[str]]
+            n_planet_params_out: Union[str, tuple[str]]
     ):
         """Constructor method.
 
         :param n_config_in: The name of the input configuration resource
         :param n_data_out: The name of the output data resource
-        :param n_flux_out: The name of the output spectrum resource collection
+        :param n_planet_params_out: The name of the output spectrum resource collection
         """
         super().__init__()
         self.config_in = n_config_in
         self.n_data_out = n_data_out
-        self.n_flux_out = n_flux_out
+        self.n_planet_params_out = n_planet_params_out
 
-    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, FluxResource]:
+    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, PlanetParamsResource]:
         """Use PHRINGE to generate synthetic data.
 
         :param resources: The resources to apply the module to
@@ -44,21 +44,18 @@ class DataGenerationModule(BaseModule):
 
         diff_counts = r_config_in.phringe.get_diff_counts()
         r_data_out.set_data(diff_counts)
-
-        spectral_irradiance = []
-        planet_name = []
-
-        for planet in r_config_in.phringe._scene.planets:
-            planet_name.append(planet.name)
-            spectral_irradiance.append(planet._spectral_energy_distribution)
-
-        r_flux_out = FluxResource(
-            name=self.n_flux_out,
-            spectral_irradiance=spectral_irradiance,
-            wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(),
-            wavelength_bin_widths=r_config_in.phringe.get_wavelength_bin_widths(),
-            planet_name=planet_name
+        r_planet_params_out = PlanetParamsResource(
+            name=self.n_planet_params_out,
         )
 
+        for planet in r_config_in.phringe._scene.planets:
+            planet_params = PlanetParams(
+                name=planet.name,
+                sed_wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(),
+                sed_wavelength_bin_widths=r_config_in.phringe.get_wavelength_bin_widths(),
+                sed=r_config_in.phringe.get_source_spectrum(planet.name)
+            )
+            r_planet_params_out.params.append(planet_params)
+
         print('Done')
-        return r_data_out, r_flux_out
+        return r_data_out, r_planet_params_out

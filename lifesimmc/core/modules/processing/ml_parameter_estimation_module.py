@@ -5,26 +5,23 @@ from matplotlib import pyplot as plt
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.coordinate_resource import CoordinateResource
-from lifesimmc.core.resources.flux_resource import FluxResource
+from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 
 
-class MLFluxPosEstimationModule(BaseModule):
+class MLParameterEstimationModule(BaseModule):
     def __init__(
             self,
             n_config_in: str,
             n_data_in: str,
-            n_flux_out: str,
+            n_planet_params_out: str,
             n_transformation_in: str,
             n_template_in: str = None,
-            n_coordinate_out: str = None,
     ):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_transformation_in = n_transformation_in
-        self.n_flux_out = n_flux_out
-        self.n_coordinate_out = n_coordinate_out
+        self.n_planet_params_out = n_planet_params_out
 
     def _get_analytical_initial_guess(self, data, template_data, grid_coordinates):
         # Normalize template data with their variance along axis 2
@@ -75,15 +72,13 @@ class MLFluxPosEstimationModule(BaseModule):
 
         return optimum_flux_at_maximum, x_coord, y_coord
 
-    def apply(self, resources: list[BaseResource]) -> tuple[FluxResource, CoordinateResource]:
+    def apply(self, resources: list[BaseResource]) -> PlanetParamsResource:
         print('Performing numerical MLE...')
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
-        # r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
         r_transformation_in = self.get_resource_from_name(self.n_transformation_in)
         transf = r_transformation_in.transformation
-        r_coordinate_out = CoordinateResource(self.n_coordinate_out)
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
@@ -141,22 +136,25 @@ class MLFluxPosEstimationModule(BaseModule):
         posy_err = stds[-1]
 
         # TODO: Implement multi-planet signal extraction
-        r_flux_out = FluxResource(
-            name=self.n_flux_out,
-            spectral_irradiance=[torch.tensor(fluxes)],
-            wavelength_bin_centers=torch.tensor(wavelengths),
-            wavelength_bin_widths=torch.tensor(wavelength_bin_widths),
-            err_low=[torch.tensor(flux_err)],
-            err_high=[torch.tensor(flux_err)],
-            covariance=[cov_out]
+        r_planet_params_out = PlanetParamsResource(
+            name=self.n_planet_params_out,
         )
-
-        r_coordinate_out.x = posx
-        r_coordinate_out.y = posy
-        r_coordinate_out.x_err_low = posx_err
-        r_coordinate_out.x_err_high = posx_err
-        r_coordinate_out.y_err_low = posy_err
-        r_coordinate_out.y_err_high = posy_err
+        planet_params = PlanetParams(
+            name='',
+            sed_wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(),
+            sed_wavelength_bin_widths=r_config_in.phringe.get_wavelength_bin_widths(),
+            sed=torch.tensor(fluxes),
+            sed_err_low=torch.tensor(flux_err),
+            sed_err_high=torch.tensor(flux_err),
+            pos_x=posx,
+            pos_y=posy,
+            pos_x_err_low=posx_err,
+            pos_x_err_high=posx_err,
+            pos_y_err_low=posy_err,
+            pos_y_err_high=posy_err,
+            covariance=cov_out
+        )
+        r_planet_params_out.params.append(planet_params)
 
         print('Done')
-        return r_flux_out, r_coordinate_out
+        return r_planet_params_out
