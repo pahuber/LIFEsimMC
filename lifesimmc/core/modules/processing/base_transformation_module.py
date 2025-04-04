@@ -1,0 +1,32 @@
+from typing import Union
+
+from lifesimmc.core.modules.base_module import BaseModule
+from lifesimmc.core.resources.base_resource import BaseResource
+
+
+class BaseTransformationModule(BaseModule):
+    """Class representation of the base transformation module."""
+
+    def __init__(
+            self,
+            n_data_in: str = None,
+            n_template_in: str = None,
+            n_data_out: str = None,
+            n_template_out: str = None,
+            n_transformation_out: str = None,
+    ):
+        """Constructor method."""
+        super().__init__()
+        self.n_data_in = n_data_in
+        self.n_template_in = n_template_in
+        self.n_data_out = n_data_out
+        self.n_template_out = n_template_out
+        self.n_transformation_out = n_transformation_out
+
+    def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
+        """Apply the module.
+
+        :param resources: The resources to apply the module to
+        :return: The resource
+        """
+        pass

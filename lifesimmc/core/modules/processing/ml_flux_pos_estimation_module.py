@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 import torch
 from lmfit import minimize, Parameters
@@ -17,19 +15,18 @@ class MLFluxPosEstimationModule(BaseModule):
             n_config_in: str,
             n_data_in: str,
             n_flux_out: str,
-            n_cov_in: Union[str, None],
+            n_transformation_in: str,
             n_template_in: str = None,
             n_coordinate_out: str = None,
     ):
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
-        self.n_cov_in = n_cov_in
+        self.n_transformation_in = n_transformation_in
         self.n_flux_out = n_flux_out
         self.n_coordinate_out = n_coordinate_out
 
     def _get_analytical_initial_guess(self, data, template_data, grid_coordinates):
-
         # Normalize template data with their variance along axis 2
         # template_data = template_data / torch.var(template_data, axis=2, keepdim=True) ** 0.5
 
@@ -83,14 +80,14 @@ class MLFluxPosEstimationModule(BaseModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
-        r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
+        # r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
+        r_transformation_in = self.get_resource_from_name(self.n_transformation_in)
+        transf = r_transformation_in.transformation
         r_coordinate_out = CoordinateResource(self.n_coordinate_out)
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
         wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths().cpu().numpy()
-        i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()
-        # i_cov_sqrt_block = torch.block_diag(*i_cov_sqrt).cpu().numpy()
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
         template_data = r_templates_in.get_data()
         grid_coordinates = r_templates_in.grid_coordinates
@@ -126,8 +123,7 @@ class MLFluxPosEstimationModule(BaseModule):
                 posx,
                 posy
             )
-            for i in range(model.shape[0]):
-                model[i] = i_cov_sqrt[i] @ model[i]
+            model = transf(model)
             model = np.transpose(model, (0, 2, 1))
             model = model.reshape(data_in.shape)
             return model - target

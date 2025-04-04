@@ -10,12 +10,10 @@ class CorrelationMapModule(BaseModule):
             self,
             n_data_in: str,
             n_template_in: str,
-            n_image_out: str,
-            n_cov_in: str = None,
+            n_image_out: str
     ):
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
-        self.n_cov_in = n_cov_in
         self.n_image_out = n_image_out
 
     def apply(self, resources: list[BaseResource]) -> ImageResource:
