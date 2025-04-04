@@ -14,6 +14,7 @@ class BaseModule(ABC):
         self.grid_size = None
         self.time_step_size = None
         self.device = None
+        self.resources = None
 
     def get_resource_from_name(self, name: str):
         """Get the resource from the name.
@@ -21,7 +22,7 @@ class BaseModule(ABC):
         :param name: The name of the resource
         :return: The resource
         """
-        resource = [resource for resource in self.resources if resource.name == name][0]
+        resource = self.resources.get(name)
         return resource
 
     @abstractmethod

@@ -25,7 +25,7 @@ class Pipeline:
         self.time_step_size = time_step_size
         self.device = PHRINGE()._get_device(self.gpu_index)
         self._modules = []
-        self._resources = []
+        self._resources = {}
 
     def add_module(self, module: BaseModule):
         """Add a module to the pipeline.
@@ -44,13 +44,13 @@ class Pipeline:
         """Get a resource by name.
 
         :param name: The name of the resource
-        :return: The resource
+        :return: The resource if found, None otherwise
         """
-        for resource in self._resources:
-            if resource.name == name:
-                return resource
-        print(f"Resource {name} not found.")
-        return None
+        if name in self._resources:
+            return self._resources[name]
+        else:
+            print(f"Resource {name} not found.")
+            return None
 
     def run(self):
         """Run the pipeline with all the modules that have been added. Remove the modules after running."""
@@ -59,7 +59,7 @@ class Pipeline:
             if resource is not None:
                 if isinstance(resource, tuple):
                     for res in resource:
-                        self._resources.append(res)
+                        self._resources[res.name] = res
                 else:
-                    self._resources.append(resource)
+                    self._resources[resource.name] = resource
         self._modules = []
