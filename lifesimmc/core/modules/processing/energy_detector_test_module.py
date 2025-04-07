@@ -1,11 +1,11 @@
-import numpy as np
-import torch
-from matplotlib import pyplot as plt
+from typing import Union
+
 from scipy.stats import ncx2
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.test_resource import TestResource, TestResourceCollection
+from lifesimmc.core.resources.test_resource import TestResource
+from lifesimmc.util.resources import get_transformations_from_resource_name
 
 
 class EnergyDetectorTestModule(BaseModule):
@@ -18,36 +18,30 @@ class EnergyDetectorTestModule(BaseModule):
 
     def __init__(
             self,
+            n_config_in: str,
             n_data_in: str,
+            n_planet_params_in: str,
+            n_transformation_in: Union[str, tuple[str]],
             n_test_out: str,
             pfa: float,
-            n_config_in: str = None,
-            n_cov_in: str = None,
-            n_coordinate_in: str = None,
-            n_flux_in: str = None,
-            use_theoretical: bool = True
     ):
         """Constructor method.
 
+        :param n_config_in: Name of the input configuration resource.
         :param n_data_in: Name of the input data resource.
+        :param n_planet_params_in: Name of the input planet parameters resource.
+        :param n_transformation_in: Name of the input transformation resource..
         :param n_test_out: Name of the output test resource.
         :param pfa: Probability of false alarm.
-        :param n_config_in: Name of the input configuration resource.
-        :param n_cov_in: Name of the input covariance resource.
-        :param n_coordinate_in: Name of the input coordinate resource.
-        :param n_flux_in: Name of the input flux resource.
-        :param use_theoretical: Whether to calculate the theoretical or empirical test statistic.
         """
         self.n_data_in = n_data_in
         self.n_test_out = n_test_out
         self.pfa = pfa
         self.n_config_in = n_config_in
-        self.n_cov_in = n_cov_in
-        self.n_coordinate_in = n_coordinate_in
-        self.n_flux_in = n_flux_in
-        self.use_theoretical = use_theoretical
+        self.n_planet_params_in = n_planet_params_in
+        self.n_transformation_in = n_transformation_in
 
-    def apply(self, resources: list[BaseResource]) -> TestResourceCollection:
+    def apply(self, resources: list[BaseResource]) -> TestResource:
         """Apply the energy detector test.
 
         :param resources: List of resources.
@@ -55,129 +49,60 @@ class EnergyDetectorTestModule(BaseModule):
         """
         print("Performing energy detector test...")
 
-        if not self.use_theoretical:
-            assert self.n_config_in is not None, "Configuration resource is required for theoretical test statistic."
-            assert self.n_cov_in is not None, "Covariance resource is required for theoretical test statistic."
-            assert self.n_coordinate_in is not None, "Coordinate resource is required for theoretical test statistic."
-            assert self.n_flux_in is not None, "Flux resource is required for theoretical test statistic."
-
-        rc_test_out = TestResourceCollection(
-            self.n_test_out,
-            'Collection of TestResources, one for each differential output'
-        )
-
         # Extract all inputs
         r_config_in = self.get_resource_from_name(self.n_config_in) if self.n_config_in is not None else None
-        r_cov_in = self.get_resource_from_name(self.n_cov_in) if self.n_cov_in is not None else None
-        r_coordinate_in = self.get_resource_from_name(
-            self.n_coordinate_in
-        ) if self.n_coordinate_in is not None else None
+        transformations = get_transformations_from_resource_name(self, self.n_transformation_in)
+        r_planet_params_in = self.get_resource_from_name(
+            self.n_planet_params_in) if self.n_planet_params_in is not None else None
 
+        times = r_config_in.phringe.get_time_steps().cpu().numpy()
+        wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
+        wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths().cpu().numpy()
+
+        # Prepare data
         data = self.get_resource_from_name(self.n_data_in).get_data()
-        num_of_diff_outputs = len(data)
-        time = r_config_in.phringe.get_time_steps(as_numpy=True)
-        self.wavelengths = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True)
-        self.wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True)
-        i_cov_sqrt = r_cov_in.i_cov_sqrt.cpu().numpy()
+        dataf = data.flatten()
+        ndim = dataf.numel()
+        dataf = dataf.cpu().numpy()
 
-        # Generate a purely diagonal covariance matrix if none is given
-        # if not self.use_theoretical:
-        #     flux_in = r_config_in.scene.planets[0].spectral_flux_density.cpu().numpy()
-        #     x_pos = r_config_in.scene.planets[0].angular_separation_from_star_x.cpu().numpy()[0]
-        #     y_pos = r_config_in.scene.planets[0].angular_separation_from_star_y.cpu().numpy()[0]
-        #
-        # else:
-        #     i_cov_sqrt = torch.diag(
-        #         torch.ones(data.shape[1], device=r_config_in.phringe._director._device)
-        #     ).unsqueeze(0).repeat(data.shape[0], 1, 1).cpu().numpy()
-        #     x_pos = np.array(r_coordinate_in.x)
-        #     y_pos = np.array(r_coordinate_in.y)
-        #     # TODO: Handle multiple planets
-        #     flux_in = self.get_resource_from_name(self.n_flux_in).collection[0].spectral_irradiance.cpu().numpy() \
-        #         if self.n_flux_in is not None else None
+        # Get test results under H1 (planet is present)
+        test_h1 = (dataf.T @ dataf)
+        xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
 
-        for i in range(num_of_diff_outputs):
-            dataf = data[i].flatten()
-            ndim = dataf.numel()
-            test = (dataf.T @ dataf)
-            xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
+        # TODO: handle mutiple planets
+        flux = r_planet_params_in.params[0].sed.cpu().numpy()
+        # TODO: Handle orbital motion
+        posx = r_planet_params_in.params[0].pos_x
+        posy = r_planet_params_in.params[0].pos_y
 
-            # icov2i = i_cov_sqrt[i]
-            # model = (icov2i @ r_config_in.phringe.get_template_numpy(
-            #     time,
-            #     self.wavelengths,
-            #     self.wavelength_bin_widths,
-            #     x_pos,
-            #     y_pos,
-            #     flux_in
-            # )[i, :, :, 0, 0]).flatten()
+        model = r_config_in.phringe._get_template_diff_counts(
+            times,
+            wavelengths,
+            wavelength_bin_widths,
+            flux,
+            posx,
+            posy
+        )
+        for transf in transformations:
+            model = transf(model)
+        modelf = model.flatten()
 
-            # Calculate test statistic
-            # if self.use_theoretical:
-            # else:
-            #     test = (model @ model)
-            sky_brightness_distribution = r_config_in.phringe._director._planets[
-                0].sky_brightness_distribution  # TODO: Handel multiple planets
+        # Get test result under H0 (planet is not present)
+        data_h0 = dataf - modelf
+        test_h0 = (data_h0.T @ data_h0)
+        xtx = (modelf @ modelf)
+        pdet = ncx2.sf(xsi, df=ndim, nc=xtx)
 
-            # if orbital motion is modeled, just use the initial position
-            if sky_brightness_distribution.ndim == 4:
-                sky_brightness_distribution = sky_brightness_distribution[0]
-
-            # Get indices of only pixel that is not zero
-            index_x, index_y = torch.nonzero(sky_brightness_distribution[0], as_tuple=True)
-            # index_x, index_y = index_x[0].item(), index_y[0].item()
-            x_coord = r_config_in.phringe._director._planets[0].sky_coordinates[
-                0, index_x[0].item(), index_y[0].item()].cpu().numpy()
-            y_coord = r_config_in.phringe._director._planets[0].sky_coordinates[
-                1, index_x[0].item(), index_y[0].item()].cpu().numpy()
-
-            # Calculate threshold
-            model = r_config_in.phringe.get_template_numpy(
-                r_config_in.phringe.get_time_steps(as_numpy=True),
-                r_config_in.phringe.get_wavelength_bin_centers(as_numpy=True),
-                r_config_in.phringe.get_wavelength_bin_widths(as_numpy=True),
-                x_coord,
-                y_coord,
-                r_config_in.scene.params[0].spectral_flux_density.cpu().numpy()
-            )
-            model = (i_cov_sqrt @ model[0, :, :, 0, 0]).flatten()
-
-            data_h0 = dataf - model
-
-            test_h0 = (data_h0.T @ data_h0)
-
-            xtx = (model @ model)
-            P_Det = ncx2.sf(xsi, df=ndim, nc=xtx)
-
-            r_test_out = TestResource(
-                name='',
-                test_statistic=test,
-                xsi=xsi,
-                xtx=test_h0,  # xtx,
-                ndim=ndim,
-                p_det=P_Det
-            )
-            rc_test_out.collection.append(r_test_out)
-
-            # Plotting test
-            z = np.linspace(0.9 * xsi, 1.1 * xsi, 1000)
-            zdet = z[z > xsi]
-            zndet = z[z < xsi]
-            fig = plt.figure(dpi=150)
-            plt.plot(z, ncx2.pdf(z, df=ndim, nc=0), label=f"PDF($T_{{E}} | \mathcal{{H}}_0$)")
-            plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=0), alpha=0.3, label=f"$P_{{FA}}$")  # , hatch="//"
-            plt.plot(z, ncx2.pdf(z, df=ndim, nc=xtx), label=f"PDF($T_{{E}}| \mathcal{{H}}_1$)")
-            plt.fill_between(zdet, ncx2.pdf(zdet, df=ndim, nc=xtx), alpha=0.3, label=f"$P_{{Det}}$")
-            plt.axvline(xsi, color="gray", linestyle="--", label=f"$\\xi(P_{{FA}}={self.pfa})$")
-            plt.xlabel(f"$T_{{E}}$")
-            plt.ylabel(f"$PDF(T_{{E}})$")
-            plt.legend()
-            plt.show()
-
-            # calculate p_det the detection probability as the are under the curve
-            # p_det = ncx2.cdf(xsi, df=ndim, nc=xtx)
-            # print(f"Detection probability: {1 - p_det}")
-            # print(f"Detection Probability: {P_Det:.4f}")
+        r_test_out = TestResource(
+            name=self.n_test_out,
+            test_statistic_h1=test_h1,
+            test_statistic_h0=test_h0,
+            threshold_xsi=xsi,
+            model_length_xtx=xtx,
+            dimensions=ndim,
+            detection_probability=pdet,
+            probability_false_alarm=self.pfa,
+        )
 
         print('Done')
-        return rc_test_out
+        return r_test_out

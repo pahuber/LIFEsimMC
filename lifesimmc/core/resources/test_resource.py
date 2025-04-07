@@ -1,21 +1,16 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from lifesimmc.core.resources.base_resource import BaseResource, BaseResourceCollection
+from lifesimmc.core.resources.base_resource import BaseResource
 
 
 @dataclass
 class TestResource(BaseResource):
     """Class representation of a test resource.
     """
-    test_statistic: float = None
-    xsi: float = None
-    xtx: float = None
-    ndim: int = None
-    p_det: float = None
-
-
-@dataclass
-class TestResourceCollection(BaseResourceCollection):
-    """Class representation of a collection of test resources.
-    """
-    collection: list[TestResource] = field(default_factory=list)
+    test_statistic_h1: float = None
+    test_statistic_h0: float = None
+    threshold_xsi: float = None
+    model_length_xtx: float = None
+    dimensions: int = None
+    detection_probability: float = None
+    probability_false_alarm: float = None
