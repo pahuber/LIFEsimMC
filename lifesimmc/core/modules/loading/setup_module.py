@@ -1,9 +1,9 @@
 from typing import overload
 
-from phringe.entities.configuration import Configuration
-from phringe.entities.instrument import Instrument
-from phringe.entities.observation import Observation
-from phringe.entities.scene import Scene
+from phringe.core.entities.configuration import Configuration
+from phringe.core.entities.instrument import Instrument
+from phringe.core.entities.observation import Observation
+from phringe.core.entities.scene import Scene
 from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
