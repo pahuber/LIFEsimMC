@@ -8,8 +8,12 @@ from torch import Tensor
 class TransformationResource:
     """Class representation of the transformation resource.
 
-    :param name: The name of the resource
-    :param transformation: The transformation function
+    Parameters
+    ----------
+    name : str
+        The name of the transformation.
+    transformation : Callable[[Tensor], Tensor]
+        The transformation function that takes a Tensor as input and returns a Tensor.
     """
     name: str
     transformation: Callable[[Tensor], Tensor]

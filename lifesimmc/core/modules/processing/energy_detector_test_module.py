@@ -11,9 +11,20 @@ from lifesimmc.util.resources import get_transformations_from_resource_name
 class EnergyDetectorTestModule(BaseModule):
     """Class representation of an energy detector test module.
 
-    :param n_data_in: Name of the input data resource.
-    :param n_test_out: Name of the output test resource.
-    :param pfa: Probability of false alarm.
+    Parameters
+    ----------
+    n_config_in : str
+        Name of the input configuration resource.
+    n_data_in : str
+        Name of the input data resource.
+    n_planet_params_in : str
+        Name of the input planet parameters resource.
+    n_transformation_in : str or tuple[str]
+        Name of the input transformation resource.
+    n_test_out : str
+        Name of the output test resource.
+    pfa : float
+        Probability of false alarm.
     """
 
     def __init__(

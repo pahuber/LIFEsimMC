@@ -9,12 +9,28 @@ from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource
 
 
 class MLParameterEstimationModule(BaseModule):
+    """Class representation of a module that performs maximum likelihood estimation (MLE) of planet parameters.
+
+    Parameters
+    ----------
+    n_config_in : str
+        Name of the input configuration resource.
+    n_data_in : str
+        Name of the input data resource.
+    n_planet_params_out : str
+        Name of the output planet parameters resource.
+    n_transformation_in : str, optional
+        Name of the input transformation resource. If None, no transformation is applied.
+    n_template_in : str, optional
+        Name of the input template resource. If None, no template is used.
+    """
+
     def __init__(
             self,
             n_config_in: str,
             n_data_in: str,
             n_planet_params_out: str,
-            n_transformation_in: str,
+            n_transformation_in: str = None,
             n_template_in: str = None,
     ):
         self.n_config_in = n_config_in
@@ -77,8 +93,9 @@ class MLParameterEstimationModule(BaseModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
-        r_transformation_in = self.get_resource_from_name(self.n_transformation_in)
-        transf = r_transformation_in.transformation
+        r_transformation_in = self.get_resource_from_name(
+            self.n_transformation_in) if self.n_transformation_in else None
+        transf = r_transformation_in.transformation if r_transformation_in else lambda x: x
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()

@@ -8,7 +8,25 @@ from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class Pipeline:
-    """Class representation of the pipeline."""
+    """Class representation of the pipeline.
+
+    Parameters
+    ----------
+    seed : int
+        The seed for the random number generator.
+    gpu_index : int
+        The index of the GPU to use.
+    grid_size : int
+        The size of the grid.
+    time_step_size : float
+        The size of the time step.
+    device : torch.device
+        The device to use for the simulation.
+    _modules : list
+        The list of modules in the pipeline.
+    _resources : dict
+        The dictionary of resources in the pipeline.
+    """
 
     def __init__(
             self,

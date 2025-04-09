@@ -5,7 +5,21 @@ from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class BaseModule(ABC):
-    """Class representation of the base module."""
+    """Class representation of the base module.
+
+    Parameters
+    ----------
+    seed : int or None
+        The random seed.
+    gpu_index : int or None
+        The index of the GPU to use.
+    grid_size : int or None
+        The size of the grid.
+    time_step_size : float or None
+        The size of the time step.
+    device : str or None
+        The device to use.
+    """
 
     def __init__(self):
         """Constructor method."""

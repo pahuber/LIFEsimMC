@@ -6,6 +6,18 @@ from lifesimmc.core.resources.image_resource import ImageResource
 
 
 class CorrelationMapModule(BaseModule):
+    """Module to calculate the correlation map of a template and data image.
+
+    Parameters
+    ----------
+    n_data_in : str
+        The name of the data input resource.
+    n_template_in : str
+        The name of the template input resource.
+    n_image_out : str
+        The name of the output image resource.
+    """
+    
     def __init__(
             self,
             n_data_in: str,

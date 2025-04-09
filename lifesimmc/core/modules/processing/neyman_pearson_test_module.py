@@ -12,12 +12,20 @@ from lifesimmc.util.resources import get_transformations_from_resource_name
 class NeymanPearsonTestModule(BaseModule):
     """Class representation of a Neyman-Pearson test module.
 
-    :param n_config_in: Name of the input configuration resource.
-    :param n_cov_in: Name of the input covariance resource.
-    :param n_data_in: Name of the input data resource.
-    :param n_flux_in: Name of the input spectrum resource.
-    :param n_test_out: Name of the output test resource.
-    :param pfa: Probability of false alarm.
+    Parameters
+    ----------
+    n_config_in : str
+        Name of the input configuration resource.
+    n_data_in : str
+        Name of the input data resource.
+    n_planet_params_in : str
+        Name of the input planet parameters resource.
+    n_transformation_in : Union[str, tuple[str]]
+        Name of the input transformation resource.
+    n_test_out : str
+        Name of the output test resource.
+    pfa : float
+        Probability of false alarm.
     """
 
     def __init__(

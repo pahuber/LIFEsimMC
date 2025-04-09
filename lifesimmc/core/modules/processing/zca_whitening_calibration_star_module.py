@@ -16,7 +16,26 @@ from lifesimmc.core.resources.transformation_resource import TransformationResou
 
 
 class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
-    """Class representation of the base transformation module."""
+    """Class representation of the base transformation module.
+
+    Parameters
+    ----------
+
+    n_config_in : str
+        Name of the input configuration resource.
+    n_data_in : str
+        Name of the input data resource.
+    n_template_in : str
+        Name of the input template resource.
+    n_data_out : str
+        Name of the output data resource.
+    n_template_out : str
+        Name of the output template resource.
+    n_transformation_out : str
+        Name of the output transformation resource.
+    diagonal_only : bool
+        If True, only the diagonal of the covariance matrix is used for whitening. Default is False.
+    """
 
     def __init__(
             self,

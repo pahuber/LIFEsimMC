@@ -13,11 +13,18 @@ from lifesimmc.core.resources.base_resource import BaseResource
 class ConfigResource(BaseResource):
     """Class representation of the configuration resource.
 
-    :param phringe: The PHRINGE object
-    :param configuration: The configuration
-    :param instrument: The instrument
-    :param observation: The observation mode
-    :param scene: The scene
+    Parameters
+    ----------
+    configuration : Configuration
+        The configuration of the simulation.
+    instrument : Instrument
+        The instrument used for the simulation.
+    observation : Observation
+        The observation used for the simulation.
+    phringe : PHRINGE
+        The PHRINGE instance used for the simulation.
+    scene : Scene
+        The scene used for the simulation.
     """
     configuration: Configuration = None
     instrument: Instrument = None

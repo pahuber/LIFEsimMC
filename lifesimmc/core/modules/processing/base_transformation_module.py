@@ -5,7 +5,22 @@ from lifesimmc.core.resources.base_resource import BaseResource
 
 
 class BaseTransformationModule(BaseModule):
-    """Class representation of the base transformation module."""
+    """Class representation of the base transformation module.
+
+    Parameters
+    ----------
+
+    n_data_in : str
+        The name of the input data resource.
+    n_template_in : str
+        The name of the input template resource.
+    n_data_out : str
+        The name of the output data resource.
+    n_template_out : str
+        The name of the output template resource.
+    n_transformation_out : str
+        The name of the output transformation resource.
+    """
 
     def __init__(
             self,

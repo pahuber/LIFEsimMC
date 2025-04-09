@@ -1,0 +1,19 @@
+/* Light theme heading color */
+html[data-theme="light"] .document h1,
+html[data-theme="light"] .document h2,
+html[data-theme="light"] .document h3,
+html[data-theme="light"] .document h4,
+html[data-theme="light"] .document h5,
+html[data-theme="light"] .document h6 {
+    color: #444 !important;
+}
+
+/* Dark theme heading color */
+html[data-theme="dark"] .document h1,
+html[data-theme="dark"] .document h2,
+html[data-theme="dark"] .document h3,
+html[data-theme="dark"] .document h4,
+html[data-theme="dark"] .document h5,
+html[data-theme="dark"] .document h6 {
+    color: #ccc !important;
+}

@@ -10,8 +10,12 @@ from lifesimmc.core.resources.base_resource import BaseResource
 class TemplateResource(BaseResource):
     """Class representation of a template resource.
 
-    :param _data: The data of the template resource
-    :param grid_coordinates: The grid coordinates of the template resource
+    Parameters
+    ----------
+    name : str
+        The name of the resource.
+    _data : Tensor
+        The data of the resource.
     """
     _data: Tensor = None
     grid_coordinates: tuple[Tensor, Tensor] = None

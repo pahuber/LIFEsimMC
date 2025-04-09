@@ -9,7 +9,10 @@ from lifesimmc.core.resources.base_resource import BaseResource
 class ImageResource(BaseResource):
     """Class representation of the image resource.
 
-    :param _image: The image to be stored.
+    Parameters
+    ----------
+    image : Tensor
+        The image tensor.
     """
     _image: Tensor = None
 

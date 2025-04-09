@@ -1,5 +1,5 @@
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from torch import Tensor
 
@@ -9,7 +9,11 @@ from lifesimmc.core.resources.base_resource import BaseResource
 @dataclass
 class DataResource(BaseResource):
     """Class representation of the data resource.
-    :param _data: The data to be stored.
+
+    Parameters
+    ----------
+    _data : Tensor
+        The data to be stored.
     """
     _data: Tensor = None
 

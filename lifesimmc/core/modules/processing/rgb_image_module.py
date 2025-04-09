@@ -7,6 +7,22 @@ from lifesimmc.core.resources.image_resource import ImageResource
 
 
 class RGBImageModule(BaseModule):
+    """Class representation of a RGB image module.
+
+    Parameters
+    ----------
+    n_config_in : str
+        Name of the input configuration resource.
+    n_data_in : str
+        Name of the input data resource.
+    n_template_in : str
+        Name of the input template resource.
+    n_image_out : str
+        Name of the output image resource.
+    metric : int, optional
+        Metric to use for the image generation. 0 for correlation, 1 for MLE. Default is 0.
+    """
+
     def __init__(
             self,
             n_config_in: str,
