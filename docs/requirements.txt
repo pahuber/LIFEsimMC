@@ -5,3 +5,4 @@ myst_parser==0.19.0
 nbsphinx>=0.9.4
 packaging==23.2
 Pygments>=2.10.0
+phringe>=1.1.2

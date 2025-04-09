@@ -52,6 +52,13 @@ A config file is used to setup the simulation and must be passed to the ``SetupM
 
     module = SetupModule(n_config_out='conf', configuration=Configuration(path=Path(r"path/to/config.py")))
 
+Alternatively, if the ``config`` dictionary is not located in a separate file, but in the same file as the ``SetupModule``,
+it can be passed directly to the ``Configuration`` object:
+
+.. code-block:: python
+
+    module = SetupModule(n_config_out='conf', configuration=Configuration(config_dict=config))
+
 This creates a ``ConfigResource`` (see :doc:`ConfigResource documentation <../source/core/resources/config_resource>`)
 named ``conf`` here that is added to the pipeline and can be accessed from all successive modules.
 
