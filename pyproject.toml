@@ -18,6 +18,7 @@ Changelog = "https://github.com/pahuber/lifesimmc/releases"
 [tool.poetry.dependencies]
 python = "^3.10,<3.11"
 click = ">=8.0.1"
+sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
