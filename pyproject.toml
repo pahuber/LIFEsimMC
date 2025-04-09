@@ -16,7 +16,7 @@ classifiers = [
 Changelog = "https://github.com/pahuber/lifesimmc/releases"
 
 [tool.poetry.dependencies]
-python = "^3.10,<3.11"
+python = ">=3.10,<3.12"
 click = ">=8.0.1"
 packaging = "==23.2"
 sphinx-copybutton = "^0.5.2"
