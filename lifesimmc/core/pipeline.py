@@ -48,7 +48,10 @@ class Pipeline:
     def add_module(self, module: BaseModule):
         """Add a module to the pipeline.
 
-        :param module: The module to add
+        Parameters
+        ----------
+        module : BaseModule
+            The module to add to the pipeline.
         """
         module.resources = self._resources
         module.seed = self.seed
@@ -61,8 +64,15 @@ class Pipeline:
     def get_resource(self, name: str) -> Union[BaseResource, None]:
         """Get a resource by name.
 
-        :param name: The name of the resource
-        :return: The resource if found, None otherwise
+        Parameters
+        ----------
+        name : str
+            The name of the resource to get.
+
+        Returns
+        -------
+        BaseResource or None
+            The resource if found, otherwise None.
         """
         if name in self._resources:
             return self._resources[name]

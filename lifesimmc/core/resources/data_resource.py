@@ -17,8 +17,22 @@ class DataResource(BaseResource):
     """
     _data: Tensor = None
 
-    def get_data(self):
+    def get_data(self) -> Tensor:
+        """Get the data stored in the resource.
+
+        Returns
+        -------
+        Tensor
+            A deep copy of the data stored in the resource.
+        """
         return deepcopy(self._data)
 
     def set_data(self, data: Tensor):
+        """Set the data in the resource.
+
+        Parameters
+        ----------
+        data : Tensor
+            The data to be stored in the resource.
+        """
         self._data = data

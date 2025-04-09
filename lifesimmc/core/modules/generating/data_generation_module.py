@@ -1,5 +1,3 @@
-from typing import Union
-
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
@@ -9,22 +7,32 @@ from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource
 class DataGenerationModule(BaseModule):
     """Class representation of the data generation module.
 
-        :param n_config_in: The name of the input configuration resource
-        :param n_data_out: The name of the output data resource
-        :param n_planet_params_out: The name of the output spectrum resource collection
+        Parameters
+        ----------
+        n_config_in : str
+            The name of the input configuration resource.
+        n_data_out : str
+            The name of the output data resource.
+        n_planet_params_out : str
+            The name of the output planet parameters resource.
     """
 
     def __init__(
             self,
             n_config_in: str,
             n_data_out: str,
-            n_planet_params_out: Union[str, tuple[str]]
+            n_planet_params_out: str
     ):
         """Constructor method.
 
-        :param n_config_in: The name of the input configuration resource
-        :param n_data_out: The name of the output data resource
-        :param n_planet_params_out: The name of the output spectrum resource collection
+        Parameters
+        ----------
+        n_config_in : str
+            The name of the input configuration resource.
+        n_data_out : str
+            The name of the output data resource.
+        n_planet_params_out : str
+            The name of the output planet parameters resource.
         """
         super().__init__()
         self.config_in = n_config_in
@@ -34,8 +42,15 @@ class DataGenerationModule(BaseModule):
     def apply(self, resources: list[BaseResource]) -> tuple[DataResource, PlanetParamsResource]:
         """Use PHRINGE to generate synthetic data.
 
-        :param resources: The resources to apply the module to
-        :return: The data and spectrum resources
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            List of resources to be used in the module.
+
+        Returns
+        -------
+        tuple[DataResource, PlanetParamsResource]
+            Tuple containing the output data resource and planet parameters resource.
         """
         print('Generating synthetic data...')
 

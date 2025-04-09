@@ -13,15 +13,31 @@ from lifesimmc.core.resources.config_resource import ConfigResource
 class SetupModule(BaseModule):
     """Class representation of the configuration loader module.
 
-        :param n_config_out: The name of the output configuration resource
-        :param configuration: The configuration object
-        :param observation: The observation mode object
-        :param instrument: The instrument object
-        :param scene: The scene object
+    Parameters
+    ----------
+    n_config_out : str
+        Name of the output configuration resource.
+    configuration : Configuration
+        Configuration object.
+    observation : Observation
+        Observation object.
+    instrument : Instrument
+        Instrument object.
+    scene : Scene
+        Scene object.
     """
 
     @overload
     def __init__(self, n_config_out: str, configuration: Configuration):
+        """Constructor method.
+
+        Parameters
+        ----------
+        n_config_out : str
+            The name of the output configuration resource
+        configuration : Configuration
+            The configuration object
+        """
         ...
 
     @overload
@@ -32,6 +48,19 @@ class SetupModule(BaseModule):
             instrument: Instrument,
             scene: Scene
     ):
+        """Constructor method.
+
+        Parameters
+        ----------
+        n_config_out : str
+            The name of the output configuration resource
+        observation : Observation
+            The observation mode object
+        instrument : Instrument
+            The instrument object
+        scene : Scene
+            The scene object
+        """
         ...
 
     def __init__(
@@ -44,11 +73,18 @@ class SetupModule(BaseModule):
     ):
         """Constructor method.
 
-        :param n_config_out: The name of the output configuration resource
-        :param configuration: The configuration object
-        :param observation: The observation mode object
-        :param instrument: The instrument object
-        :param scene: The scene object
+        Parameters
+        ----------
+        n_config_out : str
+            The name of the output configuration resource
+        configuration : Configuration
+            The configuration object
+        observation : Observation
+            The observation mode object
+        instrument : Instrument
+            The instrument object
+        scene : Scene
+            The scene object
         """
         super().__init__()
         self.n_config_out = n_config_out
@@ -60,8 +96,15 @@ class SetupModule(BaseModule):
     def apply(self, resources: list[ConfigResource]) -> ConfigResource:
         """Load the configuration file.
 
-        :param resources: The resources to apply the module to
-        :return: The configuration resource
+        Parameters
+        ----------
+        resources : list[ConfigResource]
+            List of resources.
+
+        Returns
+        -------
+        ConfigResource
+            The configuration resource.
         """
         print('Loading configuration...')
         phringe = PHRINGE(

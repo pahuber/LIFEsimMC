@@ -24,18 +24,18 @@ config = {
         'throughput': 0.12,
         'quantum_efficiency': 0.7,
         'perturbations': {
-            # 'amplitude': {
-            #     'rms': '0.1 %',
-            #     'color': 'pink',
-            # },
-            # 'phase': {
-            #     'rms': '1.5 nm',
-            #     'color': 'pink',
-            # },
-            # 'polarization': {
-            #     'rms': '0.001 rad',
-            #     'color': 'pink',
-            # },
+            'amplitude': {
+                'rms': '0.1 %',
+                'color': 'pink',
+            },
+            'phase': {
+                'rms': '1.5 nm',
+                'color': 'pink',
+            },
+            'polarization': {
+                'rms': '0.001 rad',
+                'color': 'pink',
+            },
         }
     },
     'scene': {
@@ -66,22 +66,24 @@ config = {
                 'argument_of_periapsis': '0 deg',
                 'true_anomaly': '45 deg',
                 'input_spectrum': None,
-                # 'host_star_distance': '10 pc',
-                # 'host_star_mass': '1 Msun',
+                # 'host_star_distance': '10 pc', # only necessary if no host star is specified
+                # 'host_star_mass': '1 Msun', # only necessary if no host star is specified
             },
-            # {
-            #     'name': 'Mars',
-            #     'mass': '1 Mearth',
-            #     'radius': '1 Rearth',
-            #     'temperature': '288 K',
-            #     'semi_major_axis': '1 au',
-            #     'eccentricity': '0',
-            #     'inclination': '0 deg',
-            #     'raan': '0 deg',
-            #     'argument_of_periapsis': '45 deg',
-            #     'true_anomaly': '0 deg',
-            #     'input_spectrum': None
-            # },
+            {
+                'name': 'Mars',
+                'mass': '0.1 Mearth',
+                'radius': '0.53 Rearth',
+                'temperature': '210 K',
+                'semi_major_axis': '1.52 au',
+                'eccentricity': '0',
+                'inclination': '0 deg',
+                'raan': '0 deg',
+                'argument_of_periapsis': '45 deg',
+                'true_anomaly': '0 deg',
+                'input_spectrum': None,
+                # 'host_star_distance': '10 pc',  # only necessary if no host star is specified
+                # 'host_star_mass': '1 Msun',  # only necessary if no host star is specified
+            },
         ],
     },
 }

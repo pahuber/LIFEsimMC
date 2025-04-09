@@ -26,14 +26,19 @@ copyright = f'2024, Philipp A. Huber'
 #     "logo_light": "_static/phringe2.png",
 #     "logo_dark": "_static/phringe.png"
 # }
+html_theme = "furo"
+master_doc = 'index'
 html_static_path = ['_static']
+html_css_files = ["style.css"]
 pygments_style = "monokai"
 pygments_dark_style = "monokai"
-html_logo = "_static/lifesimmc_logo.png"
+# html_logo = "_static/lifesimmc_logo.png"
 html_title = "LIFEsimMC Docs"
 html_theme_options = {
     "logo_only": True,  # Show only the logo, not the project name
     "sidebar_hide_name": True,
+    "light_logo": "lifesimmc_logo_light.png",
+    "dark_logo": "lifesimmc_logo.png",
 }
 html_context = {
     "display_github": False,  # Example of context variable
@@ -54,10 +59,6 @@ extensions = ['sphinx_copybutton',
 
 # -- Options for HTML output -------------------------------------------------
 
-master_doc = 'index'
-html_theme = "furo"
-html_static_path = ['_static']
-html_css_files = ["style.css"]
 
 import os
 import sys
@@ -81,9 +82,9 @@ def setup(app):
         filename = os.path.basename(url)
 
         if 'star' in filename or 'planet' in filename or 'local_zodi' in filename or 'exozodi' in filename:
-            local_path = os.path.join(os.path.dirname(__file__), "external/all_sources", filename)
+            local_path = os.path.join(os.path.dirname(__file__), "source/external/all_sources", filename)
         else:
-            local_path = os.path.join(os.path.dirname(__file__), "external", filename)
+            local_path = os.path.join(os.path.dirname(__file__), "source/external", filename)
 
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         urllib.request.urlretrieve(url, local_path)

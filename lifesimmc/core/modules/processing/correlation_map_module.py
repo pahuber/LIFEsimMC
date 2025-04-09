@@ -17,23 +17,40 @@ class CorrelationMapModule(BaseModule):
     n_image_out : str
         The name of the output image resource.
     """
-    
+
     def __init__(
             self,
             n_data_in: str,
             n_template_in: str,
             n_image_out: str
     ):
+        """Constructor method.
+
+        Parameters
+        ----------
+        n_data_in : str
+            The name of the data input resource.
+        n_template_in : str
+            The name of the template input resource.
+        n_image_out : str
+            The name of the output image resource.
+        """
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_image_out = n_image_out
 
     def apply(self, resources: list[BaseResource]) -> ImageResource:
-        """Perform analytical MLE on a grid of templates to crate a cost function map/image. For each grid point
-        estimate the flux and return the flux of the grid point with the maximum of the cost function.
+        """Create a correlation map of the templates with the data.
 
-        :param resources: The resources to apply the module to
-        :return: The resource
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            The resources to apply the module to.
+
+        Returns
+        -------
+        ImageResource
+            The resource containing the correlation map.
         """
         print('Calculating correlation map...')
 

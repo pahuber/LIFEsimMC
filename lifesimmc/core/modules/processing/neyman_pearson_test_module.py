@@ -39,12 +39,20 @@ class NeymanPearsonTestModule(BaseModule):
     ):
         """Constructor method.
 
-        :param n_config_in: Name of the input configuration resource.
-        :param n_data_in: Name of the input data resource.
-        :param n_planet_params_in: Name of the input planet parameters resource.
-        :param n_transformation_in: Name of the input transformation resource..
-        :param n_test_out: Name of the output test resource.
-        :param pfa: Probability of false alarm.
+        Parameters
+        ----------
+        n_config_in : str
+            Name of the input configuration resource.
+        n_data_in : str
+            Name of the input data resource.
+        n_planet_params_in : str
+            Name of the input planet parameters resource.
+        n_transformation_in : Union[str, tuple[str]]
+            Name of the input transformation resource.
+        n_test_out : str
+            Name of the output test resource.
+        pfa : float
+            Probability of false alarm.
         """
         self.n_data_in = n_data_in
         self.n_test_out = n_test_out
@@ -57,8 +65,15 @@ class NeymanPearsonTestModule(BaseModule):
     def apply(self, resources: list[BaseResource]) -> TestResource:
         """Apply the Neyman-Pearson test.
 
-        :param resources: List of resources.
-        :return: Test resource collection.
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            The resources to apply the module to.
+
+        Returns
+        -------
+        TestResource
+            The test resource.
         """
         print("Performing Neyman-Pearson test...")
 

@@ -39,7 +39,7 @@ This is done via the ``SetupModule``. There are two ways to set up the simulatio
 Option 1: Using a Config File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The simplest way to use `LIFEsimMC` is by using a config file (see :doc:`Creating a Config File <tutorials/config_file>`) and a ``Configuration`` object (see :doc:`Configuration documentation <external/configuration>`):
+The simplest way to use `LIFEsimMC` is by using a config file (see :doc:`Config File Tutorial <tutorials/config_file>`) and a ``Configuration`` object (see :doc:`Configuration documentation <external/configuration>`):
 
 .. code-block:: python
 

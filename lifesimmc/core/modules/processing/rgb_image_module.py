@@ -31,6 +31,22 @@ class RGBImageModule(BaseModule):
             n_image_out: str,
             metric: int = 0,
     ):
+        """Constructor method.
+
+        Parameters
+        ----------
+        n_config_in : str
+            Name of the input configuration resource.
+        n_data_in : str
+            Name of the input data resource.
+        n_template_in : str
+            Name of the input template resource.
+        n_image_out : str
+            Name of the output image resource.
+        metric : int, optional
+            Metric to use for the image generation. 0 for correlation, 1 for MLE. Default is 0.
+        """
+        super().__init__()
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
@@ -38,11 +54,17 @@ class RGBImageModule(BaseModule):
         self.metric = metric
 
     def apply(self, resources: list[BaseResource]) -> ImageResource:
-        """Perform analytical MLE on a grid of templates to crate a cost function map/image. For each grid point
-        estimate the flux and return the flux of the grid point with the maximum of the cost function.
+        """Apply the RGB image module to generate a false color RGB image of the scene.
 
-        :param resources: The resources to apply the module to
-        :return: The resource
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            List of resources to apply the module to.
+
+        Returns
+        -------
+        ImageResource
+            The generated RGB image resource.
         """
         print('Generating RGB image...')
 

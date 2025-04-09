@@ -1,6 +1,5 @@
 from copy import copy
 from itertools import product
-from typing import Union
 
 import numpy as np
 import torch
@@ -16,7 +15,9 @@ from lifesimmc.core.resources.transformation_resource import TransformationResou
 
 
 class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
-    """Class representation of the base transformation module.
+    """Class representation of the ZCA whitening transformation module. This module applied ZCA whitening to the data
+    and templates using a covariance matrix based on a calibration star. The properties of this calibration star are
+    assumed to be identical to the properties of the target star.
 
     Parameters
     ----------
@@ -47,7 +48,25 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
             n_transformation_out: str,
             diagonal_only: bool = False
     ):
-        """Constructor method."""
+        """Constructor method.
+
+        Parameters
+        ----------
+        n_config_in : str
+            Name of the input configuration resource.
+        n_data_in : str
+            Name of the input data resource.
+        n_template_in : str
+            Name of the input template resource.
+        n_data_out : str
+            Name of the output data resource.
+        n_template_out : str
+            Name of the output template resource.
+        n_transformation_out : str
+            Name of the output transformation resource.
+        diagonal_only : bool
+            If True, only the diagonal of the covariance matrix is used for whitening. Default is False.
+        """
         super().__init__()
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
@@ -57,11 +76,18 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
         self.n_transformation_out = n_transformation_out
         self.diagonal_only = diagonal_only
 
-    def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
+    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, TemplateResource, TransformationResource]:
         """Apply the module.
 
-        :param resources: The resources to apply the module to
-        :return: The resource
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            List of resources to be processed.
+
+        Returns
+        -------
+        tuple[DataResource, TemplateResource, TransformationResource]
+            Tuple containing the output data resource, template resource, and transformation resource.
         """
         print('Applying ZCA whitening...')
 

@@ -9,9 +9,14 @@ from lifesimmc.core.resources.template_resource import TemplateResource
 class TemplateGenerationModule(BaseModule):
     """Class representation of the template generation module to generate templates of planets with unit flux.
 
-    :param n_config_in: The name of the input configuration resource
-    :param n_template_out: The name of the output template resource collection
-    :param fov: The field of view for which to generate the templates in radians
+    Parameters
+    ----------
+    n_config_in : str
+        The name of the input configuration resource
+    n_template_out : str
+        The name of the output template resource collection
+    fov : float
+        The field of view for which to generate the templates in radians
     """
 
     def __init__(
@@ -22,10 +27,16 @@ class TemplateGenerationModule(BaseModule):
     ):
         """Constructor method.
 
-        :param n_config_in: The name of the input configuration resource
-        :param n_template_out: The name of the output template resource collection
-        :param fov: The field of view for which to generate the templates in radians
+        Parameters
+        ----------
+        n_config_in : str
+            The name of the input configuration resource
+        n_template_out : str
+            The name of the output template resource collection
+        fov : float
+            The field of view for which to generate the templates in radians
         """
+        super().__init__()
         self.n_config_in = n_config_in
         self.n_template_out = n_template_out
         self.fov = fov
@@ -33,8 +44,15 @@ class TemplateGenerationModule(BaseModule):
     def apply(self, resources: list[BaseResource]) -> TemplateResource:
         """Generate templates for a planet at each point in the grid.
 
-        :param resources: The resources to apply the module to
-        :return: A list of template resources
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            List of resources to be used in the module.
+
+        Returns
+        -------
+        TemplateResource
+            The generated template resource.
         """
         print('Generating templates...')
 

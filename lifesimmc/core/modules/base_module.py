@@ -30,11 +30,18 @@ class BaseModule(ABC):
         self.device = None
         self.resources = None
 
-    def get_resource_from_name(self, name: str):
+    def get_resource_from_name(self, name: str) -> Union[BaseResource, None]:
         """Get the resource from the name.
 
-        :param name: The name of the resource
-        :return: The resource
+        Parameters
+        ----------
+        name : str
+            The name of the resource.
+
+        Returns
+        -------
+        BaseResource or None
+            The resource if found, otherwise None.
         """
         resource = self.resources.get(name)
         return resource
@@ -43,7 +50,14 @@ class BaseModule(ABC):
     def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
         """Apply the module.
 
-        :param resources: The resources to apply the module to
-        :return: The resource
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            The resources to apply the module on.
+
+        Returns
+        -------
+        Union[None, BaseResource, tuple]
+            The result of the module application.
         """
         pass

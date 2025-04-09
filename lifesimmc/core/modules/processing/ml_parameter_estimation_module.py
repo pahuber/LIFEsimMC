@@ -32,6 +32,22 @@ class MLParameterEstimationModule(BaseModule):
             n_transformation_in: str = None,
             n_template_in: str = None,
     ):
+        """Constructor method.
+
+        Parameters
+        ----------
+        n_config_in : str
+            Name of the input configuration resource.
+        n_data_in : str
+            Name of the input data resource.
+        n_planet_params_out : str
+            Name of the output planet parameters resource.
+        n_transformation_in : str, optional
+            Name of the input transformation resource. If None, no transformation is applied.
+        n_template_in : str, optional
+            Name of the input template resource. If None, no template is used. # TODO: handle no templates
+        """
+        super().__init__()
         self.n_config_in = n_config_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in

@@ -20,8 +20,22 @@ class TemplateResource(BaseResource):
     _data: Tensor = None
     grid_coordinates: tuple[Tensor, Tensor] = None
 
-    def get_data(self):
+    def get_data(self) -> Tensor:
+        """Get the data of the resource.
+
+        Returns
+        -------
+        Tensor
+            The data of the resource.
+        """
         return deepcopy(self._data)
 
     def set_data(self, data: Tensor):
+        """Set the data of the resource.
+
+        Parameters
+        ----------
+        data : Tensor
+            The data to set.
+        """
         self._data = data

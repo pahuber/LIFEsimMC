@@ -38,12 +38,16 @@ class EnergyDetectorTestModule(BaseModule):
     ):
         """Constructor method.
 
-        :param n_config_in: Name of the input configuration resource.
-        :param n_data_in: Name of the input data resource.
-        :param n_planet_params_in: Name of the input planet parameters resource.
-        :param n_transformation_in: Name of the input transformation resource..
-        :param n_test_out: Name of the output test resource.
-        :param pfa: Probability of false alarm.
+        Parameters
+        ----------
+        n_config_in : str
+            Name of the input configuration resource.
+        n_data_in : str
+            Name of the input data resource.
+        n_planet_params_in : str
+            Name of the input planet parameters resource.
+        n_transformation_in : str or tuple[str]
+            Name of the input transformation resource.
         """
         self.n_data_in = n_data_in
         self.n_test_out = n_test_out
@@ -55,8 +59,15 @@ class EnergyDetectorTestModule(BaseModule):
     def apply(self, resources: list[BaseResource]) -> TestResource:
         """Apply the energy detector test.
 
-        :param resources: List of resources.
-        :return: Test resource collection.
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            List of resources.
+
+        Returns
+        -------
+        TestResource
+            The test resource.
         """
         print("Performing energy detector test...")
 
