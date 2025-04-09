@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from lmfit import minimize, Parameters
-from matplotlib import pyplot as plt
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -69,9 +68,9 @@ class MLParameterEstimationModule(BaseModule):
         cost_function = optimum_flux * vector_c
         cost_function = torch.sum(torch.nan_to_num(cost_function, 0), axis=0)
 
-        plt.imshow(cost_function.cpu().numpy(), cmap='magma')
-        plt.colorbar()
-        plt.show()
+        # plt.imshow(cost_function.cpu().numpy(), cmap='magma')
+        # plt.colorbar()
+        # plt.show()
 
         # Get the optimum flux at the position of the maximum of the cost function
         flat_idx = cost_function.argmax()  # scalar
