@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lifesimmc"
-version = "0.0.0"
+version = "1.0.0"
 description = "LIFEsimMC"
 authors = ["Philipp A. Huber <huberph@phys.ehtz.ch>"]
 license = "GPL-3.0"
@@ -47,6 +47,9 @@ myst-parser = { version = ">=0.16.1" }
 
 [tool.poetry.scripts]
 lifesim2 = "lifesim2.__main__:main"
+
+[tool.poetry.group.dev.dependencies]
+nbsphinx = "0.9.4"
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]

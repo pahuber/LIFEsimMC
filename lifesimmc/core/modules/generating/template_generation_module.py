@@ -1,96 +1,88 @@
-from datetime import datetime
-from pathlib import Path
-
-import numpy as np
 import torch
-from tqdm.contrib.itertools import product
+from phringe.util.grid import get_meshgrid
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.template_resource import TemplateResource, TemplateResourceCollection
+from lifesimmc.core.resources.template_resource import TemplateResource
 
 
 class TemplateGenerationModule(BaseModule):
     """Class representation of the template generation module to generate templates of planets with unit flux.
 
-    :param n_config_in: The name of the input configuration resource
-    :param n_template_out: The name of the output template resource collection
-    :param fov: The field of view for which to generate the templates in radians
-    :param write_to_fits: Whether the generated templates should be written to FITS files
-    :param create_copy: Whether a copy of the input configuration should be created
+    Parameters
+    ----------
+    n_config_in : str
+        The name of the input configuration resource
+    n_template_out : str
+        The name of the output template resource collection
+    fov : float
+        The field of view for which to generate the templates in radians
     """
 
     def __init__(
             self,
             n_config_in: str,
             n_template_out: str,
-            fov: float = None,
-            write_to_fits: bool = True,
-            create_copy: bool = True
+            fov: float
     ):
         """Constructor method.
 
-        :param n_config_in: The name of the input configuration resource
-        :param n_template_out: The name of the output template resource collection
-        :param fov: The field of view for which to generate the templates in radians
-        :param write_to_fits: Whether the generated templates should be written to FITS files
-        :param create_copy: Whether a copy of the input configuration should be created
+        Parameters
+        ----------
+        n_config_in : str
+            The name of the input configuration resource
+        n_template_out : str
+            The name of the output template resource collection
+        fov : float
+            The field of view for which to generate the templates in radians
         """
+        super().__init__()
         self.n_config_in = n_config_in
         self.n_template_out = n_template_out
         self.fov = fov
-        self.write_to_fits = write_to_fits
-        self.create_copy = create_copy
 
-    def apply(self, resources: list[BaseResource]) -> TemplateResourceCollection:
+    def apply(self, resources: list[BaseResource]) -> TemplateResource:
         """Generate templates for a planet at each point in the grid.
 
-        :param resources: The resources to apply the module to
-        :return: A list of template resources
+        Parameters
+        ----------
+        resources : list[BaseResource]
+            List of resources to be used in the module.
+
+        Returns
+        -------
+        TemplateResource
+            The generated template resource.
         """
-        r_config_in = self.get_resource_from_name(self.n_config_in)
-
-        # Generate the output directory if FITS files should be written
-        if self.write_to_fits:
-            template_dir = Path(datetime.now().strftime("%Y%m%d_%H%M%S.%f"))
-            template_dir.mkdir(parents=True, exist_ok=True)
-
-        rc_template_out = TemplateResourceCollection(
-            self.n_template_out,
-            'Collection of TemplateResources, one for each point in the grid'
-        )
-
-        # Swipe the planet position through every point in the grid and generate the data for each position
         print('Generating templates...')
 
-        device = r_config_in.phringe._director._device
-        time = r_config_in.phringe.get_time_steps(as_numpy=False).to(device)
-        wavelength = r_config_in.phringe.get_wavelength_bin_centers(as_numpy=False).to(device)
-        wavelength_bin_width = r_config_in.phringe.get_wavelength_bin_widths(as_numpy=False).to(device)
-        flux = torch.ones(wavelength.shape, device=device)
+        r_config_in = self.get_resource_from_name(self.n_config_in)
+        time = r_config_in.phringe.get_time_steps()
+        wavelength = r_config_in.phringe.get_wavelength_bin_centers()
 
-        hfov_max = r_config_in.phringe.get_field_of_view(as_numpy=False)[
-                       0] / 2 if self.fov is None else self.fov / 2
-        coord = np.linspace(-hfov_max, hfov_max, r_config_in.simulation.grid_size)
+        ir = r_config_in.phringe.get_instrument_response_theoretical(
+            time, wavelength, self.fov, r_config_in.phringe.get_nulling_baseline()
+        )
 
-        for (ix, x), (iy, y) in product(enumerate(coord), enumerate(coord), total=len(coord) ** 2):
-            # Set the planet position to the current position in the grid
+        template_counts = (
+                ir
+                * r_config_in.observation.detector_integration_time
+                * r_config_in.phringe.get_wavelength_bin_widths()[None, :, None, None, None]
+        )
+        template_diff_counts = torch.zeros(
+            (len(r_config_in.instrument.differential_outputs),) + template_counts.shape[1:],
+            dtype=torch.float32,
+            device=self.device
+        )
 
-            posx = torch.tensor(x, device=device)
-            posy = torch.tensor(y, device=device)
+        for i, diff_output in enumerate(r_config_in.instrument.differential_outputs):
+            template_diff_counts[i] = template_counts[diff_output[0]] - template_counts[diff_output[1]]
 
-            # Generate the data
-            data = r_config_in.phringe.get_template_torch(time, wavelength, wavelength_bin_width, posx, posy, flux)
-
-            r_template_out = TemplateResource(
-                name='',
-                x_coord=x,
-                y_coord=y,
-                x_index=ix,
-                y_index=iy,
-            )
-            r_template_out.set_data(data)
-            rc_template_out.collection.append(r_template_out)
+        r_template_out = TemplateResource(
+            name=self.n_template_out,
+            grid_coordinates=get_meshgrid(self.fov, self.grid_size, self.device),
+        )
+        r_template_out.set_data(template_diff_counts)
 
         print('Done')
-        return rc_template_out
+        return r_template_out
