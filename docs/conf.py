@@ -55,6 +55,8 @@ extensions = ['sphinx_copybutton',
               'sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'nbsphinx', ]
+nbsphinx_codecell_lexer = 'python3'
+
 # 'recommonmark']
 
 # -- Options for HTML output -------------------------------------------------
