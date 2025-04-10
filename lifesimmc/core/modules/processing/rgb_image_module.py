@@ -11,7 +11,7 @@ class RGBImageModule(BaseModule):
 
     Parameters
     ----------
-    n_config_in : str
+    n_setup_in : str
         Name of the input configuration resource.
     n_data_in : str
         Name of the input data resource.
@@ -25,7 +25,7 @@ class RGBImageModule(BaseModule):
 
     def __init__(
             self,
-            n_config_in: str,
+            n_setup_in: str,
             n_data_in: str,
             n_template_in: str,
             n_image_out: str,
@@ -35,7 +35,7 @@ class RGBImageModule(BaseModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
@@ -47,7 +47,7 @@ class RGBImageModule(BaseModule):
             Metric to use for the image generation. 0 for correlation, 1 for MLE. Default is 0.
         """
         super().__init__()
-        self.n_config_in = n_config_in
+        self.n_config_in = n_setup_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_image_out = n_image_out

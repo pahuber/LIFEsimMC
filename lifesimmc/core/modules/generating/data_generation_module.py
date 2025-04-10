@@ -9,7 +9,7 @@ class DataGenerationModule(BaseModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             The name of the input configuration resource.
         n_data_out : str
             The name of the output data resource.
@@ -19,7 +19,7 @@ class DataGenerationModule(BaseModule):
 
     def __init__(
             self,
-            n_config_in: str,
+            n_setup_in: str,
             n_data_out: str,
             n_planet_params_out: str
     ):
@@ -27,7 +27,7 @@ class DataGenerationModule(BaseModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             The name of the input configuration resource.
         n_data_out : str
             The name of the output data resource.
@@ -35,7 +35,7 @@ class DataGenerationModule(BaseModule):
             The name of the output planet parameters resource.
         """
         super().__init__()
-        self.config_in = n_config_in
+        self.config_in = n_setup_in
         self.n_data_out = n_data_out
         self.n_planet_params_out = n_planet_params_out
 

@@ -12,7 +12,7 @@ class MLParameterEstimationModule(BaseModule):
 
     Parameters
     ----------
-    n_config_in : str
+    n_setup_in : str
         Name of the input configuration resource.
     n_data_in : str
         Name of the input data resource.
@@ -26,7 +26,7 @@ class MLParameterEstimationModule(BaseModule):
 
     def __init__(
             self,
-            n_config_in: str,
+            n_setup_in: str,
             n_data_in: str,
             n_planet_params_out: str,
             n_transformation_in: str = None,
@@ -36,7 +36,7 @@ class MLParameterEstimationModule(BaseModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
@@ -48,7 +48,7 @@ class MLParameterEstimationModule(BaseModule):
             Name of the input template resource. If None, no template is used. # TODO: handle no templates
         """
         super().__init__()
-        self.n_config_in = n_config_in
+        self.n_config_in = n_setup_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_transformation_in = n_transformation_in

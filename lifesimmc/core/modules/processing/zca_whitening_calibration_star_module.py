@@ -22,7 +22,7 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
     Parameters
     ----------
 
-    n_config_in : str
+    n_setup_in : str
         Name of the input configuration resource.
     n_data_in : str
         Name of the input data resource.
@@ -40,7 +40,7 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
 
     def __init__(
             self,
-            n_config_in: str,
+            n_setup_in: str,
             n_data_in: str,
             n_template_in: str,
             n_data_out: str,
@@ -52,7 +52,7 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
@@ -68,7 +68,7 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
             If True, only the diagonal of the covariance matrix is used for whitening. Default is False.
         """
         super().__init__()
-        self.n_config_in = n_config_in
+        self.n_config_in = n_setup_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_data_out = n_data_out

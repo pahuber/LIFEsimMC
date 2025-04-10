@@ -14,7 +14,7 @@ class NeymanPearsonTestModule(BaseModule):
 
     Parameters
     ----------
-    n_config_in : str
+    n_setup_in : str
         Name of the input configuration resource.
     n_data_in : str
         Name of the input data resource.
@@ -30,7 +30,7 @@ class NeymanPearsonTestModule(BaseModule):
 
     def __init__(
             self,
-            n_config_in: str,
+            n_setup_in: str,
             n_data_in: str,
             n_planet_params_in: str,
             n_transformation_in: Union[str, tuple[str], None],
@@ -41,7 +41,7 @@ class NeymanPearsonTestModule(BaseModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
@@ -57,7 +57,7 @@ class NeymanPearsonTestModule(BaseModule):
         self.n_data_in = n_data_in
         self.n_test_out = n_test_out
         self.pfa = pfa
-        self.n_config_in = n_config_in
+        self.n_config_in = n_setup_in
         self.n_planet_params_in = n_planet_params_in
         self.n_transformation_in = n_transformation_in
         self.pfa = pfa

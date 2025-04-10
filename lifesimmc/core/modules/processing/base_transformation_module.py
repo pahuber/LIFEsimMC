@@ -63,6 +63,6 @@ class BaseTransformationModule(BaseModule):
         Returns
         -------
         Union[None, BaseResource, tuple]
-            The resource or tuple of resources.
+            The resource or tuple of resources.w
         """
         pass

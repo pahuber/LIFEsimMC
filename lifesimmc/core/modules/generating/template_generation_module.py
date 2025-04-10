@@ -11,7 +11,7 @@ class TemplateGenerationModule(BaseModule):
 
     Parameters
     ----------
-    n_config_in : str
+    n_setup_in : str
         The name of the input configuration resource
     n_template_out : str
         The name of the output template resource collection
@@ -21,7 +21,7 @@ class TemplateGenerationModule(BaseModule):
 
     def __init__(
             self,
-            n_config_in: str,
+            n_setup_in: str,
             n_template_out: str,
             fov: float
     ):
@@ -29,7 +29,7 @@ class TemplateGenerationModule(BaseModule):
 
         Parameters
         ----------
-        n_config_in : str
+        n_setup_in : str
             The name of the input configuration resource
         n_template_out : str
             The name of the output template resource collection
@@ -37,7 +37,7 @@ class TemplateGenerationModule(BaseModule):
             The field of view for which to generate the templates in radians
         """
         super().__init__()
-        self.n_config_in = n_config_in
+        self.n_config_in = n_setup_in
         self.n_template_out = n_template_out
         self.fov = fov
 

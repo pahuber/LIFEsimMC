@@ -7,7 +7,7 @@ from phringe.core.entities.scene import Scene
 from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
-from lifesimmc.core.resources.config_resource import ConfigResource
+from lifesimmc.core.resources.setup_resource import SetupResource
 
 
 class SetupModule(BaseModule):
@@ -93,17 +93,17 @@ class SetupModule(BaseModule):
         self.instrument = instrument
         self.scene = scene
 
-    def apply(self, resources: list[ConfigResource]) -> ConfigResource:
+    def apply(self, resources: list[SetupResource]) -> SetupResource:
         """Load the configuration file.
 
         Parameters
         ----------
-        resources : list[ConfigResource]
+        resources : list[SetupResource]
             List of resources.
 
         Returns
         -------
-        ConfigResource
+        SetupResource
             The configuration resource.
         """
         print('Loading configuration...')
@@ -128,7 +128,7 @@ class SetupModule(BaseModule):
         if self.scene:
             phringe.set(self.scene)
 
-        r_config_out = ConfigResource(
+        r_config_out = SetupResource(
             name=self.n_config_out,
             phringe=phringe,
             configuration=self.configuration,

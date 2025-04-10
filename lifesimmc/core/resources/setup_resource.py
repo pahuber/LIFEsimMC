@@ -10,8 +10,8 @@ from lifesimmc.core.resources.base_resource import BaseResource
 
 
 @dataclass
-class ConfigResource(BaseResource):
-    """Class representation of the configuration resource.
+class SetupResource(BaseResource):
+    """Class representation of the setup resource.
 
     Parameters
     ----------

@@ -1,7 +1,7 @@
 .. _config_resource:
 
-ConfigResource
-==============
+SetupResource
+=============
 
-.. autoclass:: lifesimmc.core.resources.config_resource.ConfigResource
+.. autoclass:: lifesimmc.core.resources.setup_resource.SetupResource
 
