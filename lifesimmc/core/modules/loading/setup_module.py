@@ -15,7 +15,7 @@ class SetupModule(BaseModule):
 
     Parameters
     ----------
-    n_config_out : str
+    n_setup_out : str
         Name of the output configuration resource.
     configuration : Configuration
         Configuration object.
@@ -28,12 +28,12 @@ class SetupModule(BaseModule):
     """
 
     @overload
-    def __init__(self, n_config_out: str, configuration: Configuration):
+    def __init__(self, n_setup_out: str, configuration: Configuration):
         """Constructor method.
 
         Parameters
         ----------
-        n_config_out : str
+        n_setup_out : str
             The name of the output configuration resource
         configuration : Configuration
             The configuration object
@@ -43,7 +43,7 @@ class SetupModule(BaseModule):
     @overload
     def __init__(
             self,
-            n_config_out: str,
+            n_setup_out: str,
             observation: Observation,
             instrument: Instrument,
             scene: Scene
@@ -52,7 +52,7 @@ class SetupModule(BaseModule):
 
         Parameters
         ----------
-        n_config_out : str
+        n_setup_out : str
             The name of the output configuration resource
         observation : Observation
             The observation mode object
@@ -65,7 +65,7 @@ class SetupModule(BaseModule):
 
     def __init__(
             self,
-            n_config_out: str,
+            n_setup_out: str,
             configuration: Configuration = None,
             observation: Observation = None,
             instrument: Instrument = None,
@@ -75,7 +75,7 @@ class SetupModule(BaseModule):
 
         Parameters
         ----------
-        n_config_out : str
+        n_setup_out : str
             The name of the output configuration resource
         configuration : Configuration
             The configuration object
@@ -87,7 +87,7 @@ class SetupModule(BaseModule):
             The scene object
         """
         super().__init__()
-        self.n_config_out = n_config_out
+        self.n_config_out = n_setup_out
         self.configuration = configuration
         self.observation = observation
         self.instrument = instrument
