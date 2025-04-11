@@ -33,26 +33,15 @@ output to the modules. The following code snippet gives a quick overview of the 
 Specifying User Input
 ---------------------
 
-`LIFEsimMC` requires the specification of an `observation`, the `instrument` parameters and the astrophysical `scene`.
+`LIFEsimMC` requires the specification of an ``Observation``, an ``Instrument`` and a ``Scene`` object
+(see :doc:`Observation documentation <source/external/observation>`, :doc:`Instrument documentation <source/external/instrument>` or :doc:`Scene documentation <source/external/scene>`).
 This is done via the ``SetupModule``. There are two ways to set up the simulation:
 
-Option 1: Using a Config File
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Option 1: Creating Objects Manually (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The simplest way to use `LIFEsimMC` is by using a config file (see :doc:`Config File Tutorial <tutorials/config_file>`) and a ``Configuration`` object (see :doc:`Configuration documentation <external/configuration>`):
-
-.. code-block:: python
-
-    module = SetupModule(n_config_out='config', configuration=Configuration(path=Path('path/to/config.py')))
-    pipeline.add_module(module)
-
-This module also produces an output ``ConfigResource`` named ``config``, which contains the ``Observation``, ``Instrument`` and ``Scene`` objects.
-
-
-Option 2: Manually Creating Objects
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Alternatively, one can manually create the ``Observation``, ``Instrument`` and ``Scene`` objects (see :doc:`Observation documentation <external/observation>`, :doc:`Instrument documentation <external/instrument>` or :doc:`Scene documentation <external/scene>`):
+The recommended way is to manually create the ``Observation``, ``Instrument`` and ``Scene`` objects.
+After their creation, they can directly be given as input to the ``SetupModule``:
 
 .. code-block:: python
 
@@ -60,10 +49,24 @@ Alternatively, one can manually create the ``Observation``, ``Instrument`` and `
     inst = Instrument(...)
     scene = Scene(...)
 
-    module = SetupModule(n_config_out='config', observation=obs, instrument=inst, scene=scene))
+    module = SetupModule(n_setup_out='setup', observation=obs, instrument=inst, scene=scene))
     pipeline.add_module(module)
 
-This may be required for more advanced use cases, e.g. when looping through different instrument configurations.
+Several predefined instruments and observations are available for use with e.g. ``inst = LIFEIdeal()`` or
+``inst = LIFEPerturbedOptimistic()`` (see :doc:`Tutorials <tutorials>`).
+
+Option 2: Using a Config File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Alternatively, `LIFEsimMC` can also be used with config files (see :doc:`Config File Tutorial <tutorials/config_file>`) and a ``Configuration`` object (see :doc:`Configuration documentation <external/configuration>`):
+
+.. code-block:: python
+
+    module = SetupModule(n_config_out='config', configuration=Configuration(path=Path('path/to/config.py')))
+    pipeline.add_module(module)
+
+This way all available simulation parameters can be configured in a single file, which requires a solid understanding of their interplay and is thus
+only recommended for advanced users.
 
 .. note::
     It is recommended to run `LIFEsimMC` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.

@@ -4,14 +4,14 @@ from phringe.lib.array_configuration import XArrayConfiguration
 from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
 
 
-class LIFERefDesignIdeal(Instrument):
+class LIFEIdeal(Instrument):
     def __init__(self):
         super().__init__(
             array_configuration_matrix=XArrayConfiguration.acm,
             complex_amplitude_transfer_matrix=DoubleBracewellBeamCombiner.catm,
             differential_outputs=DoubleBracewellBeamCombiner.diff_out,
             sep_at_max_mod_eff=DoubleBracewellBeamCombiner.sep_at_max_mod_eff,
-            aperture_diameter=3 * u.m,
+            aperture_diameter=3.5 * u.m,
             baseline_maximum=600 * u.m,
             baseline_minimum=8 * u.m,
             spectral_resolving_power=50,
@@ -22,7 +22,7 @@ class LIFERefDesignIdeal(Instrument):
         )
 
 
-class LIFERefDesignPerturbedOptimistic(Instrument):
+class LIFEPerturbedOptimistic(Instrument):
     def __init__(self):
         super().__init__(
             array_configuration_matrix=XArrayConfiguration.acm,
@@ -54,7 +54,7 @@ class LIFERefDesignPerturbedOptimistic(Instrument):
         )
 
 
-class LIFERefDesignPerturbedPessimistic(Instrument):
+class LIFEPerturbedPessimistic(Instrument):
     def __init__(self):
         super().__init__(
             array_configuration_matrix=XArrayConfiguration.acm,

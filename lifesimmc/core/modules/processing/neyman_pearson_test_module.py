@@ -33,9 +33,9 @@ class NeymanPearsonTestModule(BaseModule):
             n_setup_in: str,
             n_data_in: str,
             n_planet_params_in: str,
-            n_transformation_in: Union[str, tuple[str], None],
             n_test_out: str,
             pfa: float,
+            n_transformation_in: Union[str, tuple[str], None] = None,
     ):
         """Constructor method.
 

@@ -4,7 +4,7 @@ from astropy.units import Quantity
 from phringe.core.entities.observation import Observation
 
 
-class LIFERefDesignObservation(Observation):
+class LIFEObservation(Observation):
     def __init__(
             self,
             total_integration_time: Union[str, float, Quantity],
