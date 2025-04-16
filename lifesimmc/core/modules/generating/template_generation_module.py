@@ -1,4 +1,3 @@
-import torch
 from phringe.util.grid import get_meshgrid
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -60,23 +59,15 @@ class TemplateGenerationModule(BaseModule):
         time = r_config_in.phringe.get_time_steps()
         wavelength = r_config_in.phringe.get_wavelength_bin_centers()
 
-        ir = r_config_in.phringe.get_instrument_response_theoretical(
+        diff_ir = r_config_in.phringe.get_diff_instrument_response_theoretical(
             time, wavelength, self.fov, r_config_in.phringe.get_nulling_baseline()
         )
 
-        template_counts = (
-                ir
+        template_diff_counts = (
+                diff_ir
                 * r_config_in.observation.detector_integration_time
                 * r_config_in.phringe.get_wavelength_bin_widths()[None, :, None, None, None]
         )
-        template_diff_counts = torch.zeros(
-            (len(r_config_in.instrument.differential_outputs),) + template_counts.shape[1:],
-            dtype=torch.float32,
-            device=self.device
-        )
-
-        for i, diff_output in enumerate(r_config_in.instrument.differential_outputs):
-            template_diff_counts[i] = template_counts[diff_output[0]] - template_counts[diff_output[1]]
 
         r_template_out = TemplateResource(
             name=self.n_template_out,
