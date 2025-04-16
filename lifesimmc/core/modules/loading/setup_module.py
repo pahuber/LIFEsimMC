@@ -113,7 +113,7 @@ class SetupModule(BaseModule):
             grid_size=self.grid_size,
             time_step_size=self.time_step_size,
             device=self.device,
-            extra_memory=40
+            extra_memory=10
         )
 
         if self.configuration:
