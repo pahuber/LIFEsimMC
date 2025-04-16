@@ -3,8 +3,12 @@ from itertools import product
 
 import numpy as np
 import torch
+from numpy.linalg import pinv
+from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
+from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
+from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.main import PHRINGE
-from scipy.linalg import sqrtm, pinv
+from scipy.linalg import sqrtm
 from tqdm import tqdm
 
 from lifesimmc.core.modules.processing.base_transformation_module import BaseTransformationModule
@@ -116,23 +120,53 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
             extra_memory=20
         )
 
-        phringe.set(config_in.instrument)
+        # Create a copy of the instrument and add draw new perturbation time series
+        inst = config_in.instrument
+        amplitude_pert = inst.perturbations.amplitude
+        phase_pert = inst.perturbations.phase
+        polarization_pert = inst.perturbations.polarization
+
+        inst_new = copy(inst)
+
+        if amplitude_pert.rms is not None:
+            inst_new.remove_perturbation(amplitude_pert)
+            amplitude_pert_new = AmplitudePerturbation(rms=amplitude_pert.rms, color=amplitude_pert.color)
+            inst_new.add_perturbation(amplitude_pert_new)
+
+        if phase_pert.rms is not None:
+            inst_new.remove_perturbation(phase_pert)
+            phase_pert_new = PhasePerturbation(rms=phase_pert.rms, color=phase_pert.color)
+            inst_new.add_perturbation(phase_pert_new)
+
+        if polarization_pert.rms is not None:
+            inst_new.remove_perturbation(polarization_pert)
+            polarization_pert_new = PolarizationPerturbation(rms=polarization_pert.rms, color=polarization_pert.color)
+            inst_new.add_perturbation(polarization_pert_new)
+
+        phringe.set(inst_new)
+
+        # Set the observation
         phringe.set(config_in.observation)
 
         # Remove all planets from the scene to calculate covariance only on noise
-        scene = copy(config_in.scene)
-        scene.planets = []
-        phringe.set(config_in.scene)
+        scene_new = copy(config_in.scene)
+        for planet in config_in.scene.planets:
+            scene_new.remove_source(planet.name)
+        phringe.set(scene_new)
+
+        # Get the differential counts for the calibration star
         diff_counts = phringe.get_diff_counts()
 
         # Calculate the whitening matrix
         cov = torch.zeros(
             (diff_counts.shape[0], diff_counts.shape[1], diff_counts.shape[1]),
-            device=self.device
+            device=self.device,
+            dtype=torch.float32
         )
         i_cov_sqrt = torch.zeros(
             (diff_counts.shape[0], diff_counts.shape[1], diff_counts.shape[1]),
-            device=self.device
+            device=self.device,
+            dtype=torch.float32
         )
 
         for i in range(len(diff_counts)):
@@ -141,7 +175,7 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
             if self.diagonal_only:
                 cov[i] = torch.diag(torch.diag(cov[i]))
 
-            i_cov_sqrt[i] = torch.tensor(sqrtm(pinv(cov[i].cpu().numpy())), device=self.device)
+            i_cov_sqrt[i] = torch.tensor(sqrtm(pinv(cov[i].cpu().numpy())), device=self.device, dtype=torch.float32)
 
         # Apply the whitening matrix to the data and templates
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
@@ -149,12 +183,12 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
         template_data_in = r_template_in.get_data()
         r_data_out = DataResource(self.n_data_out)
 
-        if data_in is not None:
-            for i in range(data_in.shape[0]):
-                data_in[i] = i_cov_sqrt[i] @ data_in[i]
-            r_data_out.set_data(data_in)
+        for i in range(data_in.shape[0]):
+            data_in[i] = i_cov_sqrt[i] @ data_in[i]
 
-        template_counts_white = torch.zeros(template_data_in.shape, device=self.device)
+        r_data_out.set_data(data_in)
+
+        template_counts_white = torch.zeros(template_data_in.shape, device=self.device, dtype=torch.float32)
 
         for i, j in tqdm(
                 product(range(template_data_in.shape[-2]), range(template_data_in.shape[-1])),
