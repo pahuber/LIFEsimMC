@@ -4,7 +4,7 @@ LIFEsimMC Documentation
 =======================
 
 **LIFEsimMC** is a Monte Carlo-based end-to-end simulator for the `Large Interferometer For Exoplanets (LIFE) <https://life-space-mission.com/>`_
-and has been developed to support trade studies and requirement derivations for LIFE, in particular in the context of instrumental (instability) noise.
+and has been developed to support trade studies and requirement derivations for LIFE in the context of `instrumental (instability) noise`.
 It is capable of generating synthetic nulling data and incorporates a suite of processing and analysis tools for their interpretation.
 
 Please cite `Huber et al. 2025 (submitted)` if you use `LIFEsimMC` in your work.

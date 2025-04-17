@@ -36,6 +36,8 @@ class NeymanPearsonTestModule(BaseModule):
             n_test_out: str,
             pfa: float,
             n_transformation_in: Union[str, tuple[str], None] = None,
+            n_templates_in: str = None,
+            n_image_out: str = None,
     ):
         """Constructor method.
 
@@ -60,6 +62,8 @@ class NeymanPearsonTestModule(BaseModule):
         self.n_config_in = n_setup_in
         self.n_planet_params_in = n_planet_params_in
         self.n_transformation_in = n_transformation_in
+        self.n_templates_in = n_templates_in
+        self.n_image_out = n_image_out
         self.pfa = pfa
 
     def apply(self, resources: list[BaseResource]) -> TestResource:
@@ -129,6 +133,25 @@ class NeymanPearsonTestModule(BaseModule):
             detection_probability=pdet,
             probability_false_alarm=self.pfa,
         )
+
+        # print(f'{np.round(test_h1 / np.sqrt(xtx), 2)} sigma detection')
+        #
+        # if self.n_templates_in and self.n_image_out:
+        #     template_data = self.get_resource_from_name(self.n_templates_in).get_data()
+        #     significance = np.zeros(template_data.shape[-2:])
+        #
+        #     for i, j in tqdm(
+        #             product(range(template_data.shape[-2]), range(template_data.shape[-1])),
+        #             total=template_data.shape[-2] * template_data.shape[-1]
+        #     ):
+        #         modelf = template_data[:, :, :, i, j].flatten().cpu().numpy()
+        #         test_h1 = dataf @ modelf
+        #         xtx = modelf @ modelf
+        #         significance[i, j] = test_h1 / np.sqrt(xtx)
+        #
+        #     plt.imshow(significance, cmap='magma')
+        #     plt.colorbar()
+        #     plt.show()
 
         print('Done')
         return r_test_out

@@ -52,8 +52,8 @@ After their creation, they can directly be given as input to the ``SetupModule``
     module = SetupModule(n_setup_out='setup', observation=obs, instrument=inst, scene=scene))
     pipeline.add_module(module)
 
-Several predefined instruments and observations are available for use with e.g. ``inst = LIFEIdeal()`` or
-``inst = LIFEPerturbedOptimistic()`` (see :doc:`Tutorials <tutorials>`).
+Predefined instruments and observations are available for use with e.g. ``inst = LIFEReferenceDesign()`` or
+``obs = LIFEObservation()`` (see :doc:`Tutorials <tutorials>`).
 
 Option 2: Using a Config File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

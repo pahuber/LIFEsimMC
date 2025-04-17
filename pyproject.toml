@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lifesimmc"
-version = "1.0.3"
+version = "1.0.5"
 description = "LIFEsimMC"
 authors = ["Philipp A. Huber <huberph@phys.ehtz.ch>"]
 license = "GPL-3.0"

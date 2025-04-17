@@ -40,7 +40,7 @@ The following show an example config file. For a documentation and meaning of al
 and :doc:`LocalZodi documentation <../source/external/all_sources/local_zodi>`.
 
 
-.. literalinclude::  ../_static/config.py
+.. literalinclude::  ../../_static/config.py
    :language: python
 
 
