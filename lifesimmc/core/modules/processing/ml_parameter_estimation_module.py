@@ -31,6 +31,7 @@ class MLParameterEstimationModule(BaseModule):
             n_planet_params_out: str,
             n_transformation_in: str = None,
             n_template_in: str = None,
+            n_planet_params_in: str = None,
     ):
         """Constructor method.
 
@@ -53,6 +54,7 @@ class MLParameterEstimationModule(BaseModule):
         self.n_template_in = n_template_in
         self.n_transformation_in = n_transformation_in
         self.n_planet_params_out = n_planet_params_out
+        self.n_planet_params_in = n_planet_params_in
 
     def _get_analytical_initial_guess(self, data, template_data, grid_coordinates):
         # Normalize template data with their variance along axis 2
@@ -111,6 +113,7 @@ class MLParameterEstimationModule(BaseModule):
         r_transformation_in = self.get_resource_from_name(
             self.n_transformation_in) if self.n_transformation_in else None
         transf = r_transformation_in.transformation if r_transformation_in else lambda x: x
+        planet_params_in = self.get_resource_from_name(self.n_planet_params_in) if self.n_planet_params_in else None
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
@@ -126,7 +129,19 @@ class MLParameterEstimationModule(BaseModule):
         template_data = template_data.reshape((-1,) + template_data.shape[2:])
 
         # Set up parameters and initial conditions
-        flux_init, posx_init, posy_init = self._get_analytical_initial_guess(data_in, template_data, grid_coordinates)
+        if planet_params_in is None:
+            flux_init, posx_init, posy_init = self._get_analytical_initial_guess(
+                data_in,
+                template_data,
+                grid_coordinates
+            )
+        # If planet_params_in is provided, use its values as initial conditions
+        else:
+            # TODO: implement for multiple planets
+            flux_init = planet_params_in.params[0].sed.cpu().numpy()
+            posx_init = planet_params_in.params[0].pos_x
+            posy_init = planet_params_in.params[0].pos_y
+
         data_in = data_in.cpu().numpy()
         hfov_max = r_config_in.phringe.get_field_of_view()[-1].cpu().numpy() / 2  # TODO: /14 Check this
 
@@ -153,6 +168,7 @@ class MLParameterEstimationModule(BaseModule):
             model = transf(model)
             model = np.transpose(model, (0, 2, 1))
             model = model.reshape(data_in.shape)
+
             return model - target
 
         out = minimize(residual_data, params, args=(data_in,), method='leastsq')
