@@ -18,7 +18,7 @@ from lifesimmc.core.resources.template_resource import TemplateResource
 from lifesimmc.core.resources.transformation_resource import TransformationResource
 
 
-class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
+class CalibrationStarZCAWhiteningModule(BaseTransformationModule):
     """Class representation of the ZCA whitening transformation module. This module applied ZCA whitening to the data
     and templates using a covariance matrix based on a calibration star. The properties of this calibration star are
     assumed to be identical to the properties of the target star.
@@ -46,10 +46,10 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            n_template_in: str,
             n_data_out: str,
-            n_template_out: str,
             n_transformation_out: str,
+            n_template_in: str = None,
+            n_template_out: str = None,
             diagonal_only: bool = False
     ):
         """Constructor method.
@@ -179,8 +179,6 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
 
         # Apply the whitening matrix to the data and templates
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        r_template_in = self.get_resource_from_name(self.n_template_in)
-        template_data_in = r_template_in.get_data()
         r_data_out = DataResource(self.n_data_out)
 
         for i in range(data_in.shape[0]):
@@ -188,20 +186,25 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
 
         r_data_out.set_data(data_in)
 
-        template_counts_white = torch.zeros(template_data_in.shape, device=self.device, dtype=torch.float32)
+        if self.n_template_in and self.n_template_out:
+            r_template_in = self.get_resource_from_name(self.n_template_in)
+            template_data_in = r_template_in.get_data()
+            template_counts_white = torch.zeros(template_data_in.shape, device=self.device, dtype=torch.float32)
 
-        for i, j in tqdm(
-                product(range(template_data_in.shape[-2]), range(template_data_in.shape[-1])),
-                total=template_data_in.shape[-2] * template_data_in.shape[-1]
-        ):
-            for k in range(template_data_in.shape[0]):
-                template_counts_white[k, :, :, i, j] = i_cov_sqrt[k] @ template_data_in[k, :, :, i, j]
+            for i, j in tqdm(
+                    product(range(template_data_in.shape[-2]), range(template_data_in.shape[-1])),
+                    total=template_data_in.shape[-2] * template_data_in.shape[-1]
+            ):
+                for k in range(template_data_in.shape[0]):
+                    template_counts_white[k, :, :, i, j] = i_cov_sqrt[k] @ template_data_in[k, :, :, i, j]
 
-        r_template_out = TemplateResource(
-            name=self.n_template_out,
-            grid_coordinates=r_template_in.grid_coordinates
-        )
-        r_template_out.set_data(template_counts_white)
+            r_template_out = TemplateResource(
+                name=self.n_template_out,
+                grid_coordinates=r_template_in.grid_coordinates
+            )
+            r_template_out.set_data(template_counts_white)
+        else:
+            r_template_out = None
 
         # Save the whitening transformation
         def zca_whitening_transformation(data):
@@ -222,4 +225,6 @@ class ZCAWhiteningCalibrationStarModule(BaseTransformationModule):
         )
 
         print('Done')
-        return r_data_out, r_template_out, r_transformation_out
+        if r_template_out is not None:
+            return r_data_out, r_template_out, r_transformation_out
+        return r_data_out, r_transformation_out
