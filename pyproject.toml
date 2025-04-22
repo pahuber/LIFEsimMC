@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lifesimmc"
-version = "1.0.6"
+version = "1.0.7"
 description = "LIFEsimMC"
 authors = ["Philipp A. Huber <huberph@phys.ehtz.ch>"]
 license = "GPL-3.0"
@@ -21,6 +21,7 @@ click = ">=8.0.1"
 packaging = "==23.2"
 sphinx-copybutton = "^0.5.2"
 phringe = "^1.0.0"
+lmfit = "^1.3.3"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
