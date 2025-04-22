@@ -21,6 +21,8 @@ To install `LIFEsimMC` from PyPI, run the following command in your terminal:
 
     pip install lifesimmc
 
+Note that this might take a while, as the installation of the dependency ``PyTorch`` can take some time.
+
 
 Installation From GitHub
 ------------------------
