@@ -53,9 +53,9 @@ The following table gives highlights the differences between `LIFEsimMC` and `LI
    * - **Signal Extraction / Estimation**
      - Matched Filter-Based (Planetary Signal Extraction From Full Data)
      - Photon Statistics-Based (Separate Calculation of Planetary Signal and Noise)
-   * - **Available Analysis Tools**
-     - E.g. Correlation Maps, Spectrum + Full Covariance Estimates, Statistical Hypothesis Tests, etc.
-     - Spectrum + Standard Error Estimates (SNR)
+   * - **Functionality**
+     - E.g. Correlation Maps, Spectrum + Full Covariance Estimates, Statistical Hypothesis (Detection) Tests, etc.
+     - Spectrum + Standard Error Estimates (SNR), Yield Estimates
    * - **Computational Resources**
      - Computationally Expensive, Runs on CPUs + GPUs
      - Computationally Inexpensive, Runs on CPUs
