@@ -1,3 +1,4 @@
+import warnings
 from itertools import product
 
 import numpy as np
@@ -86,6 +87,10 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
             Tuple containing the output data resource, template resource, and transformation resource.
         """
         print('Normalizing with noise variance...')
+
+        perturbations = self.get_resource_from_name(self.n_config_in).instrument.perturbations
+        if perturbations.amplitude.rms is not None and perturbations.phase.rms is not None and perturbations.polarization.rms is not None:
+            warnings.warn('The noise variance normalization module should only be used for unperturbed instruments.')
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
