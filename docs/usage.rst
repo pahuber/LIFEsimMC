@@ -6,8 +6,8 @@ Usage
 Creating a LIFEsimMC Pipeline
 -----------------------------
 
-`LIFEsimMC` features a `pipeline` architecture. Upon creating a ``Pipeline`` object, `modules` can be added to the pipeline
-and executed in sequence. Information transfer between modules is handled via `resources`, which function as input and/or
+`LIFEsimMC` features a `pipeline` architecture. Upon creating a ``Pipeline`` object, ``Module`` objects can be added to the pipeline
+and executed in sequence. Information transfer between modules is handled via ``Resource`` objects, which function as input and/or
 output to the modules. The following code snippet gives a quick overview of the main workflow of `LIFEsimMC`.
 
 .. code-block:: python
@@ -49,7 +49,7 @@ After their creation, they can directly be given as input to the ``SetupModule``
     inst = Instrument(...)
     scene = Scene(...)
 
-    module = SetupModule(n_setup_out='setup', observation=obs, instrument=inst, scene=scene))
+    module = SetupModule(n_setup_out='setup', observation=obs, instrument=inst, scene=scene)
     pipeline.add_module(module)
 
 Predefined instruments and observations are available for use with e.g. ``inst = LIFEReferenceDesign()`` or

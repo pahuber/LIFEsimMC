@@ -7,5 +7,6 @@ Tutorials
     :maxdepth: 1
 
     tutorials/first_example.ipynb
-    tutorials/config_file
+    tutorials/perturbed_instrument_example.ipynb
+    tutorials/custom_spectrum.ipynb
     tutorials/advanced

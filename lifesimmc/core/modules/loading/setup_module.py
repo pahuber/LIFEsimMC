@@ -30,13 +30,20 @@ class SetupModule(BaseModule):
     """
 
     @overload
-    def __init__(self, n_setup_out: str, configuration: Configuration):
+    def __init__(
+            self,
+            n_setup_out: str,
+            n_planet_params_out: str,
+            configuration: Configuration
+    ):
         """Constructor method.
 
         Parameters
         ----------
         n_setup_out : str
             The name of the output configuration resource
+        n_planet_params_out : str
+            The name of the output planet parameters resource
         configuration : Configuration
             The configuration object
         """
@@ -46,6 +53,7 @@ class SetupModule(BaseModule):
     def __init__(
             self,
             n_setup_out: str,
+            n_planet_params_out: str,
             observation: Observation,
             instrument: Instrument,
             scene: Scene
@@ -56,6 +64,8 @@ class SetupModule(BaseModule):
         ----------
         n_setup_out : str
             The name of the output configuration resource
+        n_planet_params_out : str
+            The name of the output planet parameters resource
         observation : Observation
             The observation mode object
         instrument : Instrument

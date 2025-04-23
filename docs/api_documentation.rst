@@ -9,3 +9,4 @@ API Documentation
 
    source/core
    source/entities
+   source/library
