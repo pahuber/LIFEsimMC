@@ -1,6 +1,6 @@
 from typing import Union
 
-from scipy.stats import ncx2
+from scipy.stats import ncx2, chi2
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -114,6 +114,7 @@ class EnergyDetectorTestModule(BaseModule):
         test_h0 = (data_h0.T @ data_h0)
         xtx = (modelf @ modelf)
         pdet = ncx2.sf(xsi, df=ndim, nc=xtx)
+        p = chi2.sf(test_h1, df=ndim)
 
         r_test_out = TestResource(
             name=self.n_test_out,
@@ -124,6 +125,7 @@ class EnergyDetectorTestModule(BaseModule):
             dimensions=ndim,
             detection_probability=pdet,
             probability_false_alarm=self.pfa,
+            p_value=p,
         )
 
         print('Done')

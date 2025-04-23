@@ -62,7 +62,6 @@ class NeymanPearsonTestModule(BaseModule):
         self.n_config_in = n_setup_in
         self.n_planet_params_in = n_planet_params_in
         self.n_transformation_in = n_transformation_in
-        self.n_templates_in = n_templates_in
         self.n_image_out = n_image_out
         self.pfa = pfa
 
@@ -122,6 +121,7 @@ class NeymanPearsonTestModule(BaseModule):
         xtx = modelf @ modelf
         xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)
         pdet = 1 - norm.cdf((xsi - xtx) / np.sqrt(xtx))
+        p = norm.sf(test_h1 / np.sqrt(xtx))
 
         r_test_out = TestResource(
             name=self.n_test_out,
@@ -132,6 +132,7 @@ class NeymanPearsonTestModule(BaseModule):
             dimensions=ndim,
             detection_probability=pdet,
             probability_false_alarm=self.pfa,
+            p_value=p,
         )
 
         # print(f'{np.round(test_h1 / np.sqrt(xtx), 2)} sigma detection')

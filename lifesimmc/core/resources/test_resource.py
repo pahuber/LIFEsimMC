@@ -32,3 +32,4 @@ class TestResource(BaseResource):
     dimensions: int = None
     detection_probability: float = None
     probability_false_alarm: float = None
+    p_value: float = None
