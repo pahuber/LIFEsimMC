@@ -1,5 +1,6 @@
 from typing import overload
 
+import torch
 from phringe.core.entities.configuration import Configuration
 from phringe.core.entities.instrument import Instrument
 from phringe.core.entities.observation import Observation
@@ -7,6 +8,7 @@ from phringe.core.entities.scene import Scene
 from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
+from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 from lifesimmc.core.resources.setup_resource import SetupResource
 
 
@@ -66,6 +68,7 @@ class SetupModule(BaseModule):
     def __init__(
             self,
             n_setup_out: str,
+            n_planet_params_out: str,
             configuration: Configuration = None,
             observation: Observation = None,
             instrument: Instrument = None,
@@ -77,6 +80,8 @@ class SetupModule(BaseModule):
         ----------
         n_setup_out : str
             The name of the output configuration resource
+        n_planet_params_out : str
+            The name of the output planet parameters resource
         configuration : Configuration
             The configuration object
         observation : Observation
@@ -88,12 +93,13 @@ class SetupModule(BaseModule):
         """
         super().__init__()
         self.n_config_out = n_setup_out
+        self.n_planet_params_out = n_planet_params_out
         self.configuration = configuration
         self.observation = observation
         self.instrument = instrument
         self.scene = scene
 
-    def apply(self, resources: list[SetupResource]) -> SetupResource:
+    def apply(self, resources: list[SetupResource]) -> tuple[SetupResource, PlanetParamsResource]:
         """Load the configuration file.
 
         Parameters
@@ -137,5 +143,27 @@ class SetupModule(BaseModule):
             scene=phringe._scene,
         )
 
+        r_planet_params_out = PlanetParamsResource(
+            name=self.n_planet_params_out,
+        )
+
+        for planet in phringe._scene.planets:
+            # Get planet position from the only pixel in the sky brightness distirbution that is not zero and then from the sky coordinates map at that position the coordinate values
+            sky_brightness_distribution = planet._sky_brightness_distribution
+            non_zero_indices = torch.nonzero(sky_brightness_distribution[0])
+            sky_coordinates = planet._sky_coordinates
+            pos_x = sky_coordinates[0][non_zero_indices[0][0], non_zero_indices[0][1]].item()
+            pos_y = sky_coordinates[1][non_zero_indices[0][0], non_zero_indices[0][1]].item()
+
+            planet_params = PlanetParams(
+                name=planet.name,
+                sed_wavelength_bin_centers=phringe.get_wavelength_bin_centers(),
+                sed_wavelength_bin_widths=phringe.get_wavelength_bin_widths(),
+                sed=phringe.get_source_spectrum(planet.name),
+                pos_x=pos_x,
+                pos_y=pos_y,
+            )
+            r_planet_params_out.params.append(planet_params)
+
         print('Done')
-        return r_config_out
+        return r_config_out, r_planet_params_out
