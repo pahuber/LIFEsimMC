@@ -39,11 +39,11 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            n_template_in: str,
             n_data_out: str,
-            n_template_out: str,
             n_transformation_out: str,
-            n_planet_params_in: str
+            n_planet_params_in: str,
+            n_template_in: str = None,
+            n_template_out: str = None,
     ):
         """Constructor method.
 
@@ -94,11 +94,13 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
 
         r_config_in = self.get_resource_from_name(self.n_config_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        r_template_in = self.get_resource_from_name(self.n_template_in)
-        template_data_in = r_template_in.get_data()
+        r_template_in = self.get_resource_from_name(self.n_template_in) if self.n_template_in is not None else None
         r_data_out = DataResource(self.n_data_out)
-        template_counts_white = torch.zeros(template_data_in.shape, device=self.device)
         planet_params_in = self.get_resource_from_name(self.n_planet_params_in) if self.n_planet_params_in else None
+
+        if r_template_in is not None:
+            template_data_in = r_template_in.get_data()
+            template_counts_white = torch.zeros(template_data_in.shape, device=self.device)
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
@@ -127,16 +129,18 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
             data_variance[k] = torch.var(data_empty[k], dim=1, keepdim=True) ** 0.5
             data_in[k] = data_in[k] / data_variance[k]
 
-            for i, j in product(range(template_data_in.shape[-2]), range(template_data_in.shape[-1])):
-                template_counts_white[k, :, :, i, j] = template_data_in[k, :, :, i, j] / data_variance[k]
+            if r_template_in is not None:
+                for i, j in product(range(template_data_in.shape[-2]), range(template_data_in.shape[-1])):
+                    template_counts_white[k, :, :, i, j] = template_data_in[k, :, :, i, j] / data_variance[k]
 
-        # Create the output resources
-        r_template_out = TemplateResource(
-            name=self.n_template_out,
-            grid_coordinates=r_template_in.grid_coordinates
-        )
+                # Create the output resources
+                r_template_out = TemplateResource(
+                    name=self.n_template_out,
+                    grid_coordinates=r_template_in.grid_coordinates
+                )
+                r_template_out.set_data(template_counts_white)
+
         r_data_out.set_data(data_in)
-        r_template_out.set_data(template_counts_white)
 
         # Save the normalization transformation
         def normalization_transformation(data):
@@ -154,4 +158,7 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
         )
 
         print('Done')
-        return r_data_out, r_template_out, r_transformation_out
+        if self.n_template_in is None:
+            return r_data_out, r_transformation_out
+        else:
+            return r_data_out, r_template_out, r_transformation_out
