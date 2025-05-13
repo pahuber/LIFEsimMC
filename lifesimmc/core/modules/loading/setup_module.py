@@ -160,6 +160,11 @@ class SetupModule(BaseModule):
         for planet in phringe._scene.planets:
             # Get planet position from the only pixel in the sky brightness distirbution that is not zero and then from the sky coordinates map at that position the coordinate values
             sky_brightness_distribution = planet._sky_brightness_distribution
+
+            # If planet has orbital motion, use only initial time step
+            if planet.has_orbital_motion:
+                sky_brightness_distribution = sky_brightness_distribution[0]
+
             non_zero_indices = torch.nonzero(sky_brightness_distribution[0])
             sky_coordinates = planet._sky_coordinates
 

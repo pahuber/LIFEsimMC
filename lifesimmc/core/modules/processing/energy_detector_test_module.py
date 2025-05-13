@@ -93,6 +93,7 @@ class EnergyDetectorTestModule(BaseModule):
 
         # TODO: handle mutiple planets
         flux = r_planet_params_in.params[0].sed.cpu().numpy()
+
         # TODO: Handle orbital motion
         posx = r_planet_params_in.params[0].pos_x
         posy = r_planet_params_in.params[0].pos_y
