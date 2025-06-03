@@ -66,7 +66,7 @@ class CorrelationMapModule(BaseModule):
 
         image = (
                 torch.einsum('i,ijk->jk', y, x)
-                / torch.sqrt(torch.einsum('i, i->', y, y))
+                # / torch.sqrt(torch.einsum('i, i->', y, y))
                 / torch.sqrt(torch.einsum('ijk,ijk->', x, x))
         )
 
