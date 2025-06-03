@@ -130,17 +130,18 @@ class CalibrationStarZCAWhiteningModule(BaseTransformationModule):
 
         if amplitude_pert.rms is not None:
             inst_new.remove_perturbation(amplitude_pert)
-            amplitude_pert_new = AmplitudePerturbation(rms=amplitude_pert.rms, color=amplitude_pert.color)
+            amplitude_pert_new = AmplitudePerturbation(rms=amplitude_pert.rms, color_coeff=amplitude_pert.color_coeff)
             inst_new.add_perturbation(amplitude_pert_new)
 
         if phase_pert.rms is not None:
             inst_new.remove_perturbation(phase_pert)
-            phase_pert_new = PhasePerturbation(rms=phase_pert.rms, color=phase_pert.color)
+            phase_pert_new = PhasePerturbation(rms=phase_pert.rms, color_coeff=phase_pert.color_coeff)
             inst_new.add_perturbation(phase_pert_new)
 
         if polarization_pert.rms is not None:
             inst_new.remove_perturbation(polarization_pert)
-            polarization_pert_new = PolarizationPerturbation(rms=polarization_pert.rms, color=polarization_pert.color)
+            polarization_pert_new = PolarizationPerturbation(rms=polarization_pert.rms,
+                                                             color_coeff=polarization_pert.color_coeff)
             inst_new.add_perturbation(polarization_pert_new)
 
         phringe.set(inst_new)
