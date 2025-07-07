@@ -35,22 +35,24 @@ class LIFEReferenceDesign(Instrument):
             spectral_resolving_power=50,
             wavelength_min=4 * u.um,
             wavelength_max=18.5 * u.um,
+            wavelength_bands_boundaries=[],
+            # wavelength_bands_boundaries=[8 * u.um, 13 * u.um],
             throughput=0.12,
             quantum_efficiency=0.7,
         )
 
         if instrumental_noise == InstrumentalNoise.OPTIMISTIC:
-            ampl_pert = AmplitudePerturbation(rms='0.1 %', color='pink')
-            phase_pert = PhasePerturbation(rms='1.5 nm', color='pink')
-            pol_pert = PolarizationPerturbation(rms='0.001 rad', color='pink')
+            ampl_pert = AmplitudePerturbation(rms='0.1 %', color_coeff=1)
+            phase_pert = PhasePerturbation(rms='1.5 nm', color_coeff=1)
+            pol_pert = PolarizationPerturbation(rms='0.001 rad', color_coeff=1)
             self.add_perturbation(ampl_pert)
             self.add_perturbation(phase_pert)
             self.add_perturbation(pol_pert)
 
         elif instrumental_noise == InstrumentalNoise.PESSIMISTIC:
-            ampl_pert = AmplitudePerturbation(rms='1 %', color='pink')
-            phase_pert = PhasePerturbation(rms='15 nm', color='pink')
-            pol_pert = PolarizationPerturbation(rms='0.01 rad', color='pink')
+            ampl_pert = AmplitudePerturbation(rms='1 %', color_coeff=1)
+            phase_pert = PhasePerturbation(rms='15 nm', color_coeff=1)
+            pol_pert = PolarizationPerturbation(rms='0.01 rad', color_coeff=1)
             self.add_perturbation(ampl_pert)
             self.add_perturbation(phase_pert)
             self.add_perturbation(pol_pert)
