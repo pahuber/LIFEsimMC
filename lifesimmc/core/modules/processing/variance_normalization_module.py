@@ -3,6 +3,8 @@ from itertools import product
 
 import numpy as np
 import torch
+from numpy.linalg import pinv
+from scipy.linalg import sqrtm
 
 from lifesimmc.core.modules.processing.base_transformation_module import BaseTransformationModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -98,10 +100,6 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
         r_data_out = DataResource(self.n_data_out)
         planet_params_in = self.get_resource_from_name(self.n_planet_params_in) if self.n_planet_params_in else None
 
-        if r_template_in is not None:
-            template_data_in = r_template_in.get_data()
-            template_counts_white = torch.zeros(template_data_in.shape, device=self.device)
-
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
         wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths().cpu().numpy()
@@ -122,16 +120,32 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
         data_empty = data_in - torch.tensor(model, device=self.device, dtype=data_in.dtype)
 
         # Calculate the variance of the data
-        data_variance = torch.zeros(data_in.shape[0], data_in.shape[1], 1, device=self.device)
+        # data_variance = torch.zeros(data_in.shape[0], data_in.shape[1], 1, device=self.device)
+        icov_sqrt = torch.zeros(data_in.shape[0], data_in.shape[1], data_in.shape[1], device=self.device,
+                                dtype=data_in.dtype)
 
         # Normalize data and templates by variance
         for k in range(data_in.shape[0]):
-            data_variance[k] = torch.var(data_empty[k], dim=1, keepdim=True) ** 0.5
-            data_in[k] = data_in[k] / data_variance[k]
+            # data_variance[k] = torch.var(data_empty[k], dim=1, keepdim=True) ** 0.5
+            cov = torch.cov(data_empty[k])
+            cov = torch.diag(torch.diag(cov)).cpu().numpy()  # Use only the diagonal for whitening
 
-            if r_template_in is not None:
+            icov_sqrt[k] = torch.tensor(
+                sqrtm(pinv(cov)),
+            )
+
+            # data_in[k] = data_in[k] / data_variance[k]
+            data_in[k] = icov_sqrt[k] @ data_in[k]
+
+        if r_template_in is not None:
+            r_template_in = self.get_resource_from_name(self.n_template_in)
+            template_data_in = r_template_in.get_data()
+            template_counts_white = torch.zeros(template_data_in.shape, device=self.device, dtype=torch.float32)
+
+            for k in range(template_data_in.shape[0]):
                 for i, j in product(range(template_data_in.shape[-2]), range(template_data_in.shape[-1])):
-                    template_counts_white[k, :, :, i, j] = template_data_in[k, :, :, i, j] / data_variance[k]
+                    # template_counts_white[k, :, :, i, j] = template_data_in[k, :, :, i, j] / data_variance[k]
+                    template_counts_white[k, :, :, i, j] = icov_sqrt[k] @ template_data_in[k, :, :, i, j]
 
                 # Create the output resources
                 r_template_out = TemplateResource(
@@ -145,11 +159,11 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
         # Save the normalization transformation
         def normalization_transformation(data):
             if isinstance(data, np.ndarray):
-                i2 = data_variance.cpu().numpy()
+                i2 = icov_sqrt.cpu().numpy()
             else:
-                i2 = data_variance
+                i2 = icov_sqrt
             for l in range(data.shape[0]):
-                data[l] = data[l] / i2[l]
+                data[l] = i2[l] @ data[l]
             return data
 
         r_transformation_out = TransformationResource(
