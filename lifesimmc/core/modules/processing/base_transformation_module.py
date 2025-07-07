@@ -46,7 +46,7 @@ class BaseTransformationModule(BaseModule):
             The name of the output transformation resource.
         """
         super().__init__()
-        self.n_data_in = n_data_in
+        self.n_data_cov_in = n_data_in
         self.n_template_in = n_template_in
         self.n_data_out = n_data_out
         self.n_template_out = n_template_out
