@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 from dataclasses import dataclass
 
 from torch import Tensor
@@ -25,7 +25,7 @@ class DataResource(BaseResource):
         Tensor
             A deep copy of the data stored in the resource.
         """
-        return deepcopy(self._data)
+        return copy(self._data)
 
     def set_data(self, data: Tensor):
         """Set the data in the resource.
