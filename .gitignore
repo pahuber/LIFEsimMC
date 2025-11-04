@@ -9,4 +9,4 @@
 /src/*.egg-info/
 __pycache__/
 .idea/
-/lifesimmc/core/modules/_unused/
+/lifesimmc/core/modules/_old/_unused/
