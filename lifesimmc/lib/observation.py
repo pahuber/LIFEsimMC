@@ -1,7 +1,8 @@
 from typing import Union
 
 from astropy.units import Quantity
-from phringe.core.entities.observation import Observation
+from phringe.core.observation import Observation
+from phringe.util.baseline import OptimalNullingBaseline
 
 
 class LIFEReferenceObservation(Observation):
@@ -9,7 +10,7 @@ class LIFEReferenceObservation(Observation):
             self,
             total_integration_time: Union[str, float, Quantity],
             detector_integration_time: Union[str, float, Quantity],
-            optimized_star_separation: Union[str, float, Quantity],
+            nulling_baseline: Union[str, float, Quantity, OptimalNullingBaseline],
     ):
         """Constructor method.
 
@@ -27,7 +28,5 @@ class LIFEReferenceObservation(Observation):
             detector_integration_time=detector_integration_time,
             modulation_period=total_integration_time,
             solar_ecliptic_latitude='0 deg',
-            optimized_differential_output=0,
-            optimized_star_separation=optimized_star_separation,
-            optimized_wavelength='15 um'
+            nulling_baseline=nulling_baseline
         )

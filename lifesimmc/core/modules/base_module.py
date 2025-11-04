@@ -44,6 +44,9 @@ class BaseModule(ABC):
             The resource if found, otherwise None.
         """
         resource = self.resources.get(name)
+
+        if resource is None:
+            raise ValueError(f"Resource '{name}' not found in {self.__class__.__name__}.")
         return resource
 
     @abstractmethod

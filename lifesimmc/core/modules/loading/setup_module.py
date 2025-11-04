@@ -1,10 +1,10 @@
 from typing import overload
 
 import torch
-from phringe.core.entities.configuration import Configuration
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.observation import Observation
-from phringe.core.entities.scene import Scene
+from phringe.core.configuration import Configuration
+from phringe.core.instrument import Instrument
+from phringe.core.observation import Observation
+from phringe.core.scene import Scene
 from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
@@ -165,7 +165,7 @@ class SetupModule(BaseModule):
             if planet.has_orbital_motion:
                 sky_brightness_distribution = sky_brightness_distribution[0]
 
-            non_zero_indices = torch.nonzero(sky_brightness_distribution[0])
+            non_zero_indices = torch.nonzero(sky_brightness_distribution[1])
             sky_coordinates = planet._sky_coordinates
 
             # If planet has orbital motion, i.e. sky_coordinates change with time, then use the first time step
@@ -182,6 +182,13 @@ class SetupModule(BaseModule):
                 sed=phringe.get_source_spectrum(planet.name),
                 pos_x=pos_x,
                 pos_y=pos_y,
+                semi_major_axis=planet.semi_major_axis,
+                inclination=planet.inclination,
+                eccentricity=planet.eccentricity,
+                raan=planet.raan,
+                argument_of_periapsis=planet.argument_of_periapsis,
+                true_anomaly=planet.true_anomaly,
+                mass=planet.mass,
             )
             r_planet_params_out.params.append(planet_params)
 

@@ -4,9 +4,6 @@ from itertools import product
 import numpy as np
 import torch
 from numpy.linalg import pinv
-from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
-from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.main import PHRINGE
 from scipy.linalg import sqrtm
 from tqdm import tqdm
@@ -120,30 +117,9 @@ class CalibrationStarZCAWhiteningModule(BaseTransformationModule):
             extra_memory=20
         )
 
-        # Create a copy of the instrument and add draw new perturbation time series
+        # Create a copy of the instrument
         inst = config_in.instrument
-        amplitude_pert = inst.perturbations.amplitude
-        phase_pert = inst.perturbations.phase
-        polarization_pert = inst.perturbations.polarization
-
         inst_new = copy(inst)
-
-        if amplitude_pert.rms is not None:
-            inst_new.remove_perturbation(amplitude_pert)
-            amplitude_pert_new = AmplitudePerturbation(rms=amplitude_pert.rms, color_coeff=amplitude_pert.color_coeff)
-            inst_new.add_perturbation(amplitude_pert_new)
-
-        if phase_pert.rms is not None:
-            inst_new.remove_perturbation(phase_pert)
-            phase_pert_new = PhasePerturbation(rms=phase_pert.rms, color_coeff=phase_pert.color_coeff)
-            inst_new.add_perturbation(phase_pert_new)
-
-        if polarization_pert.rms is not None:
-            inst_new.remove_perturbation(polarization_pert)
-            polarization_pert_new = PolarizationPerturbation(rms=polarization_pert.rms,
-                                                             color_coeff=polarization_pert.color_coeff)
-            inst_new.add_perturbation(polarization_pert_new)
-
         phringe.set(inst_new)
 
         # Set the observation
@@ -156,7 +132,7 @@ class CalibrationStarZCAWhiteningModule(BaseTransformationModule):
         phringe.set(scene_new)
 
         # Get the differential counts for the calibration star
-        diff_counts = phringe.get_diff_counts()
+        diff_counts = phringe.get_counts(kernels=True)
 
         # Calculate the whitening matrix
         cov = torch.zeros(
@@ -173,13 +149,59 @@ class CalibrationStarZCAWhiteningModule(BaseTransformationModule):
         for i in range(len(diff_counts)):
             cov[i] = torch.cov(diff_counts[i])
 
+            # plt.imshow(cov[i].cpu().numpy(), aspect='auto')
+            # plt.colorbar()
+            # plt.title(f'Covariance matrix {i}')
+            # plt.show()
+
             if self.diagonal_only:
                 cov[i] = torch.diag(torch.diag(cov[i]))
 
+            # eigenvalues, eigenvectors = torch.linalg.eigh(cov[i])
+            # #
+            # # # U is the matrix of eigenvectors (columns)
+            # U = eigenvectors
+            #
+            # u1 = copy(torch.linalg.inv(U))
+            # u2 = copy(U.conj().T)
+
+            # plt.imshow((U @ u2).cpu().numpy())
+            # plt.colorbar()
+            # plt.show()
+            #
+            # plt.imshow(u2.cpu().numpy())
+            # plt.colorbar()
+            # plt.show()
+
+            #
+            # # Lambda is the diagonal matrix of eigenvalues
+            # Lambda = torch.diag(eigenvalues)
+            #
+            # # PCA
+            # i_cov_sqrt[i] = torch.tensor(sqrtm(pinv(Lambda.cpu().numpy())), device=self.device,
+            #                              dtype=torch.float32) @ U.T
+
             i_cov_sqrt[i] = torch.tensor(sqrtm(pinv(cov[i].cpu().numpy())), device=self.device, dtype=torch.float32)
+            # plt.imshow(i_cov_sqrt[i].cpu().numpy(), aspect='auto')
+            # plt.colorbar()
+            # plt.title(f'Whitening matrix for covariance matrix {i}')
+            # plt.show()
+
+            # i_cov_sqrt[i] = torch.tensor(fractional_matrix_power(cov[i].cpu().numpy(), -0.5), device=self.device,
+            #                              dtype=torch.float32)
+            # plt.imshow(i_cov_sqrt[i].cpu().numpy(), aspect='auto')
+            # plt.colorbar()
+            # plt.title(f'Whitening matrix for covariance matrix {i}')
+            # plt.show()
 
         # Apply the whitening matrix to the data and templates
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
+
+        # plt.imshow(data_in[0].cpu().numpy(), aspect='auto')
+        # plt.colorbar()
+        # plt.title('2')
+        # plt.show()
+
         r_data_out = DataResource(self.n_data_out)
 
         for i in range(data_in.shape[0]):
@@ -198,6 +220,11 @@ class CalibrationStarZCAWhiteningModule(BaseTransformationModule):
             ):
                 for k in range(template_data_in.shape[0]):
                     template_counts_white[k, :, :, i, j] = i_cov_sqrt[k] @ template_data_in[k, :, :, i, j]
+
+                    # plt.imshow(template_counts_white[k, :, :, i, j].cpu().numpy(), aspect='auto')
+                    # plt.colorbar()
+                    # plt.title(f'Whitening template {k} at pixel ({i}, {j})')
+                    # plt.show()
 
             r_template_out = TemplateResource(
                 name=self.n_template_out,

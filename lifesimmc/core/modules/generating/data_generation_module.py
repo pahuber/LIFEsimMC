@@ -53,8 +53,8 @@ class DataGenerationModule(BaseModule):
         r_config_in = self.get_resource_from_name(self.config_in)
         r_data_out = DataResource(self.n_data_out)
 
-        diff_counts = r_config_in.phringe.get_diff_counts()
+        diff_counts = r_config_in.phringe.get_counts(kernels=True)
         r_data_out.set_data(diff_counts)
-        
+
         print('Done')
         return r_data_out

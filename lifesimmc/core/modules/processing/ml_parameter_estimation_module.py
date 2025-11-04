@@ -32,6 +32,7 @@ class MLParameterEstimationModule(BaseModule):
             n_transformation_in: str = None,
             n_template_in: str = None,
             n_planet_params_in: str = None,
+            bounds: bool = False
     ):
         """Constructor method.
 
@@ -55,6 +56,7 @@ class MLParameterEstimationModule(BaseModule):
         self.n_transformation_in = n_transformation_in
         self.n_planet_params_out = n_planet_params_out
         self.n_planet_params_in = n_planet_params_in
+        self.bounds = bounds
 
     def _get_analytical_initial_guess(self, data, template_data, grid_coordinates):
         # Normalize template data with their variance along axis 2
@@ -148,7 +150,10 @@ class MLParameterEstimationModule(BaseModule):
         params = Parameters()
 
         for j in range(len(flux_init)):
-            params.add(f'flux_{j}', value=flux_init[j])
+            if self.bounds:
+                params.add(f'flux_{j}', value=flux_init[j], min=0)
+            else:
+                params.add(f'flux_{j}', value=flux_init[j])
         params.add('pos_x', value=posx_init, min=-hfov_max, max=hfov_max)
         params.add('pos_y', value=posy_init, min=-hfov_max, max=hfov_max)
 
@@ -157,13 +162,11 @@ class MLParameterEstimationModule(BaseModule):
             posx = params['pos_x'].value
             posy = params['pos_y'].value
             flux = np.array([params[f'flux_{z}'].value for z in range(len(flux_init))])
-            model = r_config_in.phringe._get_template_diff_counts(
-                times,
-                wavelengths,
-                wavelength_bin_widths,
-                flux,
-                posx,
-                posy
+            model = r_config_in.phringe.get_model_counts(
+                spectral_energy_distribution=flux,
+                x_position=posx,
+                y_position=posy,
+                kernels=True
             )
             model = transf(model)
             model = np.transpose(model, (0, 2, 1))

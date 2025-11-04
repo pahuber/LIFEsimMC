@@ -59,8 +59,10 @@ class TemplateGenerationModule(BaseModule):
         time = r_config_in.phringe.get_time_steps()
         wavelength = r_config_in.phringe.get_wavelength_bin_centers()
 
-        diff_ir = r_config_in.phringe.get_diff_instrument_response_theoretical(
-            time, wavelength, self.fov, r_config_in.phringe.get_nulling_baseline()
+        diff_ir = r_config_in.phringe.get_instrument_response(
+            fov=self.fov,
+            kernels=True,
+            perturbations=False
         )
 
         template_diff_counts = (

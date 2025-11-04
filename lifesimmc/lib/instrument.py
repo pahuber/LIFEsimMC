@@ -1,12 +1,10 @@
 from enum import Enum
 
 import astropy.units as u
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
-from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
+from phringe.core.instrument import Instrument
+from phringe.core.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
-from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
+from phringe.lib.beam_combiner import DoubleBracewell
 
 
 class InstrumentalNoise(Enum):
@@ -24,35 +22,36 @@ class InstrumentalNoise(Enum):
 
 class LIFEReferenceDesign(Instrument):
     def __init__(self, instrumental_noise: InstrumentalNoise = InstrumentalNoise.NONE):
+
+        if instrumental_noise == InstrumentalNoise.OPTIMISTIC:
+            amplitude_perturbation = PowerLawPSDPerturbation(coefficient=1, rms=0.1 * u.percent)
+            phase_perturbation = PowerLawPSDPerturbation(coefficient=1, rms=1.5 * u.nm, chromatic=True)
+            polarization_perturbation = PowerLawPSDPerturbation(coefficient=1, rms=0.001 * u.rad)
+
+        elif instrumental_noise == InstrumentalNoise.PESSIMISTIC:
+            amplitude_perturbation = PowerLawPSDPerturbation(coefficient=1, rms=1 * u.percent)
+            phase_perturbation = PowerLawPSDPerturbation(coefficient=1, rms=15 * u.nm, chromatic=True)
+            polarization_perturbation = PowerLawPSDPerturbation(coefficient=1, rms=0.01 * u.rad)
+
+        elif instrumental_noise == InstrumentalNoise.NONE:
+            amplitude_perturbation = None
+            phase_perturbation = None
+            polarization_perturbation = None
+
         super().__init__(
             array_configuration_matrix=XArrayConfiguration.acm,
-            complex_amplitude_transfer_matrix=DoubleBracewellBeamCombiner.catm,
-            differential_outputs=DoubleBracewellBeamCombiner.diff_out,
-            sep_at_max_mod_eff=DoubleBracewellBeamCombiner.sep_at_max_mod_eff,
+            complex_amplitude_transfer_matrix=DoubleBracewell.catm,
+            kernels=DoubleBracewell.kernels,
             aperture_diameter=3.5 * u.m,
-            baseline_maximum=600 * u.m,
-            baseline_minimum=8 * u.m,
+            nulling_baseline_min=10 * u.m,
+            nulling_baseline_max=60 * u.m,
             spectral_resolving_power=50,
             wavelength_min=4 * u.um,
             wavelength_max=18.5 * u.um,
             wavelength_bands_boundaries=[],
-            # wavelength_bands_boundaries=[8 * u.um, 13 * u.um],
             throughput=0.12,
             quantum_efficiency=0.7,
+            amplitude_perturbation=amplitude_perturbation,
+            phase_perturbation=phase_perturbation,
+            polarization_perturbation=polarization_perturbation,
         )
-
-        if instrumental_noise == InstrumentalNoise.OPTIMISTIC:
-            ampl_pert = AmplitudePerturbation(rms='0.1 %', color_coeff=1)
-            phase_pert = PhasePerturbation(rms='1.5 nm', color_coeff=1)
-            pol_pert = PolarizationPerturbation(rms='0.001 rad', color_coeff=1)
-            self.add_perturbation(ampl_pert)
-            self.add_perturbation(phase_pert)
-            self.add_perturbation(pol_pert)
-
-        elif instrumental_noise == InstrumentalNoise.PESSIMISTIC:
-            ampl_pert = AmplitudePerturbation(rms='1 %', color_coeff=1)
-            phase_pert = PhasePerturbation(rms='15 nm', color_coeff=1)
-            pol_pert = PolarizationPerturbation(rms='0.01 rad', color_coeff=1)
-            self.add_perturbation(ampl_pert)
-            self.add_perturbation(phase_pert)
-            self.add_perturbation(pol_pert)

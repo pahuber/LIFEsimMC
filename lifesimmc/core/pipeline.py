@@ -1,7 +1,7 @@
 from typing import Union
 
 import torch
-from phringe.main import PHRINGE
+from phringe.util.device import get_device
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -41,7 +41,7 @@ class Pipeline:
         self.gpu_index = gpu_index
         self.grid_size = grid_size
         self.time_step_size = time_step_size
-        self.device = PHRINGE()._get_device(self.gpu_index)
+        self.device = get_device(self.gpu_index)
         self._modules = []
         self._resources = {}
 

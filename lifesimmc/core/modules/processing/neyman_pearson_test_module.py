@@ -102,13 +102,11 @@ class NeymanPearsonTestModule(BaseModule):
         posx = r_planet_params_in.params[0].pos_x
         posy = r_planet_params_in.params[0].pos_y
 
-        model = r_config_in.phringe._get_template_diff_counts(
-            times,
-            wavelengths,
-            wavelength_bin_widths,
-            flux,
-            posx,
-            posy
+        model = r_config_in.phringe.get_model_counts(
+            spectral_energy_distribution=flux,
+            x_position=posx,
+            y_position=posy,
+            kernels=True
         )
         for transf in transformations:
             model = transf(model)

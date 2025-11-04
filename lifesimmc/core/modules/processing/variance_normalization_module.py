@@ -38,14 +38,14 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
     """
 
     def __init__(
-            self,
-            n_setup_in: str,
-            n_data_in: str,
-            n_data_out: str,
-            n_transformation_out: str,
-            n_planet_params_in: str,
-            n_template_in: str = None,
-            n_template_out: str = None,
+        self,
+        n_setup_in: str,
+        n_data_in: str,
+        n_data_out: str,
+        n_transformation_out: str,
+        n_planet_params_in: str,
+        n_template_in: str = None,
+        n_template_out: str = None,
     ):
         """Constructor method.
 
@@ -108,7 +108,7 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
         posx_init = planet_params_in.params[0].pos_x
         posy_init = planet_params_in.params[0].pos_y
 
-        model = r_config_in.phringe._get_template_diff_counts(
+        model = r_config_in.phringe._get_model_diff_counts(
             times,
             wavelengths,
             wavelength_bin_widths,

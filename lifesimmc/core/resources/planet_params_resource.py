@@ -49,6 +49,27 @@ class PlanetParams:
     pos_x_err_high: float = None
     pos_y_err_low: float = None
     pos_y_err_high: float = None
+    semi_major_axis: float = None
+    semi_major_axis_err_low: float = None
+    semi_major_axis_err_high: float = None
+    eccentricity: float = None
+    eccentricity_err_low: float = None
+    eccentricity_err_high: float = None
+    inclination: float = None
+    inclination_err_low: float = None
+    inclination_err_high: float = None
+    raan: float = None
+    raan_err_low: float = None
+    raan_err_high: float = None
+    argument_of_periapsis: float = None
+    argument_of_periapsis_err_low: float = None
+    argument_of_periapsis_err_high: float = None
+    true_anomaly: float = None
+    true_anomaly_err_low: float = None
+    true_anomaly_err_high: float = None
+    mass: float = None
+    mass_err_low: float = None
+    mass_err_high: float = None
     sed: Tensor = None
     sed_err_low: Tensor = None
     sed_err_high: Tensor = None
@@ -66,4 +87,3 @@ class PlanetParamsResource(BaseResource):
         List of planet parameters.
     """
     params: list[PlanetParams] = field(default_factory=list)
-    # test

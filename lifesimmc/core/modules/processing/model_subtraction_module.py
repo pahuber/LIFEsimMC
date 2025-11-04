@@ -1,6 +1,7 @@
 from copy import copy
 
 import torch
+from matplotlib import pyplot as plt
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -86,13 +87,11 @@ class ModelSubtractionModule(BaseModule):
         posx = r_planet_params_in.params[0].pos_x
         posy = r_planet_params_in.params[0].pos_y
 
-        model = r_config_in.phringe._get_template_diff_counts(
-            times,
-            wavelengths,
-            wavelength_bin_widths,
-            flux,
-            posx,
-            posy
+        model = r_config_in.phringe.get_model_counts(
+            kernels=True,
+            spectral_energy_distribution=flux,
+            x_position=posx,
+            y_position=posy,
         )
         model = torch.tensor(
             model,
@@ -102,6 +101,29 @@ class ModelSubtractionModule(BaseModule):
 
         data_out = copy(data_in) - model
 
+        # # Bootsrap
+        # mean = np.zeros(data_out.shape[1])
+        # cov_w = torch.cov(data_out[0]).cpu().numpy()
+        # samples = np.random.multivariate_normal(mean, cov_w, size=data_out[0].shape[1]).T
+        # samples2 = np.expand_dims(samples, axis=0)
+        # counts_boot = torch.tensor(samples2, dtype=data_in.dtype, device=data_in.device)
+        # # counts_boot += model
+        # plt.imshow(counts_boot.cpu().numpy()[0], cmap='viridis')
+        # plt.colorbar()
+        # plt.title('0')
+        # plt.show()
+
+        for i in range(data_in.shape[2]):
+            if i % 2 == 0:
+                data_out[:, :, i] = data_out[:, :, 0]
+            else:
+                data_out[:, :, i] = data_out[:, :, 1]
+
+        # plt.imshow(np.cov(counts_boot[0].cpu().numpy()), cmap='viridis', aspect='auto')
+        # plt.colorbar()
+        # plt.title('1')
+        # plt.show()
+        #
         # plt.imshow(data_in[0].cpu().numpy(), cmap='viridis', aspect='auto')
         # plt.colorbar()
         # plt.show()
@@ -110,11 +132,11 @@ class ModelSubtractionModule(BaseModule):
         # plt.colorbar()
         # plt.show()
         #
-        # plt.imshow(data_out[0].cpu().numpy(), cmap='viridis', aspect='auto')
-        # plt.colorbar()
-        # plt.show()
+        plt.imshow(data_out[0].cpu().numpy(), cmap='viridis', aspect='auto')
+        plt.colorbar()
+        plt.show()
 
-        r_data_out.set_data(data_out)
+        r_data_out.set_data(data_out + model)
 
         print('Done')
         return r_data_out
