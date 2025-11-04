@@ -66,3 +66,4 @@ class PlanetParamsResource(BaseResource):
         List of planet parameters.
     """
     params: list[PlanetParams] = field(default_factory=list)
+    # test
