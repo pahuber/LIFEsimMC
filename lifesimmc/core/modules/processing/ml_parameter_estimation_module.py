@@ -181,10 +181,15 @@ class MLParameterEstimationModule(BaseModule):
         posx = out.params['pos_x'].value
         posy = out.params['pos_y'].value
 
-        stds = np.sqrt(np.diag(cov_out))
-        flux_err = stds[0:-2]
-        posx_err = stds[-2]
-        posy_err = stds[-1]
+        try:
+            stds = np.sqrt(np.diag(cov_out))
+            flux_err = stds[0:-2]
+            posx_err = stds[-2]
+            posy_err = stds[-1]
+        except ValueError:
+            flux_err = np.full_like(fluxes, np.nan)
+            posx_err = np.nan
+            posy_err = np.nan
 
         # TODO: Implement multi-planet signal extraction
         r_planet_params_out = PlanetParamsResource(

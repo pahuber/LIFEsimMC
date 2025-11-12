@@ -41,7 +41,7 @@ class Pipeline:
         self.gpu_index = gpu_index
         self.grid_size = grid_size
         self.time_step_size = time_step_size
-        self.device = get_device(self.gpu_index)
+        self.device = get_device(self.gpu_index) if device is None else device
         self._modules = []
         self._resources = {}
 
