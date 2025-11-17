@@ -11,10 +11,6 @@ Please cite `Huber et al. 2025 <https://doi.org/10.3847/1538-3881/adfb6b>`_ and 
 
 For questions and other inquiries, please contact Philipp A. Huber (`huberph@phys.ethz.ch <mailto:huberph@phys.ethz.ch>`_).
 
-Contact
--------
-
-For questions or other inquiries, please contact Philipp A. Huber (huberph@phys.ethz.ch).
 
 .. toctree::
    :maxdepth: 2

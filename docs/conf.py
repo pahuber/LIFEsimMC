@@ -15,7 +15,8 @@ import sys
 import urllib
 
 sys.path.insert(0, os.path.abspath('../'))
-# sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../lifesimmc'))
+os.environ['PYTHONPATH'] = os.path.abspath('../')
 
 # -- Project information -----------------------------------------------------
 
@@ -41,9 +42,12 @@ html_theme_options = {
     "dark_logo": "lifesimmc_logo.png",
 }
 html_context = {
-    "display_github": False,  # Example of context variable
+    "display_github": True,  # Example of context variable
     "title": ""
 }
+
+nbsphinx_execute = 'never'
+nb_execution_mode = 'off'
 
 # -- General configuration ---------------------------------------------------
 
@@ -57,15 +61,16 @@ extensions = ['sphinx_copybutton',
               'nbsphinx', ]
 nbsphinx_codecell_lexer = 'python3'
 
+
 # 'recommonmark']
 
 # -- Options for HTML output -------------------------------------------------
 
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath('../lifesimmc'))
+# import os
+#
+# sys.path.insert(0, os.path.abspath('../lifesimmc'))
+# import sys
 
 
 def setup(app):
