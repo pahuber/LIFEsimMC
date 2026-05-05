@@ -20,7 +20,8 @@ class DataGenerationModule(BaseModule):
     def __init__(
             self,
             n_setup_in: str,
-            n_data_out: str
+            n_data_out: str,
+            kernels: bool = True
     ):
         """Constructor method.
 
@@ -34,6 +35,7 @@ class DataGenerationModule(BaseModule):
         super().__init__()
         self.config_in = n_setup_in
         self.n_data_out = n_data_out
+        self.kernels = kernels
 
     def apply(self, resources: list[BaseResource]) -> tuple[DataResource, PlanetParamsResource]:
         """Use PHRINGE to generate synthetic data.
@@ -53,7 +55,7 @@ class DataGenerationModule(BaseModule):
         r_config_in = self.get_resource_from_name(self.config_in)
         r_data_out = DataResource(self.n_data_out)
 
-        diff_counts = r_config_in.phringe.get_counts(kernels=True)
+        diff_counts = r_config_in.phringe.get_counts(kernels=self.kernels)
         r_data_out.set_data(diff_counts)
 
         print('Done')
