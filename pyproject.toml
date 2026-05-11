@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lifesimmc"
-version = "1.1.1"
+version = "1.1.4"
 description = "LIFEsimMC"
 authors = ["Philipp A. Huber <huberph@phys.ehtz.ch>"]
 license = "GPL-3.0"
@@ -16,7 +16,7 @@ classifiers = [
 Changelog = "https://github.com/pahuber/lifesimmc/releases"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10"
 click = ">=8.0.1"
 packaging = "==23.2"
 sphinx-copybutton = "^0.5.2"

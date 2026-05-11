@@ -68,30 +68,67 @@ class RGBImageModule(BaseModule):
         """
         print('Generating RGB image...')
 
+        def stretch_frame(rgb, lo, hi,
+                          stretch="asinh",
+                          asinh_Q=10.0,
+                          gamma=2.2,
+                          eps=1e-12):
+            """
+            rgb: (H, W, 3) numpy array
+            returns: stretched rgb in [0,1]
+            """
+
+            rgb = np.nan_to_num(rgb, nan=0.0, posinf=0.0, neginf=0.0)
+            rgb = np.clip(rgb, 0.0, None)
+
+            # luminance
+            I = np.mean(rgb, axis=-1)
+
+            # clip + normalise
+            I = np.clip(I, lo, hi)
+            I = (I - lo) / (hi - lo + eps)
+
+            # stretch
+            if stretch == "asinh":
+                I = np.arcsinh(asinh_Q * I) / np.arcsinh(asinh_Q)
+            elif stretch == "gamma":
+                I = I ** (1.0 / gamma)
+            elif stretch == "linear":
+                pass
+            else:
+                raise ValueError(f"Unknown stretch '{stretch}'")
+
+            # colour-preserving rescale
+            scale = I / (np.mean(rgb, axis=-1) + eps)
+            rgb_out = rgb * scale[..., None]
+
+            return np.clip(rgb_out, 0.0, 1.0)
+
         r_config_in = self.get_resource_from_name(self.n_config_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
         template_data = r_templates_in.get_data()
 
-        frac_red = 0.2
-        frac_blue = 0.5
+        frac_red = 0.3
+        frac_blue = 0.6
         wl = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
         wl_min = wl[0]
         wl_max = wl[-1]
-        wl_1_3 = wl_min + (wl_max - wl_min) * frac_red
+
+        wl_1_2 = wl_min + (wl_max - wl_min) * frac_red
         wl_2_3 = wl_min + (wl_max - wl_min) * frac_blue
         i_min = 0
         i_max = len(wl) - 1
-        i_1_3 = min(range(len(wl)), key=lambda i: abs(wl[i] - wl_1_3))
+        i_1_2 = min(range(len(wl)), key=lambda i: abs(wl[i] - wl_1_2))
         i_2_3 = min(range(len(wl)), key=lambda i: abs(wl[i] - wl_2_3))
 
         if self.metric == 0:
-            datab = data_in[:, i_min:i_1_3, :]
-            datag = data_in[:, i_1_3:i_2_3, :]
+            datab = data_in[:, i_min:i_1_2, :]
+            datag = data_in[:, i_1_2:i_2_3, :]
             datar = data_in[:, i_2_3:i_max, :]
 
-            template_datab = template_data[:, i_min:i_1_3, :, :, :]
-            template_datag = template_data[:, i_1_3:i_2_3, :, :, :]
+            template_datab = template_data[:, i_min:i_1_2, :, :, :]
+            template_datag = template_data[:, i_1_2:i_2_3, :, :, :]
             template_datar = template_data[:, i_2_3:i_max, :, :, :]
 
             yb = datab.flatten()
@@ -183,12 +220,22 @@ class RGBImageModule(BaseModule):
                 )
             )
 
-            image[2] = torch.sum(torch.nan_to_num(cost_function[i_min:i_1_3], 0), dim=0).cpu().numpy()
-            image[1] = torch.sum(torch.nan_to_num(cost_function[i_1_3:i_2_3], 0), dim=0).cpu().numpy()
+            image[2] = torch.sum(torch.nan_to_num(cost_function[i_min:i_1_2], 0), dim=0).cpu().numpy()
+            image[1] = torch.sum(torch.nan_to_num(cost_function[i_1_2:i_2_3], 0), dim=0).cpu().numpy()
             image[0] = torch.sum(torch.nan_to_num(cost_function[i_2_3:i_max], 0), dim=0).cpu().numpy()
 
         rgb_image = np.stack([image[0], image[1], image[2]], axis=-1)
-        rgb_image = rgb_image / rgb_image.max()
+
+        # Stretch frame
+        lo = 0
+        hi = 0.01
+        # print(hi)
+        STRETCH = "asinh"
+        ASINH_Q = 4.0
+        GAMMA = 2.2
+        # rgb_image = stretch_frame(rgb_image, lo, hi, STRETCH, ASINH_Q, GAMMA)
+        # print(rgb_image.max())
+        # rgb_image = rgb_image / 0.01  # rgb_image.max()
 
         r_image_out = ImageResource(self.n_image_out)
         r_image_out.set_image(torch.tensor(rgb_image))

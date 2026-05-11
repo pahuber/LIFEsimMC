@@ -1,6 +1,5 @@
 from typing import overload
 
-import torch
 from phringe.core.configuration import Configuration
 from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
@@ -144,6 +143,9 @@ class SetupModule(BaseModule):
         if self.scene:
             phringe.set(self.scene)
 
+        counts = phringe.get_counts(kernels=True)
+        print(counts)
+
         r_config_out = SetupResource(
             name=self.n_config_out,
             phringe=phringe,
@@ -159,21 +161,23 @@ class SetupModule(BaseModule):
 
         for planet in phringe._scene.planets:
             # Get planet position from the only pixel in the sky brightness distirbution that is not zero and then from the sky coordinates map at that position the coordinate values
-            sky_brightness_distribution = planet._sky_brightness_distribution
+            sky_brightness_distribution = planet.sky_brightness_distribution
 
             # If planet has orbital motion, use only initial time step
-            if planet.has_orbital_motion:
-                sky_brightness_distribution = sky_brightness_distribution[0]
+            # if planet.propagate_orbit:
+            #     sky_brightness_distribution = sky_brightness_distribution[: 0]
 
-            non_zero_indices = torch.nonzero(sky_brightness_distribution[1])
-            sky_coordinates = planet._sky_coordinates
+            # non_zero_indices = torch.nonzero(sky_brightness_distribution[1])
+            sky_coordinates = planet.sky_coordinates
+            pos_x = sky_coordinates
+            pos_y = sky_coordinates
 
             # If planet has orbital motion, i.e. sky_coordinates change with time, then use the first time step
-            if planet.has_orbital_motion:
-                sky_coordinates = sky_coordinates[:, 0]
-
-            pos_x = sky_coordinates[0][non_zero_indices[0][0], non_zero_indices[0][1]].item()
-            pos_y = sky_coordinates[1][non_zero_indices[0][0], non_zero_indices[0][1]].item()
+            # if planet.propagate_orbit:
+            #     sky_coordinates = sky_coordinates[:, 0]
+            #
+            # pos_x = sky_coordinates[0][non_zero_indices[0][0], non_zero_indices[0][1]].item()
+            # pos_y = sky_coordinates[1][non_zero_indices[0][0], non_zero_indices[0][1]].item()
 
             planet_params = PlanetParams(
                 name=planet.name,

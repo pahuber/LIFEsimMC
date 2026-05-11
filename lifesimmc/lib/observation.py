@@ -2,7 +2,10 @@ from typing import Union
 
 from astropy.units import Quantity
 from phringe.core.observation import Observation
-from phringe.util.baseline import OptimalNullingBaseline
+from phringe.lib.baseline import OptimalNullingBaseline
+
+
+# from phringe.util.baseline import OptimalNullingBaseline
 
 
 class LIFEReferenceObservation(Observation):
@@ -11,7 +14,7 @@ class LIFEReferenceObservation(Observation):
             total_integration_time: Union[str, float, Quantity],
             detector_integration_time: Union[str, float, Quantity],
             nulling_baseline: Union[str, float, Quantity, OptimalNullingBaseline],
-    ):
+    ) -> None:
         """Constructor method.
 
         Parameters

@@ -1,7 +1,7 @@
 from typing import Union
 
 import torch
-from phringe.util.device import get_device
+from phringe.util.memory import get_device
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
