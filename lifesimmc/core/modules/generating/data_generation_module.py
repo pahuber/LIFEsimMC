@@ -1,3 +1,5 @@
+from rich.console import Console
+
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
@@ -46,13 +48,14 @@ class DataGenerationModule(BaseModule):
         tuple[DataResource, PlanetParamsResource]
             Tuple containing the output data resource and planet parameters resource.
         """
-        print('Generating synthetic data...')
+        console = Console()
 
-        r_config_in = self.get_resource_from_name(name=self.n_setup_in)
-        r_data_out = DataResource(name=self.n_data_out)
+        with console.status("Generating synthetic data...", spinner="dots"):
+            r_config_in = self.get_resource_from_name(name=self.n_setup_in)
+            r_data_out = DataResource(name=self.n_data_out)
 
-        counts = r_config_in.phringe.get_counts(kernels=self.kernels)
-        r_data_out.set_data(counts)
+            counts = r_config_in.phringe.get_counts(kernels=self.kernels)
+            r_data_out.set_data(counts)
 
         print('Done')
         return r_data_out,

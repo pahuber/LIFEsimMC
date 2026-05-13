@@ -1,7 +1,7 @@
 import numpy as np
 import torch
-from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 from lmfit import minimize, Parameters
+from rich.console import Console
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
@@ -110,108 +110,109 @@ class MLSEDEstimationModule(BaseModule):
         return optimum_flux_at_maximum, x_coord, y_coord
 
     def run(self, pipeline_resources: list[BaseResource | ResourceCollection]) -> tuple[
-        ResourceCollection[PlanetParamsResource]]:
-        print('Estimating SED using numerical maximum likelihood estimation...')
+        ResourceCollection[PlanetResource]]:
+        console = Console()
 
-        r_setup_in = self.get_resource_from_name(self.n_setup_in)
-        r_templates_in = self.get_resource_from_name(self.n_template_in)
-        r_transformation_in = self.get_resource_from_name(self.n_transformation_in) \
-            if self.n_transformation_in \
-            else None
-        planets_in = self.get_resource_from_name(self.n_planets_in) if self.n_planets_in else None
+        with console.status("Estimating SED using numerical maximum likelihood estimation...", spinner="dots"):
+            r_setup_in = self.get_resource_from_name(self.n_setup_in)
+            r_templates_in = self.get_resource_from_name(self.n_template_in)
+            r_transformation_in = self.get_resource_from_name(self.n_transformation_in) \
+                if self.n_transformation_in \
+                else None
+            planets_in = self.get_resource_from_name(self.n_planets_in) if self.n_planets_in else None
 
-        transf_in = r_transformation_in.transformation if r_transformation_in else lambda x: x
-        data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        template_data_in = r_templates_in.get_data()
-        grid_coordinates = r_templates_in.grid_coordinates
+            transf_in = r_transformation_in.transformation if r_transformation_in else lambda x: x
+            data_in = self.get_resource_from_name(self.n_data_in).get_data()
+            template_data_in = r_templates_in.get_data()
+            grid_coordinates = r_templates_in.grid_coordinates
 
-        # Flatten data along differential outputs and times axes
-        nk, nl, nt = data_in.shape
-        _, _, _, ng, _ = template_data_in.shape
+            # Flatten data along differential outputs and times axes
+            nk, nl, nt = data_in.shape
+            _, _, _, ng, _ = template_data_in.shape
 
-        data_in = data_in.permute(0, 2, 1).reshape(nk * nt, nl)
+            data_in = data_in.permute(0, 2, 1).reshape(nk * nt, nl)
 
-        template_data_in = (
-            template_data_in
-            .permute(0, 2, 1, 3, 4)
-            .reshape(nk * nt, nl, ng, ng)
-        )
-
-        # Set up parameters and initial conditions
-        if planets_in is None:
-            sed_init, posx_init, posy_init = self._get_analytical_initial_guess(
-                data_in,
-                template_data_in,
-                grid_coordinates
+            template_data_in = (
+                template_data_in
+                .permute(0, 2, 1, 3, 4)
+                .reshape(nk * nt, nl, ng, ng)
             )
-        # If planet_params_in is provided, use its values as initial conditions
-        else:
-            # TODO: implement for multiple planets
-            sed_init = planets_in.collection[0].planet.spectral_energy_distribution[:, 0, 0].cpu().numpy()
-            posx_init = planets_in.collection[0].planet.sky_coordinates[0, 0, 0, 0, 0].cpu().numpy()
-            posy_init = planets_in.collection[0].planet.sky_coordinates[1, 0, 0, 0, 0].cpu().numpy()
 
-        data_in = data_in.cpu().numpy()
-        hfov_max = r_setup_in.phringe.get_field_of_view()[-1].cpu().numpy() / 2
-
-        params = Parameters()
-
-        for j in range(len(sed_init)):
-            if self.bounds:
-                params.add(f'flux_{j}', value=sed_init[j], min=0)
+            # Set up parameters and initial conditions
+            if planets_in is None:
+                sed_init, posx_init, posy_init = self._get_analytical_initial_guess(
+                    data_in,
+                    template_data_in,
+                    grid_coordinates
+                )
+            # If planet_params_in is provided, use its values as initial conditions
             else:
-                params.add(f'flux_{j}', value=sed_init[j])
-        params.add('pos_x', value=posx_init, min=-hfov_max, max=hfov_max)
-        params.add('pos_y', value=posy_init, min=-hfov_max, max=hfov_max)
+                # TODO: implement for multiple planets
+                sed_init = planets_in.collection[0].planet.spectral_energy_distribution[:, 0, 0].cpu().numpy()
+                posx_init = planets_in.collection[0].planet.sky_coordinates[0, 0, 0, 0, 0].cpu().numpy()
+                posy_init = planets_in.collection[0].planet.sky_coordinates[1, 0, 0, 0, 0].cpu().numpy()
 
-        # Perform MLE
-        def residual_data(params, target):
-            posx = params['pos_x'].value
-            posy = params['pos_y'].value
-            flux = np.array([params[f'flux_{z}'].value for z in range(len(sed_init))])
-            model = r_setup_in.phringe.get_model_counts(
-                spectral_energy_distribution=flux,
-                x_position=posx,
-                y_position=posy,
-                kernels=True
+            data_in = data_in.cpu().numpy()
+            hfov_max = r_setup_in.phringe.get_field_of_view()[-1].cpu().numpy() / 2
+
+            params = Parameters()
+
+            for j in range(len(sed_init)):
+                if self.bounds:
+                    params.add(f'flux_{j}', value=sed_init[j], min=0)
+                else:
+                    params.add(f'flux_{j}', value=sed_init[j])
+            params.add('pos_x', value=posx_init, min=-hfov_max, max=hfov_max)
+            params.add('pos_y', value=posy_init, min=-hfov_max, max=hfov_max)
+
+            # Perform MLE
+            def residual_data(params, target):
+                posx = params['pos_x'].value
+                posy = params['pos_y'].value
+                flux = np.array([params[f'flux_{z}'].value for z in range(len(sed_init))])
+                model = r_setup_in.phringe.get_model_counts(
+                    spectral_energy_distribution=flux,
+                    x_position=posx,
+                    y_position=posy,
+                    kernels=True
+                )
+                model = transf_in(model)
+                model = np.transpose(model, (0, 2, 1))
+                model = model.reshape(data_in.shape)
+
+                return model - target
+
+            out = minimize(residual_data, params, args=(data_in,), method='leastsq')
+            cov_out = out.covar
+
+            fluxes = np.array([out.params[f'flux_{k}'].value for k in range(len(sed_init))])
+            posx = out.params['pos_x'].value
+            posy = out.params['pos_y'].value
+
+            try:
+                stds = np.sqrt(np.diag(cov_out))
+                flux_err = stds[0:-2]
+                posx_err = stds[-2]
+                posy_err = stds[-1]
+            except ValueError:
+                flux_err = np.full_like(fluxes, np.nan)
+                posx_err = np.nan
+                posy_err = np.nan
+
+            # TODO: Implement multi-planet signal extraction
+            r_planets_out = ResourceCollection[PlanetResource](
+                name=self.n_planets_out,
             )
-            model = transf_in(model)
-            model = np.transpose(model, (0, 2, 1))
-            model = model.reshape(data_in.shape)
-
-            return model - target
-
-        out = minimize(residual_data, params, args=(data_in,), method='leastsq')
-        cov_out = out.covar
-
-        fluxes = np.array([out.params[f'flux_{k}'].value for k in range(len(sed_init))])
-        posx = out.params['pos_x'].value
-        posy = out.params['pos_y'].value
-
-        try:
-            stds = np.sqrt(np.diag(cov_out))
-            flux_err = stds[0:-2]
-            posx_err = stds[-2]
-            posy_err = stds[-1]
-        except ValueError:
-            flux_err = np.full_like(fluxes, np.nan)
-            posx_err = np.nan
-            posy_err = np.nan
-
-        # TODO: Implement multi-planet signal extraction
-        r_planets_out = ResourceCollection[PlanetResource](
-            name=self.n_planets_out,
-        )
-        planet_resource = PlanetResource(
-            name='',
-            planet=None,
-            sed=fluxes,
-            std=flux_err,
-            cov=cov_out,
-            pos_x=posx,
-            pos_y=posy
-        )
-        r_planets_out.collection.append(planet_resource)
+            planet_resource = PlanetResource(
+                name='',
+                planet=None,
+                sed=fluxes,
+                std=flux_err,
+                cov=cov_out,
+                pos_x=posx,
+                pos_y=posy
+            )
+            r_planets_out.collection.append(planet_resource)
 
         print('Done')
         return r_planets_out,

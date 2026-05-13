@@ -8,21 +8,15 @@ from lifesimmc.presets.base_preset import BasePreset
 class SingleEpochObservation(BasePreset):
     """Abstract class representing a single epoch observation."""
     _IS_FACTORY = True
+    _LATEST_VERSION = "1"
 
     @classmethod
     def _get_preset_mappings(cls) -> dict[str, type]:
-        """Get the mapping of preset versions to their classes.
-
-        Returns
-        dict[str, type]
-            The mapping of preset versions to their classes.
-        """
         from lifesimmc.presets.single_epoch_observation.versions.single_epoch_observation_v1 import (
             SingleEpochObservationV1,
         )
 
         return {
-            "latest": SingleEpochObservationV1,
             "1": SingleEpochObservationV1,
         }
 
