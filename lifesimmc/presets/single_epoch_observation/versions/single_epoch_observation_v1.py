@@ -25,6 +25,72 @@ from lifesimmc.util.library import XArrayConfiguration
 
 
 class SingleEpochObservationV1(SingleEpochObservation):
+    """Single-epoch observation preset (version 1).
+
+    Parameters
+    ----------
+    scene : Scene
+        The astrophysical scene containing the target system (e.g., star, planets,
+        and background sources).
+
+    total_integration_time : str or float or Quantity
+        Total observation time.
+
+    detector_integration_time : str or float or Quantity, optional
+        Integration time per detector frame. If None, defaults to
+        ``total_integration_time / 200``.
+
+    modulation_period : str or float or Quantity, optional
+        Period of the interferometric modulation (e.g., array rotation).
+        If None, defaults to ``total_integration_time``.
+
+    solar_ecliptic_latitude : str, optional
+        Solar ecliptic latitude used to estimate local zodiacal light contribution.
+
+    nulling_baseline : str or float or Quantity, optional
+        Nulling baseline of the interferometer. Can be specified directly or
+        derived from an optimal baseline prescription.
+
+    aperture_diameter : Quantity, optional
+        Diameter of each telescope aperture.
+
+    nulling_baseline_min : Quantity, optional
+        Minimum allowed nulling baseline.
+
+    nulling_baseline_max : Quantity, optional
+        Maximum allowed nulling baseline.
+
+    spectral_resolving_power : int, optional
+        Spectral resolving power of the instrument.
+
+    wavelength_min : Quantity, optional
+        Minimum wavelength of the observation band.
+
+    wavelength_max : Quantity, optional
+        Maximum wavelength of the observation band.
+
+    throughput : float, optional
+        Total optical throughput of the instrument.
+
+    quantum_efficiency : float, optional
+        Detector quantum efficiency.
+
+    instrumental_noise : InstrumentalNoise, optional
+        Level of instrumental perturbations (e.g., NONE, OPTIMISTIC, PESSIMISTIC).
+
+    template_fov_rad : float, optional
+        Field of view radius used for template generation.
+
+    seed : int, optional
+        Random seed for reproducibility.
+
+    grid_size : int, optional
+        Number of pixels per spatial dimension for image-based calculations.
+
+    device : torch.device, optional
+        Compute device used for the simulation (CPU or GPU).
+    """
+
     def __init__(
             self,
             scene: Scene,
@@ -51,6 +117,11 @@ class SingleEpochObservationV1(SingleEpochObservation):
             grid_size: int = 40,
             device: torch.device = torch.device('cpu'),
     ):
+        """Initialize the single-epoch observation preset.
+
+        Sets up the instrument, observation configuration, and internal
+        state required to run the simulation and analysis pipeline.
+        """
         super().__init__()
         self.scene = scene
         self.total_integration_time = total_integration_time

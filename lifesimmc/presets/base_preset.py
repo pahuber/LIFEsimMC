@@ -2,8 +2,16 @@ from abc import ABC, abstractmethod
 
 
 class BasePreset(ABC):
-    """Base class for all presets."""
+    """Base class for all presets.
 
+    Attributes
+    ----------
+
+    version : str
+        The version of the preset.
+    _IS_FACTORY : bool
+        Whether the preset is a factory.
+    """
     _IS_FACTORY = False
 
     @classmethod
