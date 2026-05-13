@@ -77,8 +77,13 @@ class SingleEpochObservation(BasePreset):
         pass
 
     @abstractmethod
-    def get_wavelength_bin_centers(self) -> np.ndarray:
+    def get_wavelength_bin_centers(self, units: Union[str, Quantity] = 'm') -> np.ndarray:
         """Get the wavelength bin centers of the observation.
+
+        Parameters
+        ----------
+        Union[str, Quantity]
+            The units to return the wavelength bin centers in. Defaults to 'm'.
 
         Returns
         -------

@@ -22,7 +22,7 @@ from lifesimmc.core.pipeline import Pipeline
 from lifesimmc.lib.instrument import InstrumentalNoise
 from lifesimmc.presets.single_epoch_observation.single_epoch_observation import SingleEpochObservation
 from lifesimmc.util.library import XArrayConfiguration
-from lifesimmc.util.spectrum import convert_spectral_units
+from lifesimmc.util.spectrum import convert_spectral_units, convert_wavelength_units
 
 
 class SingleEpochObservationV1(SingleEpochObservation):
@@ -293,8 +293,14 @@ class SingleEpochObservationV1(SingleEpochObservation):
 
         return self._pipeline.get_resource('imag_corr').get_image(as_numpy=True)
 
-    def get_wavelength_bin_centers(self) -> np.ndarray:
-        return self._instrument.wavelength_bin_centers.cpu().numpy()
+    def get_wavelength_bin_centers(self, units: Union[str, Quantity] = 'm') -> np.ndarray:
+        wavelengths_m = self._instrument.wavelength_bin_centers.cpu().numpy()
+
+        return convert_wavelength_units(
+            wavelengths_m,
+            units_in='m',
+            units_out=units,
+        )
 
     def run(self):
         self._pipeline = Pipeline(device=self.device, seed=self.seed, grid_size=self.grid_size)
