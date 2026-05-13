@@ -1,6 +1,8 @@
 from abc import abstractmethod
+from typing import Union
 
 import numpy as np
+from astropy.units import Quantity
 
 from lifesimmc.presets.base_preset import BasePreset
 
@@ -21,8 +23,13 @@ class SingleEpochObservation(BasePreset):
         }
 
     @abstractmethod
-    def extract_sed(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def extract_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Get the extracted SED and associated uncertainties of the observation.
+
+        Parameters
+        ----------
+        Union[str, Quantity]
+            The units to return the input SED in. Defaults to 'ph/s/m3'.
 
         Returns
         -------
@@ -43,8 +50,13 @@ class SingleEpochObservation(BasePreset):
         pass
 
     @abstractmethod
-    def get_input_sed(self) -> np.ndarray:
+    def get_input_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> np.ndarray:
         """Get the input SED of the observation.
+
+        Parameters
+        ----------
+        Union[str, Quantity]
+            The units to return the input SED in. Defaults to 'ph/s/m3'.
 
         Returns
         -------

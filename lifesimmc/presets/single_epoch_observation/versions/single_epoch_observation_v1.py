@@ -22,6 +22,7 @@ from lifesimmc.core.pipeline import Pipeline
 from lifesimmc.lib.instrument import InstrumentalNoise
 from lifesimmc.presets.single_epoch_observation.single_epoch_observation import SingleEpochObservation
 from lifesimmc.util.library import XArrayConfiguration
+from lifesimmc.util.spectrum import convert_spectral_units
 
 
 class SingleEpochObservationV1(SingleEpochObservation):
@@ -209,7 +210,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             nulling_baseline=self.nulling_baseline
         )
 
-    def extract_sed(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def extract_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         module = MLSEDEstimationModule(
             n_setup_in='setup',
             n_data_in='data_white',
@@ -224,7 +225,32 @@ class SingleEpochObservationV1(SingleEpochObservation):
         r_planets_ml = self._pipeline.get_resource('planets_ml')
         sed = r_planets_ml.collection[0].sed
         std = r_planets_ml.collection[0].std
-        cov = r_planets_ml.collection[0].cov
+        cov = r_planets_ml.collection[0].cov[:-2, :-2]
+
+        units = u.Unit(units) if isinstance(units, str) else units
+
+        sed = convert_spectral_units(
+            sed,
+            self.get_wavelength_bin_centers(),
+            units_in='ph/s/m3',
+            units_out=units,
+            wavelength_units='m'
+        )
+        std = convert_spectral_units(
+            std,
+            self.get_wavelength_bin_centers(),
+            units_in='ph/s/m3',
+            units_out=units,
+            wavelength_units='m'
+        )
+
+        cov = convert_spectral_units(
+            cov,
+            self.get_wavelength_bin_centers(),
+            units_in=(u.ph / u.s / u.m ** 3) ** 2,
+            units_out=units ** 2,
+            wavelength_units='m'
+        )
 
         return sed, std, cov
 
@@ -247,8 +273,18 @@ class SingleEpochObservationV1(SingleEpochObservation):
 
         return np.sqrt(xtx)
 
-    def get_input_sed(self) -> np.ndarray:
-        return self.scene.planets[0].spectral_energy_distribution.cpu().numpy()[:, 0, 0]
+    def get_input_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> np.ndarray:
+        sed_ph_s_m3 = self.scene.planets[0].spectral_energy_distribution.cpu().numpy()[:, 0, 0]
+
+        sed_converted = convert_spectral_units(
+            sed_ph_s_m3,
+            self.get_wavelength_bin_centers(),
+            units_in='ph/s/m3',
+            units_out=units,
+            wavelength_units='m'
+        )
+
+        return sed_converted
 
     def get_matched_filter(self) -> np.ndarray:
         module = MatchedFilterModule(n_data_in='data_white', n_template_in='temp_white', n_image_out='imag_corr')
