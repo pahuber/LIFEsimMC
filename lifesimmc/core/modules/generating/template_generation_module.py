@@ -18,12 +18,7 @@ class TemplateGenerationModule(BaseModule):
         The field of view for which to generate the templates in radians
     """
 
-    def __init__(
-            self,
-            n_setup_in: str,
-            n_template_out: str,
-            fov: float
-    ):
+    def __init__(self, n_setup_in: str, n_template_out: str, fov: float):
         """Constructor method.
 
         Parameters
@@ -36,16 +31,16 @@ class TemplateGenerationModule(BaseModule):
             The field of view for which to generate the templates in radians
         """
         super().__init__()
-        self.n_config_in = n_setup_in
+        self.n_setup_in = n_setup_in
         self.n_template_out = n_template_out
         self.fov = fov
 
-    def apply(self, resources: list[BaseResource]) -> TemplateResource:
+    def run(self, pipeline_resources: list[BaseResource]) -> tuple[TemplateResource]:
         """Generate templates for a planet at each point in the grid.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             List of resources to be used in the module.
 
         Returns
@@ -55,27 +50,25 @@ class TemplateGenerationModule(BaseModule):
         """
         print('Generating templates...')
 
-        r_config_in = self.get_resource_from_name(self.n_config_in)
-        time = r_config_in.phringe.get_time_steps()
-        wavelength = r_config_in.phringe.get_wavelength_bin_centers()
+        r_setup_in = self.get_resource_from_name(self.n_setup_in)
 
-        diff_ir = r_config_in.phringe.get_instrument_response(
+        response = r_setup_in.phringe.get_instrument_response(
             fov=self.fov,
             kernels=True,
             perturbations=False
         )
 
-        template_diff_counts = (
-                diff_ir
-                * r_config_in.observation.detector_integration_time
-                * r_config_in.phringe.get_wavelength_bin_widths()[None, :, None, None, None]
+        model_counts = (
+                response
+                * r_setup_in.phringe._observation.detector_integration_time
+                * r_setup_in.phringe.get_wavelength_bin_widths()[None, :, None, None, None]
         )
 
         r_template_out = TemplateResource(
             name=self.n_template_out,
             grid_coordinates=get_meshgrid(self.fov, self.grid_size, self.device),
         )
-        r_template_out.set_data(template_diff_counts)
+        r_template_out.set_data(model_counts)
 
         print('Done')
-        return r_template_out
+        return r_template_out,

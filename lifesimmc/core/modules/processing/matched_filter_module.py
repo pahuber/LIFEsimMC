@@ -5,7 +5,7 @@ from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.image_resource import ImageResource
 
 
-class CorrelationMapModule(BaseModule):
+class MatchedFilterModule(BaseModule):
     """Module to calculate the correlation map of a template and data image.
 
     Parameters
@@ -18,12 +18,7 @@ class CorrelationMapModule(BaseModule):
         The name of the output image resource.
     """
 
-    def __init__(
-            self,
-            n_data_in: str,
-            n_template_in: str,
-            n_image_out: str
-    ):
+    def __init__(self, n_data_in: str, n_template_in: str, n_image_out: str):
         """Constructor method.
 
         Parameters
@@ -39,12 +34,12 @@ class CorrelationMapModule(BaseModule):
         self.n_template_in = n_template_in
         self.n_image_out = n_image_out
 
-    def apply(self, resources: list[BaseResource]) -> ImageResource:
+    def run(self, pipeline_resources: list[BaseResource]) -> tuple[ImageResource]:
         """Create a correlation map of the templates with the data.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             The resources to apply the module to.
 
         Returns
@@ -55,23 +50,36 @@ class CorrelationMapModule(BaseModule):
         print('Calculating correlation map...')
 
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        template_counts_in = self.get_resource_from_name(self.n_template_in).get_data()
+        template_data_in = self.get_resource_from_name(self.n_template_in).get_data()
+
+        # y = data_in.flatten()
+        # x = template_data_in.reshape(
+        #     -1,
+        #     template_data_in.shape[-1],
+        #     template_data_in.shape[-1]
+        # )
+        #
+        # image = (
+        #         torch.einsum('i,ijk->jk', y, x)
+        #         # / torch.sqrt(torch.einsum('i, i->', y, y))
+        #         / torch.sqrt(torch.einsum('ijk,ijk->', x, x))
+        # )
 
         y = data_in.flatten()
-        x = template_counts_in.reshape(
+
+        x = template_data_in.reshape(
             -1,
-            template_counts_in.shape[-1],
-            template_counts_in.shape[-1]
+            template_data_in.shape[-1],
+            template_data_in.shape[-1],
         )
 
-        image = (
-                torch.einsum('i,ijk->jk', y, x)
-                # / torch.sqrt(torch.einsum('i, i->', y, y))
-                / torch.sqrt(torch.einsum('ijk,ijk->', x, x))
-        )
+        numerator = torch.einsum("i,ijk->jk", y, x)
+        template_norm = torch.sqrt(torch.einsum("ijk,ijk->jk", x, x))
+
+        image = numerator / template_norm
 
         r_image_out = ImageResource(self.n_image_out)
         r_image_out.set_image(image)
 
         print('Done')
-        return r_image_out
+        return r_image_out,

@@ -1,5 +1,6 @@
 from typing import overload
 
+from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 from phringe.core.configuration import Configuration
 from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
@@ -7,14 +8,15 @@ from phringe.core.scene import Scene
 from phringe.main import PHRINGE
 
 from lifesimmc.core.modules.base_module import BaseModule
-from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
+from lifesimmc.core.resources.planet_resource import PlanetResource
+from lifesimmc.core.resources.resource_collection import ResourceCollection
 from lifesimmc.core.resources.setup_resource import SetupResource
 
 
 class SetupModule(BaseModule):
     """Class representation of the configuration loader module.
 
-    Parameters
+    Attributes
     ----------
     n_setup_out : str
         Name of the output configuration resource.
@@ -32,7 +34,7 @@ class SetupModule(BaseModule):
     def __init__(
             self,
             n_setup_out: str,
-            n_planet_params_out: str,
+            n_planets_out: str,
             configuration: Configuration
     ):
         """Constructor method.
@@ -41,7 +43,7 @@ class SetupModule(BaseModule):
         ----------
         n_setup_out : str
             The name of the output configuration resource
-        n_planet_params_out : str
+        n_planets_out : str
             The name of the output planet parameters resource
         configuration : Configuration
             The configuration object
@@ -52,7 +54,7 @@ class SetupModule(BaseModule):
     def __init__(
             self,
             n_setup_out: str,
-            n_planet_params_out: str,
+            n_planets_out: str,
             observation: Observation,
             instrument: Instrument,
             scene: Scene
@@ -63,7 +65,7 @@ class SetupModule(BaseModule):
         ----------
         n_setup_out : str
             The name of the output configuration resource
-        n_planet_params_out : str
+        n_planets_out : str
             The name of the output planet parameters resource
         observation : Observation
             The observation mode object
@@ -77,7 +79,7 @@ class SetupModule(BaseModule):
     def __init__(
             self,
             n_setup_out: str,
-            n_planet_params_out: str,
+            n_planets_out: str,
             configuration: Configuration = None,
             observation: Observation = None,
             instrument: Instrument = None,
@@ -89,8 +91,8 @@ class SetupModule(BaseModule):
         ----------
         n_setup_out : str
             The name of the output configuration resource
-        n_planet_params_out : str
-            The name of the output planet parameters resource
+        n_planets_out : str
+            The name of the output planet resource collection
         configuration : Configuration
             The configuration object
         observation : Observation
@@ -101,33 +103,21 @@ class SetupModule(BaseModule):
             The scene object
         """
         super().__init__()
-        self.n_config_out = n_setup_out
-        self.n_planet_params_out = n_planet_params_out
+        self.n_setup_out = n_setup_out
+        self.n_planets_out = n_planets_out
         self.configuration = configuration
         self.observation = observation
         self.instrument = instrument
         self.scene = scene
 
-    def apply(self, resources: list[SetupResource]) -> tuple[SetupResource, PlanetParamsResource]:
-        """Load the configuration file.
-
-        Parameters
-        ----------
-        resources : list[SetupResource]
-            List of resources.
-
-        Returns
-        -------
-        SetupResource
-            The configuration resource.
-        """
-        print('Loading configuration...')
+    def run(self, pipeline_resources: list[SetupResource]) -> tuple[SetupResource, ResourceCollection[PlanetResource]]:
+        print('Loading setup...')
         phringe = PHRINGE(
             seed=self.seed,
             gpu_index=self.gpu_index,
+            device=self.device,
             grid_size=self.grid_size,
             time_step_size=self.time_step_size,
-            device=self.device,
             extra_memory=10
         )
 
@@ -143,58 +133,16 @@ class SetupModule(BaseModule):
         if self.scene:
             phringe.set(self.scene)
 
-        counts = phringe.get_counts(kernels=True)
-        print(counts)
-
-        r_config_out = SetupResource(
-            name=self.n_config_out,
+        r_setup_out = SetupResource(
+            name=self.n_setup_out,
             phringe=phringe,
-            configuration=self.configuration,
-            instrument=phringe._instrument,
-            observation=phringe._observation,
-            scene=phringe._scene,
         )
 
-        r_planet_params_out = PlanetParamsResource(
-            name=self.n_planet_params_out,
-        )
+        r_planet_out = ResourceCollection[PlanetParamsResource](name=self.n_planets_out)
 
         for planet in phringe._scene.planets:
-            # Get planet position from the only pixel in the sky brightness distirbution that is not zero and then from the sky coordinates map at that position the coordinate values
-            sky_brightness_distribution = planet.sky_brightness_distribution
-
-            # If planet has orbital motion, use only initial time step
-            # if planet.propagate_orbit:
-            #     sky_brightness_distribution = sky_brightness_distribution[: 0]
-
-            # non_zero_indices = torch.nonzero(sky_brightness_distribution[1])
-            sky_coordinates = planet.sky_coordinates
-            pos_x = sky_coordinates
-            pos_y = sky_coordinates
-
-            # If planet has orbital motion, i.e. sky_coordinates change with time, then use the first time step
-            # if planet.propagate_orbit:
-            #     sky_coordinates = sky_coordinates[:, 0]
-            #
-            # pos_x = sky_coordinates[0][non_zero_indices[0][0], non_zero_indices[0][1]].item()
-            # pos_y = sky_coordinates[1][non_zero_indices[0][0], non_zero_indices[0][1]].item()
-
-            planet_params = PlanetParams(
-                name=planet.name,
-                sed_wavelength_bin_centers=phringe.get_wavelength_bin_centers(),
-                sed_wavelength_bin_widths=phringe.get_wavelength_bin_widths(),
-                sed=phringe.get_source_spectrum(planet.name),
-                pos_x=pos_x,
-                pos_y=pos_y,
-                semi_major_axis=planet.semi_major_axis,
-                inclination=planet.inclination,
-                eccentricity=planet.eccentricity,
-                raan=planet.raan,
-                argument_of_periapsis=planet.argument_of_periapsis,
-                true_anomaly=planet.true_anomaly,
-                mass=planet.mass,
-            )
-            r_planet_params_out.params.append(planet_params)
+            planet_resource = PlanetResource(name=planet.name, planet=planet)
+            r_planet_out.collection.append(planet_resource)
 
         print('Done')
-        return r_config_out, r_planet_params_out
+        return r_setup_out, r_planet_out

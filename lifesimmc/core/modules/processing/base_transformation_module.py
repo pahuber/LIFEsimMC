@@ -52,12 +52,12 @@ class BaseTransformationModule(BaseModule):
         self.n_template_out = n_template_out
         self.n_transformation_out = n_transformation_out
 
-    def apply(self, resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
+    def run(self, pipeline_resources: list[BaseResource]) -> Union[None, BaseResource, tuple]:
         """Apply the module.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             The resources to apply the module to.
 
         Returns

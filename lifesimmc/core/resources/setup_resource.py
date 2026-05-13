@@ -26,8 +26,8 @@ class SetupResource(BaseResource):
     scene : Scene
         The scene used for the simulation.
     """
-    configuration: Configuration = None
-    instrument: Instrument = None
-    observation: Observation = None
     phringe: PHRINGE = None
-    scene: Scene = None
+    # configuration: Configuration = None
+    # instrument: Instrument = None
+    # observation: Observation = None
+    # scene: Scene = None

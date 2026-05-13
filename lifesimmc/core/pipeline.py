@@ -83,11 +83,8 @@ class Pipeline:
     def run(self):
         """Run the pipeline with all the modules that have been added. Remove the modules after running."""
         for module in self._modules:
-            resource = module.apply(self._resources)
-            if resource is not None:
-                if isinstance(resource, tuple):
-                    for res in resource:
-                        self._resources[res.name] = res
-                else:
-                    self._resources[resource.name] = resource
+            output_resources = module.run(pipeline_resources=self._resources)
+            if output_resources is not None:
+                for output_resource in output_resources:
+                    self._resources[output_resource.name] = output_resource
         self._modules = []

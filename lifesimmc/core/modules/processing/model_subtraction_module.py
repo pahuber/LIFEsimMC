@@ -53,12 +53,12 @@ class ModelSubtractionModule(BaseModule):
         self.n_planet_params_in = n_planet_params_in
         self.n_data_out = n_data_out
 
-    def apply(self, resources: list[BaseResource]) -> DataResource:
+    def run(self, pipeline_resources: list[BaseResource]) -> DataResource:
         """Apply the energy detector test.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             List of resources.
 
         Returns

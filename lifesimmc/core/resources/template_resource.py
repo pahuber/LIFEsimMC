@@ -18,7 +18,7 @@ class TemplateResource(BaseResource):
         The data of the resource.
     """
     _data: Tensor = None
-    grid_coordinates: tuple[Tensor, Tensor] = None
+    grid_coordinates: Tensor = None
 
     def get_data(self) -> Tensor:
         """Get the data of the resource.

@@ -56,12 +56,12 @@ class EnergyDetectorTestModule(BaseModule):
         self.n_planet_params_in = n_planet_params_in
         self.n_transformation_in = n_transformation_in
 
-    def apply(self, resources: list[BaseResource]) -> TestResource:
+    def run(self, pipeline_resources: list[BaseResource]) -> TestResource:
         """Apply the energy detector test.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             List of resources.
 
         Returns

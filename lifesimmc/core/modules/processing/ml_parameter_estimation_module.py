@@ -1,14 +1,16 @@
 import numpy as np
 import torch
+from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 from lmfit import minimize, Parameters
 
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
-from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
+from lifesimmc.core.resources.planet_resource import PlanetResource
+from lifesimmc.core.resources.resource_collection import ResourceCollection
 
 
-class MLParameterEstimationModule(BaseModule):
-    """Class representation of a module that performs maximum likelihood estimation (MLE) of planet parameters.
+class MLSEDEstimationModule(BaseModule):
+    """Class representation of a module that performs maximum likelihood estimation (MLE) of the planet's SED.
 
     Parameters
     ----------
@@ -16,7 +18,7 @@ class MLParameterEstimationModule(BaseModule):
         Name of the input configuration resource.
     n_data_in : str
         Name of the input data resource.
-    n_planet_params_out : str
+    n_planets_out : str
         Name of the output planet parameters resource.
     n_transformation_in : str, optional
         Name of the input transformation resource. If None, no transformation is applied.
@@ -28,10 +30,10 @@ class MLParameterEstimationModule(BaseModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            n_planet_params_out: str,
+            n_planets_out: str,
             n_transformation_in: str = None,
             n_template_in: str = None,
-            n_planet_params_in: str = None,
+            n_planets_in: str = None,
             bounds: bool = False
     ):
         """Constructor method.
@@ -42,7 +44,7 @@ class MLParameterEstimationModule(BaseModule):
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
-        n_planet_params_out : str
+        n_planets_out : str
             Name of the output planet parameters resource.
         n_transformation_in : str, optional
             Name of the input transformation resource. If None, no transformation is applied.
@@ -50,12 +52,12 @@ class MLParameterEstimationModule(BaseModule):
             Name of the input template resource. If None, no template is used. # TODO: handle no templates
         """
         super().__init__()
-        self.n_config_in = n_setup_in
+        self.n_setup_in = n_setup_in
         self.n_data_in = n_data_in
         self.n_template_in = n_template_in
         self.n_transformation_in = n_transformation_in
-        self.n_planet_params_out = n_planet_params_out
-        self.n_planet_params_in = n_planet_params_in
+        self.n_planets_out = n_planets_out
+        self.n_planets_in = n_planets_in
         self.bounds = bounds
 
     def _get_analytical_initial_guess(self, data, template_data, grid_coordinates):
@@ -107,53 +109,58 @@ class MLParameterEstimationModule(BaseModule):
 
         return optimum_flux_at_maximum, x_coord, y_coord
 
-    def apply(self, resources: list[BaseResource]) -> PlanetParamsResource:
-        print('Performing numerical MLE...')
+    def run(self, pipeline_resources: list[BaseResource | ResourceCollection]) -> tuple[
+        ResourceCollection[PlanetParamsResource]]:
+        print('Estimating SED using numerical maximum likelihood estimation...')
 
-        r_config_in = self.get_resource_from_name(self.n_config_in)
+        r_setup_in = self.get_resource_from_name(self.n_setup_in)
         r_templates_in = self.get_resource_from_name(self.n_template_in)
-        r_transformation_in = self.get_resource_from_name(
-            self.n_transformation_in) if self.n_transformation_in else None
-        transf = r_transformation_in.transformation if r_transformation_in else lambda x: x
-        planet_params_in = self.get_resource_from_name(self.n_planet_params_in) if self.n_planet_params_in else None
+        r_transformation_in = self.get_resource_from_name(self.n_transformation_in) \
+            if self.n_transformation_in \
+            else None
+        planets_in = self.get_resource_from_name(self.n_planets_in) if self.n_planets_in else None
 
-        times = r_config_in.phringe.get_time_steps().cpu().numpy()
-        wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
-        wavelength_bin_widths = r_config_in.phringe.get_wavelength_bin_widths().cpu().numpy()
+        transf_in = r_transformation_in.transformation if r_transformation_in else lambda x: x
         data_in = self.get_resource_from_name(self.n_data_in).get_data()
-        template_data = r_templates_in.get_data()
+        template_data_in = r_templates_in.get_data()
         grid_coordinates = r_templates_in.grid_coordinates
 
         # Flatten data along differential outputs and times axes
-        data_in = data_in.permute(0, 2, 1)
-        data_in = data_in.reshape((-1,) + data_in.shape[2:])
-        template_data = template_data.permute(0, 2, 1, 3, 4)
-        template_data = template_data.reshape((-1,) + template_data.shape[2:])
+        nk, nl, nt = data_in.shape
+        _, _, _, ng, _ = template_data_in.shape
+
+        data_in = data_in.permute(0, 2, 1).reshape(nk * nt, nl)
+
+        template_data_in = (
+            template_data_in
+            .permute(0, 2, 1, 3, 4)
+            .reshape(nk * nt, nl, ng, ng)
+        )
 
         # Set up parameters and initial conditions
-        if planet_params_in is None:
-            flux_init, posx_init, posy_init = self._get_analytical_initial_guess(
+        if planets_in is None:
+            sed_init, posx_init, posy_init = self._get_analytical_initial_guess(
                 data_in,
-                template_data,
+                template_data_in,
                 grid_coordinates
             )
         # If planet_params_in is provided, use its values as initial conditions
         else:
             # TODO: implement for multiple planets
-            flux_init = planet_params_in.params[0].sed.cpu().numpy()
-            posx_init = planet_params_in.params[0].pos_x
-            posy_init = planet_params_in.params[0].pos_y
+            sed_init = planets_in.collection[0].planet.spectral_energy_distribution[:, 0, 0].cpu().numpy()
+            posx_init = planets_in.collection[0].planet.sky_coordinates[0, 0, 0, 0, 0].cpu().numpy()
+            posy_init = planets_in.collection[0].planet.sky_coordinates[1, 0, 0, 0, 0].cpu().numpy()
 
         data_in = data_in.cpu().numpy()
-        hfov_max = r_config_in.phringe.get_field_of_view()[-1].cpu().numpy() / 2  # TODO: /14 Check this
+        hfov_max = r_setup_in.phringe.get_field_of_view()[-1].cpu().numpy() / 2
 
         params = Parameters()
 
-        for j in range(len(flux_init)):
+        for j in range(len(sed_init)):
             if self.bounds:
-                params.add(f'flux_{j}', value=flux_init[j], min=0)
+                params.add(f'flux_{j}', value=sed_init[j], min=0)
             else:
-                params.add(f'flux_{j}', value=flux_init[j])
+                params.add(f'flux_{j}', value=sed_init[j])
         params.add('pos_x', value=posx_init, min=-hfov_max, max=hfov_max)
         params.add('pos_y', value=posy_init, min=-hfov_max, max=hfov_max)
 
@@ -161,14 +168,14 @@ class MLParameterEstimationModule(BaseModule):
         def residual_data(params, target):
             posx = params['pos_x'].value
             posy = params['pos_y'].value
-            flux = np.array([params[f'flux_{z}'].value for z in range(len(flux_init))])
-            model = r_config_in.phringe.get_model_counts(
+            flux = np.array([params[f'flux_{z}'].value for z in range(len(sed_init))])
+            model = r_setup_in.phringe.get_model_counts(
                 spectral_energy_distribution=flux,
                 x_position=posx,
                 y_position=posy,
                 kernels=True
             )
-            model = transf(model)
+            model = transf_in(model)
             model = np.transpose(model, (0, 2, 1))
             model = model.reshape(data_in.shape)
 
@@ -177,7 +184,7 @@ class MLParameterEstimationModule(BaseModule):
         out = minimize(residual_data, params, args=(data_in,), method='leastsq')
         cov_out = out.covar
 
-        fluxes = np.array([out.params[f'flux_{k}'].value for k in range(len(flux_init))])
+        fluxes = np.array([out.params[f'flux_{k}'].value for k in range(len(sed_init))])
         posx = out.params['pos_x'].value
         posy = out.params['pos_y'].value
 
@@ -192,25 +199,19 @@ class MLParameterEstimationModule(BaseModule):
             posy_err = np.nan
 
         # TODO: Implement multi-planet signal extraction
-        r_planet_params_out = PlanetParamsResource(
-            name=self.n_planet_params_out,
+        r_planets_out = ResourceCollection[PlanetResource](
+            name=self.n_planets_out,
         )
-        planet_params = PlanetParams(
+        planet_resource = PlanetResource(
             name='',
-            sed_wavelength_bin_centers=r_config_in.phringe.get_wavelength_bin_centers(),
-            sed_wavelength_bin_widths=r_config_in.phringe.get_wavelength_bin_widths(),
-            sed=torch.tensor(fluxes),
-            sed_err_low=torch.tensor(flux_err),
-            sed_err_high=torch.tensor(flux_err),
+            planet=None,
+            sed=fluxes,
+            std=flux_err,
+            cov=cov_out,
             pos_x=posx,
-            pos_y=posy,
-            pos_x_err_low=posx_err,
-            pos_x_err_high=posx_err,
-            pos_y_err_low=posy_err,
-            pos_y_err_high=posy_err,
-            covariance=cov_out
+            pos_y=posy
         )
-        r_planet_params_out.params.append(planet_params)
+        r_planets_out.collection.append(planet_resource)
 
         print('Done')
-        return r_planet_params_out
+        return r_planets_out,

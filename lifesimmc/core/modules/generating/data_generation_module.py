@@ -1,28 +1,22 @@
 from lifesimmc.core.modules.base_module import BaseModule
 from lifesimmc.core.resources.base_resource import BaseResource
 from lifesimmc.core.resources.data_resource import DataResource
-from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource
 
 
 class DataGenerationModule(BaseModule):
     """Class representation of the data generation module.
 
-        Parameters
+        Attributes
         ----------
         n_setup_in : str
-            The name of the input configuration resource.
+            The name of the input setup resource.
         n_data_out : str
             The name of the output data resource.
-        n_planet_params_out : str
-            The name of the output planet parameters resource.
+        kernels : bool
+            Whether to use kernels or not.
     """
 
-    def __init__(
-            self,
-            n_setup_in: str,
-            n_data_out: str,
-            kernels: bool = True
-    ):
+    def __init__(self, n_setup_in: str, n_data_out: str, kernels: bool = True):
         """Constructor method.
 
         Parameters
@@ -31,18 +25,20 @@ class DataGenerationModule(BaseModule):
             The name of the input configuration resource.
         n_data_out : str
             The name of the output data resource.
+        kernels : bool
+            Whether to use kernels or not.
         """
         super().__init__()
-        self.config_in = n_setup_in
+        self.n_setup_in = n_setup_in
         self.n_data_out = n_data_out
         self.kernels = kernels
 
-    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, PlanetParamsResource]:
+    def run(self, pipeline_resources: list[BaseResource]) -> tuple[DataResource]:
         """Use PHRINGE to generate synthetic data.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             List of resources to be used in the module.
 
         Returns
@@ -52,11 +48,11 @@ class DataGenerationModule(BaseModule):
         """
         print('Generating synthetic data...')
 
-        r_config_in = self.get_resource_from_name(self.config_in)
-        r_data_out = DataResource(self.n_data_out)
+        r_config_in = self.get_resource_from_name(name=self.n_setup_in)
+        r_data_out = DataResource(name=self.n_data_out)
 
-        diff_counts = r_config_in.phringe.get_counts(kernels=self.kernels)
-        r_data_out.set_data(diff_counts)
+        counts = r_config_in.phringe.get_counts(kernels=self.kernels)
+        r_data_out.set_data(counts)
 
         print('Done')
-        return r_data_out
+        return r_data_out,

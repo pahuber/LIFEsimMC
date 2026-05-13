@@ -18,7 +18,7 @@ class NeymanPearsonTestModule(BaseModule):
         Name of the input configuration resource.
     n_data_in : str
         Name of the input data resource.
-    n_planet_params_est_in : str
+    n_planets_est_in : str
         Name of the input planet parameters resource.
     n_transformation_in : Union[str, tuple[str]]
         Name of the input transformation resource.
@@ -32,12 +32,12 @@ class NeymanPearsonTestModule(BaseModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            n_planet_params_est_in: str,
-            n_planet_params_true_in: str,
+            n_planets_est_in: str,
+            n_planets_true_in: str,
             n_test_out: str,
             pfa: float,
+            pdet: float,
             n_transformation_in: Union[str, tuple[str], None] = None,
-            n_templates_in: str = None,
             n_image_out: str = None,
     ):
         """Constructor method.
@@ -48,7 +48,7 @@ class NeymanPearsonTestModule(BaseModule):
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
-        n_planet_params_est_in : str
+        n_planets_est_in : str
             Name of the input planet parameters resource.
         n_transformation_in : Union[str, tuple[str]]
             Name of the input transformation resource.
@@ -57,22 +57,23 @@ class NeymanPearsonTestModule(BaseModule):
         pfa : float
             Probability of false alarm.
         """
+        self.n_setup_in = n_setup_in
         self.n_data_in = n_data_in
         self.n_test_out = n_test_out
         self.pfa = pfa
-        self.n_config_in = n_setup_in
-        self.n_planet_params_est_in = n_planet_params_est_in
-        self.n_planet_params_true_in = n_planet_params_true_in
+        self.n_planets_est_in = n_planets_est_in
+        self.n_planets_true_in = n_planets_true_in
         self.n_transformation_in = n_transformation_in
         self.n_image_out = n_image_out
         self.pfa = pfa
+        self.pdet = pdet
 
-    def apply(self, resources: list[BaseResource]) -> TestResource:
+    def run(self, pipeline_resources: list[BaseResource]) -> tuple[TestResource]:
         """Apply the Neyman-Pearson test.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             The resources to apply the module to.
 
         Returns
@@ -82,51 +83,54 @@ class NeymanPearsonTestModule(BaseModule):
         """
         print("Performing Neyman-Pearson test...")
 
-        # Extract all inputs
-        r_config_in = self.get_resource_from_name(self.n_config_in) if self.n_config_in is not None else None
+        r_setup_in = self.get_resource_from_name(self.n_setup_in) if self.n_setup_in is not None else None
         transformations = get_transformations_from_resource_name(self, self.n_transformation_in)
-        r_planet_params_est_in = self.get_resource_from_name(
-            self.n_planet_params_est_in) if self.n_planet_params_est_in is not None else None
-        r_planet_params_true_in = self.get_resource_from_name(self.n_planet_params_true_in)
+        r_planets_est_in = self.get_resource_from_name(
+            self.n_planets_est_in) if self.n_planets_est_in is not None else None
+        r_planet_params_true_in = self.get_resource_from_name(self.n_planets_true_in)
 
         # Prepare data
-        data = self.get_resource_from_name(self.n_data_in).get_data()
-        dataf = data.flatten()
-        ndim = dataf.numel()
-        dataf = dataf.cpu().numpy()
+        data_in = self.get_resource_from_name(self.n_data_in).get_data()
+        data_in_flat = data_in.flatten()
+        ndim = data_in_flat.numel()
+        data_in_flat = data_in_flat.cpu().numpy()
 
         # TODO: handle mutiple planets
-        flux_est = r_planet_params_est_in.params[0].sed.cpu().numpy()
+        flux_est = r_planets_est_in.collection[0].sed
+
         # TODO: Handle orbital motion
-        posx_est = r_planet_params_est_in.params[0].pos_x
-        posy_est = r_planet_params_est_in.params[0].pos_y
+        posx_est = r_planets_est_in.collection[0].pos_x
+        posy_est = r_planets_est_in.collection[0].pos_y
 
         # True model_est
-        flux_true = r_planet_params_true_in.params[0].sed.cpu().numpy()
-        posx_true = r_planet_params_true_in.params[0].pos_x
-        posy_true = r_planet_params_true_in.params[0].pos_y
+        flux_true = r_planet_params_true_in.collection[0].planet.spectral_energy_distribution.cpu().numpy()[:, 0, 0]
+        posx_true = r_planet_params_true_in.collection[0].planet.sky_coordinates[0, 0, 0, 0, 0].item()
+        posy_true = r_planet_params_true_in.collection[0].planet.sky_coordinates[1, 0, 0, 0, 0].item()
 
-        model_est = r_config_in.phringe.get_model_counts(
-            spectral_energy_distribution=flux_est,
-            x_position=posx_est,
-            y_position=posy_est,
-            kernels=True
-        )
-        model_true = r_config_in.phringe.get_model_counts(
+        # model_est = r_setup_in.phringe.get_model_counts(
+        #     spectral_energy_distribution=flux_est,
+        #     x_position=posx_est,
+        #     y_position=posy_est,
+        #     kernels=True
+        # )
+        model_true = r_setup_in.phringe.get_model_counts(
             spectral_energy_distribution=flux_true,
             x_position=posx_true,
             y_position=posy_true,
             kernels=True
         )
+
         for transf in transformations:
-            model_est = transf(model_est)
+            # model_est = transf(model_est)
             model_true = transf(model_true)
-        modelf_est = model_est.flatten()
+
+        # modelf_est = model_est.flatten()
         modelf_true = model_true.flatten()
+        modelf_est = model_true.flatten()
 
         # Get test under H1 (planet present) and H0 (planet absent)
-        test_h1 = (dataf @ modelf_est)
-        data_h0 = dataf - modelf_true
+        test_h1 = (data_in_flat @ modelf_est)
+        data_h0 = data_in_flat - modelf_true
         test_h0 = (data_h0 @ modelf_est)
         xtx = modelf_true @ modelf_true
         xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)
@@ -146,4 +150,4 @@ class NeymanPearsonTestModule(BaseModule):
         )
 
         print('Done')
-        return r_test_out
+        return r_test_out,

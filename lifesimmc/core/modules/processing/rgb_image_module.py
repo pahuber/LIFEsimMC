@@ -53,12 +53,12 @@ class RGBImageModule(BaseModule):
         self.n_image_out = n_image_out
         self.metric = metric
 
-    def apply(self, resources: list[BaseResource]) -> ImageResource:
+    def run(self, pipeline_resources: list[BaseResource]) -> ImageResource:
         """Apply the RGB image module to generate a false color RGB image of the scene.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             List of resources to apply the module to.
 
         Returns

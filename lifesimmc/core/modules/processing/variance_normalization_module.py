@@ -38,14 +38,14 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
     """
 
     def __init__(
-        self,
-        n_setup_in: str,
-        n_data_in: str,
-        n_data_out: str,
-        n_transformation_out: str,
-        n_planet_params_in: str,
-        n_template_in: str = None,
-        n_template_out: str = None,
+            self,
+            n_setup_in: str,
+            n_data_in: str,
+            n_data_out: str,
+            n_transformation_out: str,
+            n_planet_params_in: str,
+            n_template_in: str = None,
+            n_template_out: str = None,
     ):
         """Constructor method.
 
@@ -75,12 +75,13 @@ class NoiseVarianceNormalizationModule(BaseTransformationModule):
         self.n_transformation_out = n_transformation_out
         self.n_planet_params_in = n_planet_params_in
 
-    def apply(self, resources: list[BaseResource]) -> tuple[DataResource, TemplateResource, TransformationResource]:
+    def run(self, pipeline_resources: list[BaseResource]) -> tuple[
+        DataResource, TemplateResource, TransformationResource]:
         """Apply the module.
 
         Parameters
         ----------
-        resources : list[BaseResource]
+        pipeline_resources : list[BaseResource]
             List of resources to be processed.
 
         Returns
