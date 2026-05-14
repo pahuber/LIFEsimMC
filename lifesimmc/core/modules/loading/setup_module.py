@@ -1,6 +1,5 @@
 from typing import overload
 
-from lifesimmc.core.resources.planet_params_resource import PlanetParamsResource, PlanetParams
 from phringe.core.configuration import Configuration
 from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
@@ -138,7 +137,7 @@ class SetupModule(BaseModule):
             phringe=phringe,
         )
 
-        r_planet_out = ResourceCollection[PlanetParamsResource](name=self.n_planets_out)
+        r_planet_out = ResourceCollection[PlanetResource](name=self.n_planets_out)
 
         for planet in phringe._scene.planets:
             planet_resource = PlanetResource(name=planet.name, planet=planet)
