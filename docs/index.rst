@@ -10,11 +10,11 @@
 LIFEsimMC
 =========
 
-.. image:: _static/lifesimmc_light.png
+.. image:: _static/lifesimmc_dark.png
   :class: only-light
   :width: 62%
 
-.. image:: _static/lifesimmc_dark.png
+.. image:: _static/lifesimmc_light.png
   :class: only-dark
   :width: 62%
 

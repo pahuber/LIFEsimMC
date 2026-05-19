@@ -41,8 +41,8 @@ html_title = "LIFEsimMC Docs"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "light_logo": "_static/lifesimmc_light.png",
-    "dark_logo": "_static/lifesimmc_dark.png",
+    "light_logo": "_static/lifesimmc_dark.png",
+    "dark_logo": "_static/lifesimmc_light.png",
     "github_url": "https://github.com/pahuber/LIFEsimMC",
     "globaltoc_expand_depth": 1,
     "accent_color": "blue",
@@ -69,6 +69,13 @@ html_css_files = [
 
 pygments_style = "monokai"
 pygments_dark_style = "monokai"
+
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**/.ipynb_checkpoints",
+]
 
 # -- nbsphinx configuration --------------------------------------------------
 
