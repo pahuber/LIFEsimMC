@@ -1,97 +1,117 @@
 # Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
 import sys
-import urllib
+import urllib.request
 
-sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../lifesimmc'))
-os.environ['PYTHONPATH'] = os.path.abspath('../')
+# -- Path setup --------------------------------------------------------------
+
+sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../lifesimmc"))
+os.environ["PYTHONPATH"] = os.path.abspath("..")
 
 # -- Project information -----------------------------------------------------
 
-project = 'LIFEsimMC'
-author = 'Philipp A. Huber'
-copyright = f'2024, Philipp A. Huber'
-# html_theme_options = {
-#     "logo_light": "_static/phringe2.png",
-#     "logo_dark": "_static/phringe.png"
-# }
-html_theme = "furo"
-master_doc = 'index'
-html_static_path = ['_static']
-html_css_files = ["style.css"]
-pygments_style = "monokai"
-pygments_dark_style = "monokai"
-# html_logo = "_static/lifesimmc_logo.png"
-html_title = "LIFEsimMC Docs"
-html_theme_options = {
-    "logo_only": True,  # Show only the logo, not the project name
-    "sidebar_hide_name": True,
-    "light_logo": "lifesimmc_logo_light.png",
-    "dark_logo": "lifesimmc_logo.png",
-}
-html_context = {
-    "display_github": True,  # Example of context variable
-    "title": ""
-}
-
-nbsphinx_execute = 'never'
-nb_execution_mode = 'off'
+project = "LIFEsimMC"
+author = "Philipp A. Huber"
+copyright = "2024, Philipp A. Huber"
 
 # -- General configuration ---------------------------------------------------
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
+extensions = [
+    "sphinx_copybutton",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "nbsphinx",
+    "recommonmark",
+    "sphinx_contributors",
+]
 
-extensions = ['sphinx_copybutton',
-              'sphinx.ext.autodoc',
-              'sphinx.ext.napoleon',
-              'nbsphinx', ]
-nbsphinx_codecell_lexer = 'python3'
+master_doc = "index"
+
+# -- Notebook execution ------------------------------------------------------
+
+nbsphinx_execute = "never"
+nb_execution_mode = "off"
+
+# -- HTML output -------------------------------------------------------------
+
+html_theme = "shibuya"
+html_title = "LIFEsimMC Docs"
+html_static_path = ["_static"]
+
+html_theme_options = {
+    "light_logo": "_static/lifesimmc_light.png",
+    "dark_logo": "_static/lifesimmc_dark.png",
+    "github_url": "https://github.com/pahuber/LIFEsimMC",
+    "globaltoc_expand_depth": 1,
+    "accent_color": "blue",
+}
+
+html_context = {
+    "source_type": "github",
+    "source_user": "pahuber",
+    "source_repo": "LIFEsimMC",
+    "source_version": "main",
+    "source_docs_path": "/docs/",
+}
+
+html_sidebars = {
+    "**": [
+        "sidebars/localtoc.html",
+        "sidebars/repo-stats.html",
+    ]
+}
+
+html_css_files = [
+    "custom.css",
+]
+
+pygments_style = "monokai"
+pygments_dark_style = "monokai"
+
+# -- nbsphinx configuration --------------------------------------------------
+
+nbsphinx_codecell_lexer = "python3"
+
+# -- Matplotlib configuration ------------------------------------------------
+
+try:
+    import matplotlib as mpl
+
+    mpl.rcParams["text.usetex"] = False
+except ImportError:
+    pass
 
 
-# 'recommonmark']
-
-# -- Options for HTML output -------------------------------------------------
-
-
-# import os
-#
-# sys.path.insert(0, os.path.abspath('../lifesimmc'))
-# import sys
-
+# -- External documentation files --------------------------------------------
 
 def setup(app):
-    urls = ["https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/observation.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/instrument.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/scene.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/configuration.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/star.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/planet.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/local_zodi.rst",
-            "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/exozodi.rst",
-            ]
+    urls = [
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/observation.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/instrument.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/scene.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/configuration.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/star.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/planet.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/local_zodi.rst",
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/refs/heads/main/docs/source/all_sources/exozodi.rst",
+    ]
+
+    all_sources_files = {
+        "star.rst",
+        "planet.rst",
+        "local_zodi.rst",
+        "exozodi.rst",
+    }
 
     for url in urls:
-        # Extract the filename from the URL
         filename = os.path.basename(url)
 
-        if 'star' in filename or 'planet' in filename or 'local_zodi' in filename or 'exozodi' in filename:
-            local_path = os.path.join(os.path.dirname(__file__), "source/external/all_sources", filename)
+        if filename in all_sources_files:
+            local_dir = os.path.join(os.path.dirname(__file__), "source", "external", "all_sources")
         else:
-            local_path = os.path.join(os.path.dirname(__file__), "source/external", filename)
+            local_dir = os.path.join(os.path.dirname(__file__), "source", "external")
 
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        urllib.request.urlretrieve(url, local_path)
+        os.makedirs(local_dir, exist_ok=True)
+        urllib.request.urlretrieve(url, os.path.join(local_dir, filename))

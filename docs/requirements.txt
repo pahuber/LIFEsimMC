@@ -1,10 +1,12 @@
-furo==2023.3.23
 sphinx==5.0.0
+shibuya
+sphinx-copybutton
 sphinx-click==4.1.0
-myst_parser==0.19.0
+myst-parser==0.19.0
 nbsphinx>=0.9.4
 packaging==23.2
 Pygments>=2.10.0
 phringe>=1.1.2
 jupyter==1.0.0
 recommonmark
+sphinx-contributors
