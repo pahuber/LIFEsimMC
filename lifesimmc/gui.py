@@ -394,7 +394,7 @@ def run_simulation(
         sol_ecl_lat, baseline_mode, custom_bl,
         ap_diam, throughput, qe, templ_fov, bl_min, bl_max, wl_min, wl_max,
         grid_size, use_seed, seed_val, device_str,
-        ref_star_dist, ref_star_lum, ref_star_ra, ref_star_dec,
+        ref_star_dist, ref_star_lum, ref_star_mass, ref_star_ra, ref_star_dec,
         disp_sed_units, disp_wl_units,
         ylim_min, ylim_max,
 ):
@@ -490,24 +490,35 @@ def run_simulation(
                 declination=f"{star_dec} deg",
             ))
             _log("Star added.")
-        elif planet_inc or exozodi_inc:
-            ref_star_temp_K = 5778.0 * (float(ref_star_lum) ** 0.25)
-            scene.add_source(Star(
-                name="Reference Host Star",
-                distance=f"{ref_star_dist} pc",
-                mass="1.0 Msun", radius="1.0 Rsun",
-                temperature=f"{ref_star_temp_K:.1f} K",
-                right_ascension=f"{ref_star_ra} hourangle",
-                declination=f"{ref_star_dec} deg",
-            ))
-            _log("Reference host star added.")
+        # elif planet_inc or exozodi_inc:
+        #     ref_star_temp_K = 5778.0 * (float(ref_star_lum) ** 0.25)
+        #     scene.add_source(Star(
+        #         name="Reference Host Star",
+        #         distance=f"{ref_star_dist} pc",
+        #         mass="1.0 Msun", radius="1.0 Rsun",
+        #         temperature=f"{ref_star_temp_K:.1f} K",
+        #         right_ascension=f"{ref_star_ra} hourangle",
+        #         declination=f"{ref_star_dec} deg",
+        #     ))
+        #     _log("Reference host star added.")
 
         if lzodi_inc:
-            scene.add_source(LocalZodi())
+            scene.add_source(LocalZodi(
+                **({} if star_inc else {
+                    "host_star_declination": f"{ref_star_dec} deg",
+                    "host_star_right_ascension": f"{ref_star_ra} deg",
+                })
+            ))
             _log("Local zodi added.")
 
         if exozodi_inc:
-            scene.add_source(Exozodi(level=int(exozodi_level)))
+            scene.add_source(Exozodi(
+                level=exozodi_level,
+                **({} if star_inc else {
+                    "host_star_distance": f"{ref_star_dist} pc",
+                    "host_star_luminosity": f"{ref_star_lum} Lsun",
+                })
+            ))
             _log(f"Exozodi (level {int(exozodi_level)}) added.")
 
         if planet_inc:
@@ -535,6 +546,11 @@ def run_simulation(
                 raan=f"{planet_raan} deg",
                 argument_of_periapsis=f"{planet_aop} deg",
                 true_anomaly=f"{planet_ta} deg",
+                **({} if star_inc else {
+                    "host_star_distance": f"{ref_star_dist} pc",
+                    "host_star_mass": f"{ref_star_mass} Msun",
+                })
+
             ))
             _log("Planet added.")
 
@@ -756,6 +772,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                         with gr.Row():
                             ref_star_dist = gr.Number(value=10.0, label="Distance (pc)", minimum=0.001)
                             ref_star_lum = gr.Number(value=1.0, label="Luminosity (L☉)", minimum=0.0001)
+                            ref_star_mass = gr.Number(value=1.0, label="Mass (M☉)", minimum=0.01)
                         with gr.Row():
                             ref_star_ra = gr.Number(value=10.0, label="RA (h)")
                             ref_star_dec = gr.Number(value=45.0, label="Dec (°)")
@@ -1040,7 +1057,7 @@ GPL-3.0 License · © Philipp A. Huber
         sol_ecl_lat, baseline_mode, custom_bl,
         ap_diam, throughput, qe, templ_fov, bl_min, bl_max, wl_min, wl_max,
         grid_size, use_seed, seed_val, device_str,
-        ref_star_dist, ref_star_lum, ref_star_ra, ref_star_dec,
+        ref_star_dist, ref_star_lum, ref_star_mass, ref_star_ra, ref_star_dec,
         disp_sed_units, disp_wl_units,
         ylim_min, ylim_max,
     ]

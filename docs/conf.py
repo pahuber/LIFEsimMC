@@ -25,6 +25,7 @@ extensions = [
     "nbsphinx",
     "recommonmark",
     "sphinx_contributors",
+    "myst_nb"
 ]
 
 master_doc = "index"
@@ -33,6 +34,7 @@ master_doc = "index"
 
 nbsphinx_execute = "never"
 nb_execution_mode = "off"
+nb_execution_allow_errors = True
 
 # -- HTML output -------------------------------------------------------------
 
