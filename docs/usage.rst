@@ -17,7 +17,7 @@ Single-Epoch Observation Preset
 
    <p>
      <a class="button" href="https://huggingface.co/spaces/pahuber/LIFEsimMC-Test" target="_blank">
-       Go to Web Interface (Beta)
+       Go to Public Web Interface (Beta)
      </a>
    </p>
 
