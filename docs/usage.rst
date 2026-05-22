@@ -37,19 +37,19 @@ The following code snippet gives a quick overview of the main workflow when usin
     # Create the pipeline
     pipeline = Pipeline()
 
-    # Create and add a module with an output resource named 'ex_a' and another argument that is not a resource
-    module = ExampleAModule(n_example_a_resource_out='ex_a', example_argument=42)
+    # Create and add a module with an output resource named 'a' and another argument that is not a resource
+    module = AModule(n_a_resource_out='a', some_argument=42)
     pipeline.add_module(module)
 
-    # Create and add a second module with an input ('ex_a') and output resource named 'ex_b'
-    module = ExampleBModule(n_example_a_resource_in='ex_a', n_example_b_resource_out='ex_b')
+    # Create and add a second module with an input ('a') and output resource named 'b'
+    module = BModule(n_a_resource_in='a', n_b_resource_out='b')
     pipeline.add_module(module)
 
     # Run the pipeline
     pipeline.run()
 
-    # Get the output resource named 'ex_b' of the second module
-    ex_b = pipeline.get_resource('ex_b')
+    # Get the output resource named 'b' of the second module
+    b = pipeline.get_resource('b')
 
 
 Specifying User Input

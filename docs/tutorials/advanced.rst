@@ -6,4 +6,4 @@ Advanced
 .. toctree::
     :maxdepth: 1
 
-    advanced/config_file
+    advanced/custom_pipeline.ipynb

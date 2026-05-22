@@ -19,7 +19,7 @@ To install ``LIFEsimMC`` from PyPI, run the following command in your terminal:
 
 Installation From GitHub
 ------------------------
-To install ``LIFEsimMC` from GitHub, run the following command in your terminal:
+To install ``LIFEsimMC`` from GitHub, run the following command in your terminal:
 
 .. code-block:: console
 
