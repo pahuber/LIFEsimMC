@@ -51,7 +51,10 @@ xdoctest = { extras = ["colors"], version = ">=0.15.10" }
 myst-parser = { version = ">=0.16.1" }
 
 [tool.poetry.scripts]
-lifesim2 = "lifesim2.__main__:main"
+lifesimmc = "lifesimmc.__main__:main"
+
+[project.scripts]
+lifesimmc-gui = "lifesimmc.gui:main"
 
 [tool.poetry.group.dev.dependencies]
 nbsphinx = "0.9.4"

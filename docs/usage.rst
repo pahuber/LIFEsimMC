@@ -3,12 +3,34 @@
 Usage
 =====
 
-Creating a LIFEsimMC Pipeline
------------------------------
+``LIFEsimMC`` can cover many different use cases due to its **modular pipeline architecture**, but also features **presets for the most common use cases** consisting of predefined pipelines.
 
-`LIFEsimMC` features a `pipeline` architecture. Upon creating a ``Pipeline`` object, ``Module`` objects can be added to the pipeline
-and executed in sequence. Information transfer between modules is handled via ``Resource`` objects, which function as input and/or
-output to the modules. The following code snippet gives a quick overview of the main workflow of `LIFEsimMC`.
+This page provides a brief overview of the different ways to use ``LIFEsimMC``.
+
+Presets (Recommended)
+---------------------
+
+Single-Epoch Observation Preset
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+..
+    .. raw:: html
+
+       <p>
+         <a class="button" href="https://life-space-mission.com/" target="_blank">
+           Go to Web Interface
+         </a>
+       </p>
+
+The **single-epoch observation** preset is the standard use case of ``LIFEsimMC``, returning the extracted planet spectrum with uncertainties after a single observation with the reference design of LIFE.
+It can be accessed through **graphical user interface (GUI)** or the **Python API**. Have a look at the `single-epoch observations tutorial <tutorials/seo.rst>`_ for instructions how to use it.
+
+
+Custom Pipeline (Advanced)
+--------------------------
+For **custom use cases**, the user can create their own pipeline and add custom modules to it. Results between modules are shared through so-called resources.
+Have a look at the :doc:`advanced tutorials <tutorials/advanced>` for examples pipelines.
+
+The following code snippet gives a quick overview of the main workflow when using pipelines and modules:
 
 .. code-block:: python
 
@@ -31,16 +53,16 @@ output to the modules. The following code snippet gives a quick overview of the 
 
 
 Specifying User Input
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
-`LIFEsimMC` requires the specification of an ``Observation``, an ``Instrument`` and a ``Scene`` object
+``LIFEsimMC`` requires the specification of an ``Observation``, an ``Instrument`` and a ``Scene`` object
 (see :doc:`Observation documentation <source/external/observation>`, :doc:`Instrument documentation <source/external/instrument>` or :doc:`Scene documentation <source/external/scene>`).
 This is done via the ``SetupModule``. There are two ways to set up the simulation:
 
-Option 1: Creating Objects Manually (Recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Option 1: Creating Objects Manually
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The recommended way is to manually create the ``Observation``, ``Instrument`` and ``Scene`` objects.
+The first way is to manually create the ``Observation``, ``Instrument`` and ``Scene`` objects.
 After their creation, they can directly be given as input to the ``SetupModule``:
 
 .. code-block:: python
@@ -52,21 +74,17 @@ After their creation, they can directly be given as input to the ``SetupModule``
     module = SetupModule(n_setup_out='setup', observation=obs, instrument=inst, scene=scene)
     pipeline.add_module(module)
 
-Predefined instruments and observations are available for use with e.g. ``inst = LIFEReferenceDesign()`` or
-``obs = LIFEObservation()`` (see :doc:`Tutorials <tutorials>`).
+
 
 Option 2: Using a Config File
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Alternatively, `LIFEsimMC` can also be used with config files (see :doc:`Config File Tutorial <tutorials/config_file>`) and a ``Configuration`` object (see :doc:`Configuration documentation <external/configuration>`):
+Alternatively, ``LIFEsimMC`` can also be used with config files (see :doc:`Config File Tutorial <tutorials/config_file>`) and a ``Configuration`` object (see :doc:`Configuration documentation <external/configuration>`):
 
 .. code-block:: python
 
     module = SetupModule(n_config_out='config', configuration=Configuration(path=Path('path/to/config.py')))
     pipeline.add_module(module)
 
-This way all available simulation parameters can be configured in a single file, which requires a solid understanding of their interplay and is thus
-only recommended for advanced users.
-
 .. note::
-    It is recommended to run `LIFEsimMC` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
+    It is recommended to run ``LIFEsimMC` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.

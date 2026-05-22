@@ -32,7 +32,7 @@ class NeymanPearsonTestModule(BaseModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            n_planets_est_in: str,
+            # n_planets_est_in: str,
             n_planets_true_in: str,
             n_test_out: str,
             pfa: float,
@@ -61,7 +61,7 @@ class NeymanPearsonTestModule(BaseModule):
         self.n_data_in = n_data_in
         self.n_test_out = n_test_out
         self.pfa = pfa
-        self.n_planets_est_in = n_planets_est_in
+        # self.n_planets_est_in = n_planets_est_in
         self.n_planets_true_in = n_planets_true_in
         self.n_transformation_in = n_transformation_in
         self.n_image_out = n_image_out
@@ -85,8 +85,8 @@ class NeymanPearsonTestModule(BaseModule):
 
         r_setup_in = self.get_resource_from_name(self.n_setup_in) if self.n_setup_in is not None else None
         transformations = get_transformations_from_resource_name(self, self.n_transformation_in)
-        r_planets_est_in = self.get_resource_from_name(
-            self.n_planets_est_in) if self.n_planets_est_in is not None else None
+        # r_planets_est_in = self.get_resource_from_name(
+        #     self.n_planets_est_in) if self.n_planets_est_in is not None else None
         r_planet_params_true_in = self.get_resource_from_name(self.n_planets_true_in)
 
         # Prepare data
@@ -96,11 +96,11 @@ class NeymanPearsonTestModule(BaseModule):
         data_in_flat = data_in_flat.cpu().numpy()
 
         # TODO: handle mutiple planets
-        flux_est = r_planets_est_in.collection[0].sed
+        # flux_est = r_planets_est_in.collection[0].sed
 
         # TODO: Handle orbital motion
-        posx_est = r_planets_est_in.collection[0].pos_x
-        posy_est = r_planets_est_in.collection[0].pos_y
+        # posx_est = r_planets_est_in.collection[0].pos_x
+        # posy_est = r_planets_est_in.collection[0].pos_y
 
         # True model_est
         flux_true = r_planet_params_true_in.collection[0].planet.spectral_energy_distribution.cpu().numpy()[:, 0, 0]
@@ -113,12 +113,17 @@ class NeymanPearsonTestModule(BaseModule):
         #     y_position=posy_est,
         #     kernels=True
         # )
+        # print(np.sum(flux_true))
         model_true = r_setup_in.phringe.get_model_counts(
             spectral_energy_distribution=flux_true,
             x_position=posx_true,
             y_position=posy_true,
             kernels=True
         )
+
+        t = model_true.flatten()
+
+        # print(t @ t)
 
         for transf in transformations:
             # model_est = transf(model_est)
@@ -133,6 +138,8 @@ class NeymanPearsonTestModule(BaseModule):
         data_h0 = data_in_flat - modelf_true
         test_h0 = (data_h0 @ modelf_est)
         xtx = modelf_true @ modelf_true
+        # print(np.sum(modelf_true))
+        # print(xtx)
         xsi = np.sqrt(xtx) * norm.ppf(1 - self.pfa)
         pdet = 1 - norm.cdf((xsi - xtx) / np.sqrt(xtx))
         p = norm.sf(test_h1 / np.sqrt(xtx))

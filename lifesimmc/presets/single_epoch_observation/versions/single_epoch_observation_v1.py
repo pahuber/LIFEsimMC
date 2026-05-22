@@ -144,6 +144,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
         self.seed = seed
         self.device = device
 
+        self._diagonal_only = False
         self._instrument = self._create_instrument()
         self._observation = self._create_observation()
         self._pipeline = None
@@ -170,6 +171,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             amplitude_perturbation = None
             phase_perturbation = None
             polarization_perturbation = None
+            self._diagonal_only = True
 
         return Instrument(
             array_configuration_matrix=XArrayConfiguration.acm,
@@ -197,9 +199,13 @@ class SingleEpochObservationV1(SingleEpochObservation):
         Observation
             The observation object.
         """
+        # Calculate minimum number of time steps to ensure proper sampling
+        n_wavelengths_approx = self.spectral_resolving_power * 1.5
+        n_time_steps = n_wavelengths_approx * 15
+
         detector_integration_time = self.detector_integration_time \
             if self.detector_integration_time is not None \
-            else self.total_integration_time / 200
+            else self.total_integration_time / n_time_steps
         modulation_period = self.total_integration_time if self.modulation_period is None else self.modulation_period
 
         return Observation(
@@ -260,7 +266,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             n_data_in='data_white',
             n_transformation_in='zca',
             n_planets_true_in='planets_init',
-            n_planets_est_in='planets_ml',
+            # n_planets_est_in='planets_ml',
             n_test_out='test_np',
             n_image_out='imag_np',
             pfa=2.87e-7,
@@ -269,6 +275,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
         self._pipeline.add_module(module)
         self._pipeline.run()
 
+        test_h1 = self._pipeline.get_resource('test_np').test_statistic_h1
         xtx = self._pipeline.get_resource('test_np').model_length_xtx
 
         return np.sqrt(xtx)
@@ -327,7 +334,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             n_data_out='data_white',
             n_template_out='temp_white',
             n_transformation_out='zca',
-            diagonal_only=False
+            diagonal_only=self._diagonal_only
         )
         self._pipeline.add_module(module)
 
