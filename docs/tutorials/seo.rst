@@ -3,6 +3,13 @@
 Single-Epoch Observations
 =========================
 
+.. raw:: html
+
+   <p>
+     <a class="button" href="https://huggingface.co/spaces/pahuber/LIFEsimMC-Test" target="_blank">
+       Go to Web Interface (Beta)
+     </a>
+   </p>
 
 Graphical User Interface (GUI)
 ------------------------------

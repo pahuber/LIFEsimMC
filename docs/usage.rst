@@ -12,14 +12,14 @@ Presets (Recommended)
 
 Single-Epoch Observation Preset
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-..
-    .. raw:: html
 
-       <p>
-         <a class="button" href="https://life-space-mission.com/" target="_blank">
-           Go to Web Interface
-         </a>
-       </p>
+.. raw:: html
+
+   <p>
+     <a class="button" href="https://huggingface.co/spaces/pahuber/LIFEsimMC-Test" target="_blank">
+       Go to Web Interface (Beta)
+     </a>
+   </p>
 
 The **single-epoch observation** preset is the standard use case of ``LIFEsimMC``, returning the extracted planet spectrum with uncertainties after a single observation with the reference design of LIFE.
 It can be accessed through **graphical user interface (GUI)** or the **Python API**. Have a look at the `single-epoch observations tutorial <tutorials/seo.rst>`_ for instructions how to use it.
