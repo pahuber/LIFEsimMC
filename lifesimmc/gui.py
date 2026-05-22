@@ -738,7 +738,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                         with gr.Group(visible=True) as star_params:
                             with gr.Row():
                                 star_dist = gr.Number(value=10.0, label="Distance (pc)", minimum=0.001)
-                                star_temp = gr.Number(value=5778, label="Temp. (K)", minimum=100)
+                                star_temp = gr.Number(value=5778, label="Temperature (K)", minimum=100)
                             with gr.Row():
                                 star_mass = gr.Number(value=1.0, label="Mass (M☉)", minimum=0.001)
                                 star_rad = gr.Number(value=1.0, label="Radius (R☉)", minimum=0.001)
@@ -767,8 +767,8 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                                      container=False, scale=0, min_width=80)
                         with gr.Group(visible=True) as planet_params:
                             with gr.Row():
-                                planet_sma = gr.Number(value=1.0, label="SMA (au)", minimum=0.001)
-                                planet_temp = gr.Number(value=254, label="Temp. (K)", minimum=10)
+                                planet_sma = gr.Number(value=1.0, label="Semi-Major Axis (au)", minimum=0.001)
+                                planet_temp = gr.Number(value=254, label="Temperature (K)", minimum=10)
                             with gr.Row():
                                 planet_mass = gr.Number(value=1.0, label="Mass (M⊕)", minimum=0.001)
                                 planet_rad = gr.Number(value=1.0, label="Radius (R⊕)", minimum=0.001)
@@ -805,7 +805,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                             exozodi_inc = gr.Checkbox(value=True, label="Include",
                                                       container=False, scale=0, min_width=80)
                         with gr.Group(visible=True) as exozodi_params:
-                            exozodi_level = gr.Number(value=3, label="Exozodi Level", minimum=1)
+                            exozodi_level = gr.Number(value=3, label="Exozodi Level", minimum=0.1)
 
                     with gr.Group(elem_classes="source-card"):
                         with gr.Row():
@@ -828,18 +828,18 @@ with gr.Blocks(title="LIFEsimMC") as demo:
 
                         with gr.Accordion("More", open=False):
                             use_det_int = gr.Checkbox(value=False,
-                                                      label="Override detector integration time")
+                                                      label="Override Detector Integration Time")
                             with gr.Row(visible=False) as det_int_row:
-                                det_int_val = gr.Number(value=432.0, label="Det. int. time", minimum=0.001)
+                                det_int_val = gr.Number(value=432.0, label="Detector Integration Time", minimum=0.001)
                                 det_int_unit = gr.Dropdown(["d", "h", "s"], value="s", label="Unit")
-                            use_mod = gr.Checkbox(value=False, label="Override modulation period")
+                            use_mod = gr.Checkbox(value=False, label="Override Modulation Period")
                             with gr.Row(visible=False) as mod_row:
-                                mod_val = gr.Number(value=1.0, label="Modulation period", minimum=0.001)
+                                mod_val = gr.Number(value=1.0, label="Modulation Period", minimum=0.001)
                                 mod_unit = gr.Dropdown(["d", "h", "s"], value="d", label="Unit")
                             sol_ecl_lat = gr.Number(value=0.0, label="Solar Ecliptic Latitude (°)")
-                            baseline_mode = gr.Radio(["Optimal (auto)", "Custom (m)"],
-                                                     value="Optimal (auto)", label="Nulling Baseline")
-                            custom_bl = gr.Number(value=10.0, label="Custom baseline (m)",
+                            baseline_mode = gr.Radio(["Optimize for HZ", "Custom (m)"],
+                                                     value="Optimize for HZ", label="Nulling Baseline Length")
+                            custom_bl = gr.Number(value=10.0, label="Custom Nulling Baseline Length (m)",
                                                   visible=False, minimum=1.0)
 
                     gr.HTML('<div class="sec-label">Instrument</div>')
@@ -850,13 +850,13 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                             value="Optimistic", label="Instrumental Noise")
                         with gr.Accordion("More", open=False):
                             with gr.Row():
-                                ap_diam = gr.Number(value=3.5, label="Aperture Ø (m)", minimum=0.1)
+                                ap_diam = gr.Number(value=3.5, label="Aperture Diameter (m)", minimum=0.1)
                                 throughput = gr.Number(value=0.15, label="Throughput", minimum=0.0, maximum=1.0)
                             with gr.Row():
                                 qe = gr.Number(value=0.6, label="Quantum Efficiency", minimum=0.0, maximum=1.0)
                             with gr.Row():
-                                bl_min = gr.Number(value=10.0, label="Min. Baseline (m)", minimum=0.1)
-                                bl_max = gr.Number(value=100.0, label="Max. Baseline (m)", minimum=1.0)
+                                bl_min = gr.Number(value=10.0, label="Min. Null. Baseline (m)", minimum=0.1)
+                                bl_max = gr.Number(value=100.0, label="Max. Null. Baseline (m)", minimum=1.0)
                             with gr.Row():
                                 wl_min = gr.Number(value=4.0, label="Min. Wavelength (µm)", minimum=0.1)
                                 wl_max = gr.Number(value=18.5, label="Max. Wavelength (µm)", minimum=0.1)
@@ -881,7 +881,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                             grid_size = gr.Number(value=40, label="Grid Size", minimum=4, maximum=512)
                             templ_fov = gr.Number(value=1e-6, label="Template FOV (rad)")
                             with gr.Row():
-                                use_seed = gr.Checkbox(value=False, label="Fixed seed")
+                                use_seed = gr.Checkbox(value=False, label="Fixed Seed")
                                 seed_val = gr.Number(value=42, label="Seed", minimum=0)
 
         # ════════════════════════════════════════════════════════════════════

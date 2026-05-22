@@ -28,17 +28,14 @@ All outputs can be downloaded as ``numpy`` arrays from within the GUI.
 
    Screenshot of the GUI of the single-epoch observation simulator.
 
-After `installing LIFEsimMC <../installation.rst>`_, you can start the GUI by running the following command in your terminal:
+After `installing LIFEsimMC <../installation.rst>`_, you can start the GUI by running
 
 .. code-block:: console
 
     lifesimmc-gui
 
-or, alternatively:
-
-.. code-block:: console
-
-    python -m lifesimmc.gui
+in your terminal and then clicking on: `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_. Alternatively, you can open a
+browser and manually navigate to `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_.
 
 For a documentation of all configurable parameters, check out the :doc:`SingleEpochObservation <../source/presets/seo>` class documentation.
 

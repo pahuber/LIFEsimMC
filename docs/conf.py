@@ -67,7 +67,7 @@ html_css_files = [
     "custom.css",
 ]
 
-pygments_style = "monokai"
+pygments_style = "friendly"
 pygments_dark_style = "monokai"
 
 exclude_patterns = [
