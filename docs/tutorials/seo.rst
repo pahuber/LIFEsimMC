@@ -25,6 +25,7 @@ For a **detailed documentation of the architecture and the corresponding instrum
 
 
 
+
 Running a Single-Epoch Observation
 ----------------------------------
 
@@ -49,7 +50,8 @@ To run the GUI (see screenshot below) locally (after `installing LIFEsimMC <../i
 
 
 The single-epoch observation simulator will then be hosted locally on your machine and you can just click on `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_
-to open it. Alternatively, you can open a browser and manually navigate to `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_.
+to open it. Alternatively, you can open a browser and manually navigate to `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_. A screenshot of the GUI
+is shown in the figure below.
 
 .. _fig-gui:
 
