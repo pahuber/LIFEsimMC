@@ -98,4 +98,4 @@ Alternatively, ``LIFEsimMC`` can also be used with config files (see :doc:`Confi
     pipeline.add_module(module)
 
 .. note::
-    It is recommended to run ``LIFEsimMC` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
+    It is recommended to run ``LIFEsimMC`` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
