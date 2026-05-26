@@ -42,7 +42,7 @@ However, it can also be run in a regular Python script through the Python API.
 Graphical User Interface (GUI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To run the GUI (see screenshot below) locally (after `installing LIFEsimMC <../installation.rst>`_), open a console and the following command:
+To run the GUI (see screenshot below) locally (after `installing LIFEsimMC <../installation.rst>`_), open a console and run the following command:
 
 .. code-block:: console
 
