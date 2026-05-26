@@ -1,5 +1,8 @@
 """LIFEsimMC — Single Epoch Observation GUI."""
 import base64
+import inspect
+import json
+import re
 import sys
 import tempfile
 import threading
@@ -22,6 +25,117 @@ import numpy as np
 import gradio as gr
 import torch
 from astropy import units as u
+
+
+# ── Docstring tooltip extraction ───────────────────────────────────────────────
+def _parse_docstring_params(cls):
+    """Return {param_name: description} parsed from a NumPy-style docstring."""
+    doc = inspect.getdoc(cls) or ""
+    params = {}
+    in_params = False
+    current_param = None
+    current_lines = []
+
+    for line in doc.split("\n"):
+        if line.strip() == "Parameters":
+            in_params = True
+            continue
+        if in_params and re.match(r"^-{3,}$", line.strip()):
+            continue
+        if not in_params:
+            continue
+        # Non-indented non-empty line that isn't a "name : type" header → new section
+        if line and not line.startswith(" ") and not re.match(r"^\w+\s*:", line):
+            break
+        param_match = re.match(r"^(\w+)\s*:", line)
+        if param_match and not line.startswith(" "):
+            if current_param and current_lines:
+                params[current_param] = " ".join(current_lines).strip()
+            current_param = param_match.group(1)
+            current_lines = []
+        elif line.startswith(" ") and current_param:
+            t = line.strip()
+            if t:
+                current_lines.append(t)
+
+    if current_param and current_lines:
+        params[current_param] = " ".join(current_lines).strip()
+    return params
+
+
+def _build_tips():
+    """Build elem_id → tooltip text from class docstrings."""
+    tips = {}
+
+    try:
+        from phringe.core.sources.star import Star
+        p = _parse_docstring_params(Star)
+        tips["p-star-dist"] = p.get("distance", "")
+        tips["p-star-temp"] = p.get("temperature", "")
+        tips["p-star-mass"] = p.get("mass", "")
+        tips["p-star-rad"] = p.get("radius", "")
+        tips["p-star-ra"] = p.get("right_ascension", "")
+        tips["p-star-dec"] = p.get("declination", "")
+    except Exception:
+        pass
+
+    try:
+        from phringe.core.sources.planet import Planet
+        p = _parse_docstring_params(Planet)
+        tips["p-planet-sma"] = p.get("semi_major_axis", "")
+        tips["p-planet-temp"] = p.get("temperature", "")
+        tips["p-planet-mass"] = p.get("mass", "")
+        tips["p-planet-rad"] = p.get("radius", "")
+        tips["p-planet-ecc"] = p.get("eccentricity", "")
+        tips["p-planet-incl"] = p.get("inclination", "")
+        tips["p-planet-raan"] = p.get("raan", "")
+        tips["p-planet-aop"] = p.get("argument_of_periapsis", "")
+        tips["p-planet-ta"] = p.get("true_anomaly", "")
+        tips["p-sed-mode"] = p.get("sed_loader", "")
+    except Exception:
+        pass
+
+    try:
+        from phringe.core.sources.exozodi import Exozodi
+        p = _parse_docstring_params(Exozodi)
+        tips["p-exozodi-level"] = p.get("level", "")
+    except Exception:
+        pass
+
+    try:
+        from lifesimmc.presets.single_epoch_observation.single_epoch_observation import SingleEpochObservation
+        p = _parse_docstring_params(SingleEpochObservation)
+        tips["p-tot-int"] = p.get("total_integration_time", "")
+        tips["p-spec-res"] = p.get("spectral_resolving_power", "")
+        tips["p-det-int"] = p.get("detector_integration_time", "")
+        tips["p-mod-val"] = p.get("modulation_period", "")
+        tips["p-sol-ecl-lat"] = p.get("solar_ecliptic_latitude", "")
+        tips["p-custom-bl"] = p.get("nulling_baseline", "")
+        tips["p-ap-diam"] = p.get("aperture_diameter", "")
+        tips["p-throughput"] = p.get("throughput", "")
+        tips["p-qe"] = p.get("quantum_efficiency", "")
+        tips["p-bl-min"] = p.get("nulling_baseline_min", "")
+        tips["p-bl-max"] = p.get("nulling_baseline_max", "")
+        tips["p-wl-min"] = p.get("wavelength_min", "")
+        tips["p-wl-max"] = p.get("wavelength_max", "")
+        tips["p-noise"] = p.get("instrumental_noise", "")
+        tips["p-templ-fov"] = p.get("template_fov_rad", "")
+        tips["p-seed"] = p.get("seed", "")
+        tips["p-grid-size"] = p.get("grid_size", "")
+        tips["p-device"] = p.get("device", "")
+        tips["p-ref-rad"] = p.get("host_star_radius", "")
+        tips["p-ref-temp"] = p.get("host_star_temperature", "")
+        tips["p-ref-mass"] = p.get("host_star_mass", "")
+        tips["p-ref-dist"] = p.get("host_star_distance", "")
+        tips["p-ref-ra"] = p.get("host_star_right_ascension", "")
+        tips["p-ref-dec"] = p.get("host_star_declination", "")
+    except Exception:
+        pass
+
+    return {k: v for k, v in tips.items() if v}
+
+
+_TIPS = _build_tips()
 
 # ── Theme ──────────────────────────────────────────────────────────────────────
 theme = gr.themes.Base(
@@ -142,6 +256,33 @@ button.primary, button.secondary { border-radius: 12px !important; }
 
 /* Ensure number inputs show their value in the dark theme */
 input[type="number"] { color: #c9d1e0 !important; }
+
+/* ── Info tooltip button ───────────────────────────────────────────────────── */
+.info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #141e33;
+    border: 1px solid #2d4070;
+    color: #4f72d4;
+    font-size: 9px;
+    font-weight: 800;
+    cursor: default;
+    vertical-align: middle;
+    margin-left: 5px;
+    line-height: 1;
+    font-style: normal;
+    flex-shrink: 0;
+    user-select: none;
+    transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.info-btn:hover {
+    border-color: #5b8af5;
+    color: #7aa8ff;
+    background: #1a2845;
+}
 """
 
 # ── Cache for replot ───────────────────────────────────────────────────────────
@@ -555,7 +696,6 @@ def run_simulation(
                     "host_star_distance": f"{ref_star_dist} pc",
                     "host_star_declination": f"{ref_star_dec} deg",
                     "host_star_right_ascension": f"{ref_star_ra} deg",
-
                 })
             )
             _log(f"{_pfx}Preset v{seo.version} created.")
@@ -723,10 +863,12 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                              scale=0, size="lg", min_width=100, visible=False)
         status_html = gr.HTML(_READY, scale=3)
     with gr.Row(equal_height=True):
-        avg_runs_enabled = gr.Checkbox(value=False, label="Average Over Runs", elem_classes="avg-runs",
-                                       container=False, min_width=0)
+        avg_runs_enabled = gr.Checkbox(value=False, label="Average Over Runs",
+                                       elem_classes="avg-runs", container=False,
+                                       min_width=0, elem_id="p-avg-runs")
         avg_runs_count = gr.Number(value=10, minimum=2, show_label=False,
-                                   container=False, visible=False, scale=0, min_width=70)
+                                   container=False, visible=False, scale=0,
+                                   min_width=70, elem_id="p-avg-runs-count")
         gr.HTML("<div style='flex:1'></div>")
 
     gr.HTML('<hr style="border:none;border-top:1px solid #181818;margin:0.4rem 0 0.6rem;">')
@@ -751,15 +893,21 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                                    container=False, scale=0, min_width=80)
                         with gr.Group(visible=True) as star_params:
                             with gr.Row():
-                                star_dist = gr.Number(value=10.0, label="Distance (pc)", minimum=0.001)
-                                star_temp = gr.Number(value=5778, label="Temperature (K)", minimum=100)
+                                star_dist = gr.Number(value=10.0, label="Distance (pc)",
+                                                      minimum=0.001, elem_id="p-star-dist")
+                                star_temp = gr.Number(value=5778, label="Temperature (K)",
+                                                      minimum=100, elem_id="p-star-temp")
                             with gr.Row():
-                                star_mass = gr.Number(value=1.0, label="Mass (M☉)", minimum=0.001)
-                                star_rad = gr.Number(value=1.0, label="Radius (R☉)", minimum=0.001)
+                                star_mass = gr.Number(value=1.0, label="Mass (M☉)",
+                                                      minimum=0.001, elem_id="p-star-mass")
+                                star_rad = gr.Number(value=1.0, label="Radius (R☉)",
+                                                     minimum=0.001, elem_id="p-star-rad")
                             with gr.Accordion("More", open=False):
                                 with gr.Row():
-                                    star_ra = gr.Number(value=10.0, label="RA (h)")
-                                    star_dec = gr.Number(value=45.0, label="Dec (°)")
+                                    star_ra = gr.Number(value=10.0, label="RA (h)",
+                                                        elem_id="p-star-ra")
+                                    star_dec = gr.Number(value=45.0, label="Dec (°)",
+                                                         elem_id="p-star-dec")
 
                     with gr.Group(visible=False, elem_classes="ref-card") as host_star_ref:
                         gr.HTML('<div style="font-size:0.7rem;font-weight:700;color:#5b8af5;'
@@ -768,13 +916,19 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                 '<div style="font-size:0.72rem;color:#3a4460;margin-bottom:0.5rem;">'
                                 'Needed for scene geometry when star is excluded.</div>')
                         with gr.Row():
-                            ref_star_rad = gr.Number(value=1.0, label="Radius (R☉)", minimum=0.01)
-                            ref_star_mass = gr.Number(value=1.0, label="Mass (M☉)", minimum=0.01)
-                            ref_star_temp = gr.Number(value=5780, label="Temperature (K)", minimum=2000)
+                            ref_star_rad = gr.Number(value=1.0, label="Radius (R☉)",
+                                                     minimum=0.01, elem_id="p-ref-rad")
+                            ref_star_mass = gr.Number(value=1.0, label="Mass (M☉)",
+                                                      minimum=0.01, elem_id="p-ref-mass")
+                            ref_star_temp = gr.Number(value=5780.0, label="Temperature (K)",
+                                                      minimum=2000, elem_id="p-ref-temp")
                         with gr.Row():
-                            ref_star_dist = gr.Number(value=10.0, label="Distance (pc)", minimum=0.1)
-                            ref_star_ra = gr.Number(value=10.0, label="RA (h)")
-                            ref_star_dec = gr.Number(value=45.0, label="Dec (°)")
+                            ref_star_dist = gr.Number(value=10.0, label="Distance (pc)",
+                                                      minimum=0.1, elem_id="p-ref-dist")
+                            ref_star_ra = gr.Number(value=10.0, label="RA (h)",
+                                                    elem_id="p-ref-ra")
+                            ref_star_dec = gr.Number(value=45.0, label="Dec (°)",
+                                                     elem_id="p-ref-dec")
 
                     with gr.Group(elem_classes="source-card"):
                         with gr.Row():
@@ -783,12 +937,17 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                                      container=False, scale=0, min_width=80)
                         with gr.Group(visible=True) as planet_params:
                             with gr.Row():
-                                planet_sma = gr.Number(value=1.0, label="Semi-Major Axis (au)", minimum=0.001)
-                                planet_temp = gr.Number(value=254, label="Temperature (K)", minimum=10)
+                                planet_sma = gr.Number(value=1.0, label="Semi-Major Axis (au)",
+                                                       minimum=0.001, elem_id="p-planet-sma")
+                                planet_temp = gr.Number(value=254, label="Temperature (K)",
+                                                        minimum=10, elem_id="p-planet-temp")
                             with gr.Row():
-                                planet_mass = gr.Number(value=1.0, label="Mass (M⊕)", minimum=0.001)
-                                planet_rad = gr.Number(value=1.0, label="Radius (R⊕)", minimum=0.001)
-                            sed_mode = gr.Radio(["Blackbody", "Custom"], value="Blackbody", label="SED")
+                                planet_mass = gr.Number(value=1.0, label="Mass (M⊕)",
+                                                        minimum=0.001, elem_id="p-planet-mass")
+                                planet_rad = gr.Number(value=1.0, label="Radius (R⊕)",
+                                                       minimum=0.001, elem_id="p-planet-rad")
+                            sed_mode = gr.Radio(["Blackbody", "Custom"], value="Blackbody",
+                                                label="SED", elem_id="p-sed-mode")
                             with gr.Group(visible=False) as sed_custom_group:
                                 sed_file = gr.File(label="SED file (.txt / .dat / .csv)",
                                                    file_types=[".txt", ".dat", ".csv"])
@@ -796,22 +955,30 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                     _SED_P = ["W/sr/m2/um", "W/m2/um", "ph/s/m2/um", "ph/s/m3",
                                               "erg/s/cm2/AA", "erg/s/cm2/Hz", "Custom…"]
                                     _WL_P = ["um", "nm", "m", "Custom…"]
-                                    sed_units_sel = gr.Dropdown(_SED_P, value="W/sr/m2/um", label="SED Units")
-                                    sed_wl_sel = gr.Dropdown(_WL_P, value="um", label="Wavelength Units")
+                                    sed_units_sel = gr.Dropdown(_SED_P, value="W/sr/m2/um",
+                                                                label="SED Units")
+                                    sed_wl_sel = gr.Dropdown(_WL_P, value="um",
+                                                             label="Wavelength Units")
                                 sed_units_custom = gr.Textbox(label="Custom SED units",
-                                                              placeholder="e.g. erg/s/cm2/AA", visible=False)
+                                                              placeholder="e.g. erg/s/cm2/AA",
+                                                              visible=False)
                                 sed_wl_custom = gr.Textbox(label="Custom Wavelength Units",
                                                            placeholder="e.g. AA", visible=False)
                             with gr.Accordion("More", open=False):
                                 with gr.Row():
                                     planet_ecc = gr.Number(value=0.0, label="Eccentricity",
-                                                           minimum=0.0, maximum=0.9999)
-                                    planet_inc_deg = gr.Number(value=180.0, label="Inclination (°)")
+                                                           minimum=0.0, maximum=0.9999,
+                                                           elem_id="p-planet-ecc")
+                                    planet_inc_deg = gr.Number(value=180.0, label="Inclination (°)",
+                                                               elem_id="p-planet-incl")
                                 with gr.Row():
-                                    planet_raan = gr.Number(value=90.0, label="RAAN (°)")
-                                    planet_aop = gr.Number(value=0.0, label="Arg. Periapsis (°)")
+                                    planet_raan = gr.Number(value=90.0, label="RAAN (°)",
+                                                            elem_id="p-planet-raan")
+                                    planet_aop = gr.Number(value=0.0, label="Arg. Periapsis (°)",
+                                                           elem_id="p-planet-aop")
                                 with gr.Row():
-                                    planet_ta = gr.Number(value=45.0, label="True Anomaly (°)")
+                                    planet_ta = gr.Number(value=45.0, label="True Anomaly (°)",
+                                                          elem_id="p-planet-ta")
 
                     with gr.Group(elem_classes="source-card"):
                         with gr.Row():
@@ -819,7 +986,8 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                             exozodi_inc = gr.Checkbox(value=True, label="Include",
                                                       container=False, scale=0, min_width=80)
                         with gr.Group(visible=True) as exozodi_params:
-                            exozodi_level = gr.Number(value=3, label="Exozodi Level", minimum=0.1)
+                            exozodi_level = gr.Number(value=3, label="Exozodi Level",
+                                                      minimum=0.1, elem_id="p-exozodi-level")
 
                     with gr.Group(elem_classes="source-card"):
                         with gr.Row():
@@ -834,47 +1002,63 @@ with gr.Blocks(title="LIFEsimMC") as demo:
 
                     with gr.Group(elem_classes="source-card"):
                         with gr.Row():
-                            tot_int_val = gr.Number(value=1.0, minimum=0.001, label="Integration Time")
+                            tot_int_val = gr.Number(value=1.0, minimum=0.001,
+                                                    label="Integration Time",
+                                                    elem_id="p-tot-int")
                             tot_int_unit = gr.Dropdown(["d", "h", "s"], value="d", label="Unit")
                         spec_res = gr.Number(value=20, label="Spectral Resolving Power",
-                                             minimum=1, maximum=10000)
+                                             minimum=1, maximum=10000, elem_id="p-spec-res")
                         with gr.Accordion("More", open=False):
                             use_det_int = gr.Checkbox(value=False,
                                                       label="Override Detector Integration Time")
                             with gr.Row(visible=False) as det_int_row:
-                                det_int_val = gr.Number(value=432.0, label="Detector Integration Time",
-                                                        minimum=0.001)
+                                det_int_val = gr.Number(value=432.0,
+                                                        label="Detector Integration Time",
+                                                        minimum=0.001, elem_id="p-det-int")
                                 det_int_unit = gr.Dropdown(["d", "h", "s"], value="s", label="Unit")
                             use_mod = gr.Checkbox(value=False, label="Override Modulation Period")
                             with gr.Row(visible=False) as mod_row:
-                                mod_val = gr.Number(value=1.0, label="Modulation Period", minimum=0.001)
+                                mod_val = gr.Number(value=1.0, label="Modulation Period",
+                                                    minimum=0.001, elem_id="p-mod-val")
                                 mod_unit = gr.Dropdown(["d", "h", "s"], value="d", label="Unit")
-                            sol_ecl_lat = gr.Number(value=0.0, label="Solar Ecliptic Latitude (°)")
+                            sol_ecl_lat = gr.Number(value=0.0,
+                                                    label="Solar Ecliptic Latitude (°)",
+                                                    elem_id="p-sol-ecl-lat")
                             baseline_mode = gr.Radio(["Optimize for HZ", "Custom (m)"],
-                                                     value="Optimize for HZ", label="Nulling Baseline Length")
-                            custom_bl = gr.Number(value=10.0, label="Custom Nulling Baseline Length (m)",
-                                                  visible=False, minimum=1.0)
+                                                     value="Optimize for HZ",
+                                                     label="Nulling Baseline Length")
+                            custom_bl = gr.Number(value=10.0,
+                                                  label="Custom Nulling Baseline Length (m)",
+                                                  visible=False, minimum=1.0,
+                                                  elem_id="p-custom-bl")
 
                     gr.HTML('<div class="sec-label">Instrument</div>')
 
                     with gr.Group(elem_classes="source-card"):
                         noise_label = gr.Dropdown(
                             ["None (ideal)", "Optimistic", "Pessimistic"],
-                            value="Optimistic", label="Instrumental Noise")
+                            value="Optimistic", label="Instrumental Noise",
+                            elem_id="p-noise")
                         with gr.Accordion("More", open=False):
                             with gr.Row():
-                                ap_diam = gr.Number(value=3.5, label="Aperture Diameter (m)", minimum=0.1)
+                                ap_diam = gr.Number(value=3.5, label="Aperture Diameter (m)",
+                                                    minimum=0.1, elem_id="p-ap-diam")
                                 throughput = gr.Number(value=0.15, label="Throughput",
-                                                       minimum=0.0, maximum=1.0)
+                                                       minimum=0.0, maximum=1.0,
+                                                       elem_id="p-throughput")
                             with gr.Row():
                                 qe = gr.Number(value=0.6, label="Quantum Efficiency",
-                                               minimum=0.0, maximum=1.0)
+                                               minimum=0.0, maximum=1.0, elem_id="p-qe")
                             with gr.Row():
-                                bl_min = gr.Number(value=10.0, label="Min. Null. Baseline (m)", minimum=0.1)
-                                bl_max = gr.Number(value=100.0, label="Max. Null. Baseline (m)", minimum=1.0)
+                                bl_min = gr.Number(value=10.0, label="Min. Null. Baseline (m)",
+                                                   minimum=0.1, elem_id="p-bl-min")
+                                bl_max = gr.Number(value=100.0, label="Max. Null. Baseline (m)",
+                                                   minimum=1.0, elem_id="p-bl-max")
                             with gr.Row():
-                                wl_min = gr.Number(value=4.0, label="Min. Wavelength (µm)", minimum=0.1)
-                                wl_max = gr.Number(value=18.5, label="Max. Wavelength (µm)", minimum=0.1)
+                                wl_min = gr.Number(value=4.0, label="Min. Wavelength (µm)",
+                                                   minimum=0.1, elem_id="p-wl-min")
+                                wl_max = gr.Number(value=18.5, label="Max. Wavelength (µm)",
+                                                   minimum=0.1, elem_id="p-wl-max")
 
                     gr.HTML('<div class="sec-label">Simulation</div>')
 
@@ -892,13 +1076,16 @@ with gr.Blocks(title="LIFEsimMC") as demo:
 
                         _devs = _available_devices()
                         device_str = gr.Radio([s.upper() for s in _devs], value="CPU",
-                                              label="Compute Device")
+                                              label="Compute Device", elem_id="p-device")
                         with gr.Accordion("More", open=False):
-                            grid_size = gr.Number(value=40, label="Grid Size", minimum=4, maximum=512)
-                            templ_fov = gr.Number(value=1e-6, label="Template FOV (rad)")
+                            grid_size = gr.Number(value=40, label="Grid Size",
+                                                  minimum=4, maximum=512, elem_id="p-grid-size")
+                            templ_fov = gr.Number(value=1e-6, label="Template FOV (rad)",
+                                                  elem_id="p-templ-fov")
                             with gr.Row():
                                 use_seed = gr.Checkbox(value=False, label="Fixed Seed")
-                                seed_val = gr.Number(value=42, label="Seed", minimum=0)
+                                seed_val = gr.Number(value=42, label="Seed", minimum=0,
+                                                     elem_id="p-seed")
 
         # ════════════════════════════════════════════════════════════════════
         # RIGHT — Results
@@ -1041,7 +1228,6 @@ GPL-3.0 License · © Philipp A. Huber
     cov_scale.change(
         lambda x: gr.update(visible=x == "SymLog"), cov_scale, linthresh, queue=False)
 
-    # show_progress="hidden" suppresses the loading overlay on the number field
     avg_runs_enabled.change(
         lambda x: gr.update(visible=x), avg_runs_enabled, avg_runs_count,
         queue=False, show_progress="hidden")
@@ -1099,6 +1285,90 @@ GPL-3.0 License · © Philipp A. Huber
     _dl_inputs = [disp_sed_units, disp_wl_units]
     for _w in [disp_sed_units, disp_wl_units]:
         _w.change(update_download_units, _dl_inputs, prepare_downloads_btn, queue=True)
+
+    # ── Info-button injection (tooltips from docstrings) ──────────────────────
+    gr.HTML(f"""<script>
+(function () {{
+  "use strict";
+  const TIPS = {json.dumps(_TIPS, ensure_ascii=False)};
+
+  function findLabelSpan(el) {{
+    // Radio / fieldset group label
+    var s = el.querySelector("legend span") || el.querySelector("legend");
+    if (s) return s;
+    // Label without an embedded input (Number, Dropdown, Textbox, Radio group)
+    var labels = el.querySelectorAll("label");
+    for (var i = 0; i < labels.length; i++) {{
+      if (!labels[i].querySelector("input")) {{
+        var sp = labels[i].querySelector("span");
+        if (sp) return sp;
+      }}
+    }}
+    // Checkbox / inline radio: label with input + text span
+    var chk = el.querySelector("label > span");
+    if (chk) return chk;
+    // Gradio Radio standalone label-wrap span
+    var lw = el.querySelector(".label-wrap span") || el.querySelector(".label-wrap");
+    if (lw) return lw;
+    return null;
+  }}
+
+  function injectAll() {{
+    for (var id in TIPS) {{
+      var el = document.getElementById(id);
+      if (!el || el.dataset.tipDone) continue;
+      var span = findLabelSpan(el);
+      if (!span) continue;
+
+      (function (tipText, anchorEl) {{
+        var btn = document.createElement("i");
+        btn.className = "info-btn";
+        btn.textContent = "i";
+
+        var tipEl = document.createElement("span");
+        tipEl.innerHTML = tipText.replace(/\n/g, "<br>");
+        tipEl.style.cssText = [
+          "display:none", "position:fixed", "z-index:99999",
+          "background:#111828", "border:1px solid #2d4070", "border-radius:8px",
+          "padding:8px 11px", "font-size:0.7rem", "font-weight:400", "font-style:normal",
+          "color:#8898b8", "white-space:normal", "width:220px", "line-height:1.5",
+          "box-shadow:0 4px 24px rgba(0,0,0,0.75)", "pointer-events:none",
+          "letter-spacing:0", "text-transform:none"
+        ].join(";");
+        document.body.appendChild(tipEl);
+
+        btn.addEventListener("mouseenter", function () {{
+          var r = btn.getBoundingClientRect();
+          tipEl.style.display = "block";
+          tipEl.style.left = (r.right + 8) + "px";
+          tipEl.style.right = "auto";
+          tipEl.style.top = (r.top + r.height / 2) + "px";
+          tipEl.style.transform = "translateY(-50%)";
+          requestAnimationFrame(function () {{
+            var tr = tipEl.getBoundingClientRect();
+            if (tr.right > window.innerWidth - 8) {{
+              tipEl.style.left = "auto";
+              tipEl.style.right = (window.innerWidth - r.left + 8) + "px";
+            }}
+          }});
+        }});
+        btn.addEventListener("mouseleave", function () {{
+          tipEl.style.display = "none";
+        }});
+
+        span.after(btn);
+        anchorEl.dataset.tipDone = "1";
+      }})(TIPS[id], el);
+    }}
+  }}
+
+  var attempts = 0;
+  (function retry() {{
+    injectAll();
+    if (++attempts < 20) setTimeout(retry, 500);
+  }})();
+}})();
+</script>""")
 
 
 def main():
