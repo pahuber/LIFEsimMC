@@ -33,6 +33,7 @@ master_doc = "index"
 
 nbsphinx_execute = "never"
 nb_execution_mode = "off"
+nb_execution_timeout = -1
 nb_execution_allow_errors = True
 
 # -- HTML output -------------------------------------------------------------
