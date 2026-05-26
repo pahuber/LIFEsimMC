@@ -709,15 +709,23 @@ def run_simulation(
                 f"{_pfx}Extracting SED…", lambda: seo.extract_sed(units="ph/s/m3"))
             _log(f"{_pfx}SED extracted.")
 
+            # num_reps in SEO is 1, so always use 0th element here
+            sed_raw = sed_raw[0]
+            std_raw = std_raw[0]
+            cov_raw = cov_raw[0]
+
             yield _mid(f"{_pfx}Computing matched filter…")
             filt_map = yield from _run_threaded(
                 f"{_pfx}Computing matched filter…", seo.get_matched_filter)
             _log(f"{_pfx}Matched filter computed.")
 
+            # num_reps in SEO is 1, so always use 0th element here
+            filt_map = filt_map[0]
+
             yield _mid(f"{_pfx}Neyman-Pearson test…")
             det_sig, wl_raw, sed_true_raw = yield from _run_threaded(
                 f"{_pfx}Neyman-Pearson test…", lambda: (
-                    seo.get_detection_significance(),
+                    seo.get_detection_significance()[0],  # num_reps in SEO is 1, so always use 0th element here
                     seo.get_wavelength_bin_centers(units="m"),
                     seo.get_input_sed(units="ph/s/m3"),
                 ))
