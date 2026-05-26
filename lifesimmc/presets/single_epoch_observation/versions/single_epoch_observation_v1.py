@@ -37,6 +37,9 @@ class SingleEpochObservationV1(SingleEpochObservation):
     total_integration_time : str or float or Quantity
         Total observation time.
 
+    num_reps : int, optional
+        Number of repetitions of the observation.
+
     detector_integration_time : str or float or Quantity, optional
         Integration time per detector frame. If None, defaults to
         ``total_integration_time / 200``.
@@ -114,6 +117,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             self,
             scene: Scene,
             total_integration_time: Union[str, float, Quantity],
+            num_reps: int = 1,
             detector_integration_time: Union[str, float, Quantity] = None,
             modulation_period: Union[str, float, Quantity] = None,
             solar_ecliptic_latitude: str = '0 deg',
@@ -151,6 +155,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
         super().__init__()
         self.scene = scene
         self.total_integration_time = total_integration_time
+        self.num_reps = num_reps
         self.detector_integration_time = detector_integration_time
         self.modulation_period = modulation_period
         self.solar_ecliptic_latitude = solar_ecliptic_latitude
@@ -178,7 +183,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
         self._diagonal_only = False
         self._instrument = self._create_instrument()
         self._observation = self._create_observation()
-        self._pipeline = None
+        self._pipelines = None
 
     def _create_instrument(self) -> Instrument:
         """Create the instrument and set the perturbations.
@@ -257,68 +262,78 @@ class SingleEpochObservationV1(SingleEpochObservation):
         )
 
     def extract_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        module = MLSEDEstimationModule(
-            n_setup_in='setup',
-            n_data_in='data_white',
-            n_template_in='temp_white',
-            n_transformation_in='zca',
-            n_planets_in='planets_init',
-            n_planets_out='planets_ml',
-        )
-        self._pipeline.add_module(module)
-        self._pipeline.run()
+        seds, stds, covs = [], [], []
 
-        r_planets_ml = self._pipeline.get_resource('planets_ml')
-        sed = r_planets_ml.collection[0].sed
-        std = r_planets_ml.collection[0].std
-        cov = r_planets_ml.collection[0].cov[:-2, :-2]
+        for pipeline in self._pipelines:
+            module = MLSEDEstimationModule(
+                n_setup_in='setup',
+                n_data_in='data_white',
+                n_template_in='temp_white',
+                n_transformation_in='zca',
+                n_planets_in='planets_init',
+                n_planets_out='planets_ml',
+            )
+            pipeline.add_module(module)
+            pipeline.run()
 
-        units = u.Unit(units) if isinstance(units, str) else units
+            r_planets_ml = pipeline.get_resource('planets_ml')
+            sed = r_planets_ml.collection[0].sed
+            std = r_planets_ml.collection[0].std
+            cov = r_planets_ml.collection[0].cov[:-2, :-2]
 
-        sed = convert_spectral_units(
-            sed,
-            self.get_wavelength_bin_centers(),
-            units_in='ph/s/m3',
-            units_out=units,
-            wavelength_units='m'
-        )
-        std = convert_spectral_units(
-            std,
-            self.get_wavelength_bin_centers(),
-            units_in='ph/s/m3',
-            units_out=units,
-            wavelength_units='m'
-        )
+            units = u.Unit(units) if isinstance(units, str) else units
 
-        cov = convert_spectral_units(
-            cov,
-            self.get_wavelength_bin_centers(),
-            units_in=(u.ph / u.s / u.m ** 3) ** 2,
-            units_out=units ** 2,
-            wavelength_units='m'
-        )
+            sed = convert_spectral_units(
+                sed,
+                self.get_wavelength_bin_centers(),
+                units_in='ph/s/m3',
+                units_out=units,
+                wavelength_units='m'
+            )
+            std = convert_spectral_units(
+                std,
+                self.get_wavelength_bin_centers(),
+                units_in='ph/s/m3',
+                units_out=units,
+                wavelength_units='m'
+            )
 
-        return sed, std, cov
+            cov = convert_spectral_units(
+                cov,
+                self.get_wavelength_bin_centers(),
+                units_in=(u.ph / u.s / u.m ** 3) ** 2,
+                units_out=units ** 2,
+                wavelength_units='m'
+            )
 
-    def get_detection_significance(self) -> float:
-        module = NeymanPearsonTestModule(
-            n_setup_in="setup",
-            n_data_in='data_white',
-            n_transformation_in='zca',
-            n_planets_true_in='planets_init',
-            # n_planets_est_in='planets_ml',
-            n_test_out='test_np',
-            n_image_out='imag_np',
-            pfa=2.87e-7,
-            pdet=0.9
-        )
-        self._pipeline.add_module(module)
-        self._pipeline.run()
+            seds.append(sed)
+            stds.append(std)
+            covs.append(cov)
 
-        test_h1 = self._pipeline.get_resource('test_np').test_statistic_h1
-        xtx = self._pipeline.get_resource('test_np').model_length_xtx
+        return np.stack(seds), np.stack(stds), np.stack(covs)
 
-        return np.sqrt(xtx)
+    def get_detection_significance(self) -> np.ndarray:
+        significances = []
+
+        for pipeline in self._pipelines:
+            module = NeymanPearsonTestModule(
+                n_setup_in="setup",
+                n_data_in='data_white',
+                n_transformation_in='zca',
+                n_planets_true_in='planets_init',
+                # n_planets_est_in='planets_ml',
+                n_test_out='test_np',
+                n_image_out='imag_np',
+                pfa=2.87e-7,
+                pdet=0.9
+            )
+            pipeline.add_module(module)
+            pipeline.run()
+
+            xtx = pipeline.get_resource('test_np').model_length_xtx
+            significances.append(np.sqrt(xtx))
+
+        return np.asarray(significances)
 
     def get_input_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> np.ndarray:
         sed_ph_s_m3 = self.scene.planets[0].spectral_energy_distribution.cpu().numpy()[:, 0, 0]
@@ -334,11 +349,16 @@ class SingleEpochObservationV1(SingleEpochObservation):
         return sed_converted
 
     def get_matched_filter(self) -> np.ndarray:
-        module = MatchedFilterModule(n_data_in='data_white', n_template_in='temp_white', n_image_out='imag_corr')
-        self._pipeline.add_module(module)
-        self._pipeline.run()
+        maps = []
 
-        return self._pipeline.get_resource('imag_corr').get_image(as_numpy=True)
+        for pipeline in self._pipelines:
+            module = MatchedFilterModule(n_data_in='data_white', n_template_in='temp_white', n_image_out='imag_corr')
+            pipeline.add_module(module)
+            pipeline.run()
+
+            maps.append(pipeline.get_resource('imag_corr').get_image(as_numpy=True))
+
+            return np.stack(maps)
 
     def get_wavelength_bin_centers(self, units: Union[str, Quantity] = 'm') -> np.ndarray:
         wavelengths_m = self._instrument.wavelength_bin_centers.cpu().numpy()
@@ -350,32 +370,39 @@ class SingleEpochObservationV1(SingleEpochObservation):
         )
 
     def run(self):
-        self._pipeline = Pipeline(device=self.device, seed=self.seed, grid_size=self.grid_size)
+        self._pipelines = []
 
-        module = SetupModule(
-            n_setup_out='setup',
-            n_planets_out='planets_init',
-            scene=self.scene,
-            instrument=self._instrument,
-            observation=self._observation
-        )
-        self._pipeline.add_module(module)
+        for i in range(self.num_reps):
+            seed = None if self.seed is None else self.seed + i
 
-        module = DataGenerationModule(n_setup_in='setup', n_data_out='data')
-        self._pipeline.add_module(module)
+            pipeline = Pipeline(device=self.device, seed=seed, grid_size=self.grid_size)
 
-        module = TemplateGenerationModule(n_setup_in='setup', n_template_out='temp', fov=self.template_fov_rad)
-        self._pipeline.add_module(module)
+            module = SetupModule(
+                n_setup_out='setup',
+                n_planets_out='planets_init',
+                scene=self.scene,
+                instrument=self._instrument,
+                observation=self._observation
+            )
+            pipeline.add_module(module)
 
-        module = ZCAWhiteningModule(
-            n_setup_in='setup',
-            n_data_in='data',
-            n_template_in='temp',
-            n_data_out='data_white',
-            n_template_out='temp_white',
-            n_transformation_out='zca',
-            diagonal_only=self._diagonal_only
-        )
-        self._pipeline.add_module(module)
+            module = DataGenerationModule(n_setup_in='setup', n_data_out='data')
+            pipeline.add_module(module)
 
-        self._pipeline.run()
+            module = TemplateGenerationModule(n_setup_in='setup', n_template_out='temp', fov=self.template_fov_rad)
+            pipeline.add_module(module)
+
+            module = ZCAWhiteningModule(
+                n_setup_in='setup',
+                n_data_in='data',
+                n_template_in='temp',
+                n_data_out='data_white',
+                n_template_out='temp_white',
+                n_transformation_out='zca',
+                diagonal_only=self._diagonal_only
+            )
+            pipeline.add_module(module)
+
+            pipeline.run()
+
+            self._pipelines.append(pipeline)

@@ -39,7 +39,7 @@ class SingleEpochObservation(BasePreset):
         pass
 
     @abstractmethod
-    def get_detection_significance(self) -> float:
+    def get_detection_significance(self) -> np.ndarray:
         """Get the detection significance of the observation based on the Neyman-Pearson test.
 
         Returns
