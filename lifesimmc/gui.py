@@ -76,7 +76,6 @@ CSS = """
 footer { display: none !important; }
 .source-card { border-radius: 12px !important;}
 
-
 .panel-results .source-card {
     border-radius: 12px !important;
     overflow: hidden;
@@ -84,6 +83,13 @@ footer { display: none !important; }
 
 .panel-results .source-card .block {
     background: var(--block-background-fill) !important;
+}
+
+.avg-runs {
+    background: none !important;
+    border: none !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
 }
 
 /* section labels */
@@ -133,6 +139,9 @@ button.label-wrap { border-radius: 0px 0px 12px 12px !important; }
 button, .btn,
 button.lg, button.sm, button.md,
 button.primary, button.secondary { border-radius: 12px !important; }
+
+/* Ensure number inputs show their value in the dark theme */
+input[type="number"] { color: #c9d1e0 !important; }
 """
 
 # ── Cache for replot ───────────────────────────────────────────────────────────
@@ -216,12 +225,6 @@ def _map_fig(fmap):
     return fig
 
 
-def _npy_tmp(arr, name):
-    path = Path(tempfile.gettempdir()) / f"lifesimmc_{name}.npy"
-    np.save(path, np.asarray(arr))
-    return str(path)
-
-
 def _safe_unit_name(unit):
     return (
         str(unit)
@@ -236,48 +239,47 @@ def _zip_tmp_from_cache(disp_sed_units, disp_wl_units):
     from lifesimmc.util.spectrum import convert_spectral_units, convert_wavelength_units
 
     r = _cache
+    n_runs = r.get("n_runs", 1)
 
     sed_unit_name = _safe_unit_name(disp_sed_units)
     wl_unit_name = _safe_unit_name(disp_wl_units)
 
-    wl = convert_wavelength_units(
-        r["wl_raw"],
-        units_in="m",
-        units_out=disp_wl_units,
-    )
-
-    sed_est = convert_spectral_units(
-        r["sed_raw"],
-        r["wl_raw"],
-        units_in="ph/s/m3",
-        units_out=disp_sed_units,
-        wavelength_units="m",
-    )
+    wl = convert_wavelength_units(r["wl_raw"], units_in="m", units_out=disp_wl_units)
 
     sed_true = convert_spectral_units(
-        r["sed_true_raw"],
-        r["wl_raw"],
-        units_in="ph/s/m3",
-        units_out=disp_sed_units,
-        wavelength_units="m",
+        r["sed_true_raw"], r["wl_raw"],
+        units_in="ph/s/m3", units_out=disp_sed_units, wavelength_units="m",
     )
 
-    std = convert_spectral_units(
-        r["std_raw"],
-        r["wl_raw"],
-        units_in="ph/s/m3",
-        units_out=disp_sed_units,
-        wavelength_units="m",
-    )
+    f = np.asarray(convert_spectral_units(
+        np.ones(len(r["wl_raw"])), r["wl_raw"],
+        units_in="ph/s/m3", units_out=disp_sed_units, wavelength_units="m",
+    ))
 
-    # Covariance units transform with the square of the SED conversion.
-    cov = convert_spectral_units(
-        r["cov_raw"] ** 0.5,
-        r["wl_raw"],
-        units_in="ph/s/m3",
-        units_out=disp_sed_units,
-        wavelength_units="m",
-    ) ** 2
+    if n_runs > 1 and r.get("all_sed_raws") is not None:
+        sed_est = np.stack([
+            convert_spectral_units(s, r["wl_raw"], units_in="ph/s/m3",
+                                   units_out=disp_sed_units, wavelength_units="m")
+            for s in r["all_sed_raws"]
+        ])
+        std_out = np.stack([
+            convert_spectral_units(s, r["wl_raw"], units_in="ph/s/m3",
+                                   units_out=disp_sed_units, wavelength_units="m")
+            for s in r["all_std_raws"]
+        ])
+        cov_out = np.stack([np.outer(f, f) * c for c in r["all_cov_raws"]])
+        fmap_out = r["all_filt_maps"]
+    else:
+        sed_est = convert_spectral_units(
+            r["sed_raw"], r["wl_raw"],
+            units_in="ph/s/m3", units_out=disp_sed_units, wavelength_units="m",
+        )
+        std_out = convert_spectral_units(
+            r["std_raw"], r["wl_raw"],
+            units_in="ph/s/m3", units_out=disp_sed_units, wavelength_units="m",
+        )
+        cov_out = np.outer(f, f) * r["cov_raw"]
+        fmap_out = r["filt_map"]
 
     path = Path(tempfile.gettempdir()) / "lifesimmc_results.zip"
 
@@ -286,14 +288,13 @@ def _zip_tmp_from_cache(disp_sed_units, disp_wl_units):
             (f"wavelengths_{wl_unit_name}.npy", wl),
             (f"sed_estimated_{sed_unit_name}.npy", sed_est),
             (f"sed_true_{sed_unit_name}.npy", sed_true),
-            (f"std_{sed_unit_name}.npy", std),
-            (f"covariance_{sed_unit_name}2.npy", cov),
-            ("matched_filter.npy", r["filt_map"]),
+            (f"std_{sed_unit_name}.npy", std_out),
+            (f"covariance_{sed_unit_name}2.npy", cov_out),
+            ("matched_filter.npy", fmap_out),
         ]:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".npy") as tmp:
                 np.save(tmp, np.asarray(arr))
                 tmp_path = tmp.name
-
             zf.write(tmp_path, arcname=filename)
             Path(tmp_path).unlink(missing_ok=True)
 
@@ -302,77 +303,57 @@ def _zip_tmp_from_cache(disp_sed_units, disp_wl_units):
 
 # ── Replot (unit / scale changes after run) ────────────────────────────────────
 def replot(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthresh):
-    """Replot and auto-update linthresh from the unit-converted covariance.
-    Returns (fig_sed, fig_cov, new_linthresh_str) — use for unit-change triggers."""
     if not _cache:
         return None, None, gr.update()
     from lifesimmc.util.spectrum import convert_spectral_units, convert_wavelength_units
     r = _cache
     wl = convert_wavelength_units(r["wl_raw"], units_in="m", units_out=disp_wl_units)
-    sed = convert_spectral_units(r["sed_raw"], r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                                 wavelength_units="m")
-    std = convert_spectral_units(r["std_raw"], r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                                 wavelength_units="m")
-    sed_true = convert_spectral_units(r["sed_true_raw"], r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                                      wavelength_units="m")
-    # Covariance C[i,j] scales as f_i * f_j where f is the per-channel conversion factor.
-    # Compute f by converting a unit array, then apply via outer product (avoids sqrt of negatives).
-    f = np.asarray(
-        convert_spectral_units(np.ones(len(r["wl_raw"])), r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                               wavelength_units="m"))
+    sed = convert_spectral_units(r["sed_raw"], r["wl_raw"], units_in="ph/s/m3",
+                                 units_out=disp_sed_units, wavelength_units="m")
+    std = convert_spectral_units(r["std_raw"], r["wl_raw"], units_in="ph/s/m3",
+                                 units_out=disp_sed_units, wavelength_units="m")
+    sed_true = convert_spectral_units(r["sed_true_raw"], r["wl_raw"], units_in="ph/s/m3",
+                                      units_out=disp_sed_units, wavelength_units="m")
+    f = np.asarray(convert_spectral_units(
+        np.ones(len(r["wl_raw"])), r["wl_raw"], units_in="ph/s/m3",
+        units_out=disp_sed_units, wavelength_units="m"))
     cov = np.outer(f, f) * r["cov_raw"]
     vmax = max(abs(float(np.nanmin(cov))), abs(float(np.nanmax(cov)))) or 1.0
     new_linthresh = f"{vmax * 1e-3:.1e}"
     plt.close("all")
     return (
-        _sed_fig(wl, sed, std, sed_true, disp_wl_units, disp_sed_units, ylim_min=ylim_min, ylim_max=ylim_max),
+        _sed_fig(wl, sed, std, sed_true, disp_wl_units, disp_sed_units,
+                 ylim_min=ylim_min, ylim_max=ylim_max),
         _cov_fig(cov, scale=cov_scale, linthresh=new_linthresh),
         new_linthresh,
     )
 
 
 def replot_nolt(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthresh):
-    """Replot using the user-supplied linthresh (no widget update).
-    Use for scale / ylim / linthresh-text changes so the user's value is preserved."""
     if not _cache:
         return None, None
     from lifesimmc.util.spectrum import convert_spectral_units, convert_wavelength_units
     r = _cache
     wl = convert_wavelength_units(r["wl_raw"], units_in="m", units_out=disp_wl_units)
-    sed = convert_spectral_units(r["sed_raw"], r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                                 wavelength_units="m")
-    std = convert_spectral_units(r["std_raw"], r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                                 wavelength_units="m")
-    sed_true = convert_spectral_units(r["sed_true_raw"], r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                                      wavelength_units="m")
-    f = np.asarray(
-        convert_spectral_units(np.ones(len(r["wl_raw"])), r["wl_raw"], units_in="ph/s/m3", units_out=disp_sed_units,
-                               wavelength_units="m"))
+    sed = convert_spectral_units(r["sed_raw"], r["wl_raw"], units_in="ph/s/m3",
+                                 units_out=disp_sed_units, wavelength_units="m")
+    std = convert_spectral_units(r["std_raw"], r["wl_raw"], units_in="ph/s/m3",
+                                 units_out=disp_sed_units, wavelength_units="m")
+    sed_true = convert_spectral_units(r["sed_true_raw"], r["wl_raw"], units_in="ph/s/m3",
+                                      units_out=disp_sed_units, wavelength_units="m")
+    f = np.asarray(convert_spectral_units(
+        np.ones(len(r["wl_raw"])), r["wl_raw"], units_in="ph/s/m3",
+        units_out=disp_sed_units, wavelength_units="m"))
     cov = np.outer(f, f) * r["cov_raw"]
     plt.close("all")
     return (
-        _sed_fig(wl, sed, std, sed_true, disp_wl_units, disp_sed_units, ylim_min=ylim_min, ylim_max=ylim_max),
+        _sed_fig(wl, sed, std, sed_true, disp_wl_units, disp_sed_units,
+                 ylim_min=ylim_min, ylim_max=ylim_max),
         _cov_fig(cov, scale=cov_scale, linthresh=linthresh),
     )
 
 
-def prepare_downloads():
-    if not _cache:
-        return (
-            gr.update(value="<span style='color:#f44336'>No results available.</span>"),
-            gr.update(value=None, visible=True),
-        )
-
-    path = _zip_tmp_from_cache(disp_sed_units, disp_wl_units)
-
-    return (
-        gr.update(value="<span style='color:#3ddc84'>Download ready.</span>"),
-        gr.update(value=path, visible=True),
-    )
-
-
 def update_download_units(disp_sed_units, disp_wl_units):
-    """Regenerate the zip with new units when the user changes display units."""
     if not _cache:
         return gr.update()
     zip_path = _zip_tmp_from_cache(disp_sed_units, disp_wl_units)
@@ -397,13 +378,16 @@ def run_simulation(
         ref_star_dist, ref_star_lum, ref_star_mass, ref_star_ra, ref_star_dec,
         disp_sed_units, disp_wl_units,
         ylim_min, ylim_max,
+        cov_scale, linthresh,
+        avg_runs_enabled, avg_runs_count,
 ):
-    # ── helpers ────────────────────────────────────────────────────────────────
     _UNIT = {"d": u.d, "h": u.hour, "s": u.s}
     _NA = (None, None, None, None)
     _hide_download = (gr.update(visible=False),)
     log = []
     _t0 = time.time()
+
+    n_runs = max(2, int(avg_runs_count or 2)) if avg_runs_enabled else 1
 
     def _log(msg, level="INFO"):
         log.append(f"[{level}] {msg}")
@@ -420,19 +404,12 @@ def run_simulation(
                 f'<span style="color:#3a4460;margin-left:auto;font-size:0.75rem;">{elapsed:.0f}s</span>'
                 f'</div>')
 
-    # Outputs (14):
-    #   plot_sed, plot_cov, plot_map,
-    #   sig_html, status_html, log_box,
-    #   results_col,
-    #   dl_est, dl_true, dl_std, dl_cov, dl_fmap,
-    #   linthresh, stop_btn
     def _mid(msg):
         return (*_NA, _status(msg), _log_text(),
                 gr.update(visible=False), *_hide_download,
                 gr.update(), gr.update(visible=True), gr.update(visible=True))
 
     def _run_threaded(msg, fn):
-        """Run fn() in a daemon thread, yielding timer updates every second."""
         _exc: list = [None]
         _res: list = [None]
 
@@ -452,9 +429,7 @@ def run_simulation(
             raise _exc[0]
         return _res[0]
 
-    # close leftover figures from previous run before doing anything
     plt.close("all")
-
     yield _mid("Initialising…")
 
     try:
@@ -475,180 +450,205 @@ def run_simulation(
             "Pessimistic": InstrumentalNoise.PESSIMISTIC,
         }
 
-        # ── Scene ──────────────────────────────────────────────────────────────
-        _log("Building scene…")
-        scene = Scene()
+        all_det_sigs: list = []
+        all_sed_raws: list = []
+        all_std_raws: list = []
+        all_cov_raws: list = []
+        all_filt_maps: list = []
+        wl_raw_ref = None
+        sed_true_raw_ref = None
+        seo = None
 
-        if star_inc:
-            scene.add_source(Star(
-                name="",
-                distance=f"{star_dist} pc",
-                mass=f"{star_mass} Msun",
-                radius=f"{star_rad} Rsun",
-                temperature=f"{star_temp} K",
-                right_ascension=f"{star_ra} hourangle",
-                declination=f"{star_dec} deg",
-            ))
-            _log("Star added.")
-        # elif planet_inc or exozodi_inc:
-        #     ref_star_temp_K = 5778.0 * (float(ref_star_lum) ** 0.25)
-        #     scene.add_source(Star(
-        #         name="Reference Host Star",
-        #         distance=f"{ref_star_dist} pc",
-        #         mass="1.0 Msun", radius="1.0 Rsun",
-        #         temperature=f"{ref_star_temp_K:.1f} K",
-        #         right_ascension=f"{ref_star_ra} hourangle",
-        #         declination=f"{ref_star_dec} deg",
-        #     ))
-        #     _log("Reference host star added.")
+        for run_idx in range(n_runs):
+            _pfx = f"[{run_idx + 1}/{n_runs}] " if n_runs > 1 else ""
 
-        if lzodi_inc:
-            scene.add_source(LocalZodi(
-                **({} if star_inc else {
-                    "host_star_declination": f"{ref_star_dec} deg",
-                    "host_star_right_ascension": f"{ref_star_ra} deg",
-                })
-            ))
-            _log("Local zodi added.")
+            _log(f"{_pfx}Building scene…")
+            scene = Scene()
 
-        if exozodi_inc:
-            scene.add_source(Exozodi(
-                level=exozodi_level,
-                **({} if star_inc else {
-                    "host_star_distance": f"{ref_star_dist} pc",
-                    "host_star_luminosity": f"{ref_star_lum} Lsun",
-                })
-            ))
-            _log(f"Exozodi (level {int(exozodi_level)}) added.")
+            if star_inc:
+                scene.add_source(Star(
+                    name="",
+                    distance=f"{star_dist} pc",
+                    mass=f"{star_mass} Msun",
+                    radius=f"{star_rad} Rsun",
+                    temperature=f"{star_temp} K",
+                    right_ascension=f"{star_ra} hourangle",
+                    declination=f"{star_dec} deg",
+                ))
+                _log(f"{_pfx}Star added.")
 
-        if planet_inc:
-            sed_loader_obj = None
-            if sed_mode == "Custom" and sed_file is not None:
-                from phringe.io.sed_loader import SEDLoader
-                su = sed_units_custom if sed_units_sel == "Custom…" else sed_units_sel
-                wu = sed_wl_custom if sed_wl_sel == "Custom…" else sed_wl_sel
-                _tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-                with open(sed_file, "rb") as f:
-                    _tmp.write(f.read())
-                _tmp.flush()
-                sed_loader_obj = SEDLoader(path_to_file=_tmp.name, sed_units=su, wavelength_units=wu)
-                _log(f"SED file loaded ({su}, {wu}).")
-            scene.add_source(Planet(
-                name="",
-                propagate_orbit=False,
-                sed_loader=sed_loader_obj,
-                mass=f"{planet_mass} Mearth",
-                radius=f"{planet_rad} Rearth",
-                temperature=f"{planet_temp} K",
-                semi_major_axis=f"{planet_sma} au",
-                eccentricity=planet_ecc,
-                inclination=f"{planet_inc_deg} deg",
-                raan=f"{planet_raan} deg",
-                argument_of_periapsis=f"{planet_aop} deg",
-                true_anomaly=f"{planet_ta} deg",
-                **({} if star_inc else {
-                    "host_star_distance": f"{ref_star_dist} pc",
-                    "host_star_mass": f"{ref_star_mass} Msun",
-                })
+            if lzodi_inc:
+                scene.add_source(LocalZodi(
+                    **({} if star_inc else {
+                        "host_star_declination": f"{ref_star_dec} deg",
+                        "host_star_right_ascension": f"{ref_star_ra} deg",
+                    })
+                ))
+                _log(f"{_pfx}Local zodi added.")
 
-            ))
-            _log("Planet added.")
+            if exozodi_inc:
+                scene.add_source(Exozodi(
+                    level=exozodi_level,
+                    **({} if star_inc else {
+                        "host_star_distance": f"{ref_star_dist} pc",
+                        "host_star_luminosity": f"{ref_star_lum} Lsun",
+                    })
+                ))
+                _log(f"{_pfx}Exozodi (level {int(exozodi_level)}) added.")
 
-        yield _mid("Configuring preset…")
+            if planet_inc:
+                sed_loader_obj = None
+                if sed_mode == "Custom" and sed_file is not None:
+                    from phringe.io.sed_loader import SEDLoader
+                    su = sed_units_custom if sed_units_sel == "Custom…" else sed_units_sel
+                    wu = sed_wl_custom if sed_wl_sel == "Custom…" else sed_wl_sel
+                    _tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
+                    with open(sed_file, "rb") as f:
+                        _tmp.write(f.read())
+                    _tmp.flush()
+                    sed_loader_obj = SEDLoader(path_to_file=_tmp.name, sed_units=su, wavelength_units=wu)
+                    _log(f"{_pfx}SED file loaded ({su}, {wu}).")
+                scene.add_source(Planet(
+                    name="",
+                    propagate_orbit=False,
+                    sed_loader=sed_loader_obj,
+                    mass=f"{planet_mass} Mearth",
+                    radius=f"{planet_rad} Rearth",
+                    temperature=f"{planet_temp} K",
+                    semi_major_axis=f"{planet_sma} au",
+                    eccentricity=planet_ecc,
+                    inclination=f"{planet_inc_deg} deg",
+                    raan=f"{planet_raan} deg",
+                    argument_of_periapsis=f"{planet_aop} deg",
+                    true_anomaly=f"{planet_ta} deg",
+                    **({} if star_inc else {
+                        "host_star_distance": f"{ref_star_dist} pc",
+                        "host_star_mass": f"{ref_star_mass} Msun",
+                    })
+                ))
+                _log(f"{_pfx}Planet added.")
 
-        nulling_baseline = (
-            custom_bl * u.m if baseline_mode == "Custom (m)"
-            else OptimalNullingBaseline(
-                angular_star_separation="habitable-zone",
-                wavelength="15 um",
-                sep_at_max_mod_eff=DoubleBracewell.sep_at_max_mod_eff[0],
+            yield _mid(f"{_pfx}Configuring preset…")
+
+            nulling_baseline = (
+                custom_bl * u.m if baseline_mode == "Custom (m)"
+                else OptimalNullingBaseline(
+                    angular_star_separation="habitable-zone",
+                    wavelength="15 um",
+                    sep_at_max_mod_eff=DoubleBracewell.sep_at_max_mod_eff[0],
+                )
             )
-        )
 
-        seo = SingleEpochObservation(
-            scene=scene,
-            total_integration_time=tot_int_val * _UNIT[tot_int_unit],
-            detector_integration_time=det_int_val * _UNIT[det_int_unit] if use_det_int else None,
-            modulation_period=mod_val * _UNIT[mod_unit] if use_mod else None,
-            solar_ecliptic_latitude=f"{sol_ecl_lat} deg",
-            nulling_baseline=nulling_baseline,
-            aperture_diameter=ap_diam * u.m,
-            nulling_baseline_min=bl_min * u.m,
-            nulling_baseline_max=bl_max * u.m,
-            spectral_resolving_power=int(spec_res),
-            wavelength_min=wl_min * u.um,
-            wavelength_max=wl_max * u.um,
-            throughput=throughput,
-            quantum_efficiency=qe,
-            instrumental_noise=_NOISE[noise_label],
-            template_fov_rad=templ_fov,
-            grid_size=int(grid_size),
-            seed=int(seed_val) if use_seed else None,
-            device=torch.device(device_str.lower()),
-        )
-        _log(f"Preset v{seo.version} created.")
+            seed_this_run = int(seed_val) + run_idx if use_seed else None
 
-        yield _mid("Running data pipeline…")
-        yield from _run_threaded("Running data pipeline…", seo.run)
-        _log("Pipeline complete.")
+            seo = SingleEpochObservation(
+                scene=scene,
+                total_integration_time=tot_int_val * _UNIT[tot_int_unit],
+                detector_integration_time=det_int_val * _UNIT[det_int_unit] if use_det_int else None,
+                modulation_period=mod_val * _UNIT[mod_unit] if use_mod else None,
+                solar_ecliptic_latitude=f"{sol_ecl_lat} deg",
+                nulling_baseline=nulling_baseline,
+                aperture_diameter=ap_diam * u.m,
+                nulling_baseline_min=bl_min * u.m,
+                nulling_baseline_max=bl_max * u.m,
+                spectral_resolving_power=int(spec_res),
+                wavelength_min=wl_min * u.um,
+                wavelength_max=wl_max * u.um,
+                throughput=throughput,
+                quantum_efficiency=qe,
+                instrumental_noise=_NOISE[noise_label],
+                template_fov_rad=templ_fov,
+                grid_size=int(grid_size),
+                seed=seed_this_run,
+                device=torch.device(device_str.lower()),
+            )
+            _log(f"{_pfx}Preset v{seo.version} created.")
 
-        yield _mid("Extracting SED…")
-        sed_raw, std_raw, cov_raw = yield from _run_threaded(
-            "Extracting SED…", lambda: seo.extract_sed(units="ph/s/m3"))
-        _log("SED extracted.")
+            yield _mid(f"{_pfx}Running data pipeline…")
+            yield from _run_threaded(f"{_pfx}Running data pipeline…", seo.run)
+            _log(f"{_pfx}Pipeline complete.")
 
-        yield _mid("Computing matched filter…")
-        filt_map = yield from _run_threaded("Computing matched filter…", seo.get_matched_filter)
-        _log("Matched filter computed.")
+            yield _mid(f"{_pfx}Extracting SED…")
+            sed_raw, std_raw, cov_raw = yield from _run_threaded(
+                f"{_pfx}Extracting SED…", lambda: seo.extract_sed(units="ph/s/m3"))
+            _log(f"{_pfx}SED extracted.")
 
-        yield _mid("Neyman-Pearson test…")
-        det_sig, wl_raw, sed_true_raw = yield from _run_threaded(
-            "Neyman-Pearson test…", lambda: (
-                seo.get_detection_significance(),
-                seo.get_wavelength_bin_centers(units="m"),
-                seo.get_input_sed(units="ph/s/m3"),
-            ))
-        _log(f"Detection significance: {det_sig:.2f} σ")
+            yield _mid(f"{_pfx}Computing matched filter…")
+            filt_map = yield from _run_threaded(
+                f"{_pfx}Computing matched filter…", seo.get_matched_filter)
+            _log(f"{_pfx}Matched filter computed.")
 
-        cov_arr = np.asarray(cov_raw)
+            yield _mid(f"{_pfx}Neyman-Pearson test…")
+            det_sig, wl_raw, sed_true_raw = yield from _run_threaded(
+                f"{_pfx}Neyman-Pearson test…", lambda: (
+                    seo.get_detection_significance(),
+                    seo.get_wavelength_bin_centers(units="m"),
+                    seo.get_input_sed(units="ph/s/m3"),
+                ))
+            _log(f"{_pfx}Detection significance: {det_sig:.2f} σ")
+
+            all_det_sigs.append(float(det_sig))
+            all_sed_raws.append(np.asarray(sed_raw))
+            all_std_raws.append(np.asarray(std_raw))
+            all_cov_raws.append(np.asarray(cov_raw))
+            all_filt_maps.append(np.asarray(filt_map))
+            if run_idx == 0:
+                wl_raw_ref = np.asarray(wl_raw)
+                sed_true_raw_ref = np.asarray(sed_true_raw)
+            if n_runs > 1:
+                _log(f"Run {run_idx + 1}/{n_runs} complete.")
+
+        # ── Aggregate ─────────────────────────────────────────────────────────
+        det_sig_final = float(np.mean(all_det_sigs))
+        sed_raw_final = np.mean(all_sed_raws, axis=0)
+        std_raw_final = np.mean(all_std_raws, axis=0)
+        cov_arr_final = np.mean(all_cov_raws, axis=0)
+        filt_map_final = np.mean(all_filt_maps, axis=0)
 
         _cache.update({
-            "sed_raw": np.asarray(sed_raw),
-            "std_raw": np.asarray(std_raw),
-            "cov_raw": cov_arr,
-            "wl_raw": np.asarray(wl_raw),
-            "sed_true_raw": np.asarray(sed_true_raw),
-            "filt_map": np.asarray(filt_map),
-            "det_sig": float(det_sig),
+            "sed_raw": sed_raw_final,
+            "std_raw": std_raw_final,
+            "cov_raw": cov_arr_final,
+            "wl_raw": wl_raw_ref,
+            "sed_true_raw": sed_true_raw_ref,
+            "filt_map": filt_map_final,
+            "det_sig": det_sig_final,
+            "n_runs": n_runs,
+            "all_sed_raws": np.stack(all_sed_raws) if n_runs > 1 else None,
+            "all_std_raws": np.stack(all_std_raws) if n_runs > 1 else None,
+            "all_cov_raws": np.stack(all_cov_raws) if n_runs > 1 else None,
+            "all_filt_maps": np.stack(all_filt_maps) if n_runs > 1 else None,
         })
 
         yield _mid("Rendering plots…")
 
-        wl = convert_wavelength_units(wl_raw, units_in="m", units_out=disp_wl_units)
-        sed = convert_spectral_units(sed_raw, wl_raw, units_in="ph/s/m3", units_out=disp_sed_units,
-                                     wavelength_units="m")
-        std = convert_spectral_units(std_raw, wl_raw, units_in="ph/s/m3", units_out=disp_sed_units,
-                                     wavelength_units="m")
-        sed_true = convert_spectral_units(sed_true_raw, wl_raw, units_in="ph/s/m3", units_out=disp_sed_units,
-                                          wavelength_units="m")
+        wl = convert_wavelength_units(wl_raw_ref, units_in="m", units_out=disp_wl_units)
+        sed = convert_spectral_units(sed_raw_final, wl_raw_ref, units_in="ph/s/m3",
+                                     units_out=disp_sed_units, wavelength_units="m")
+        std = convert_spectral_units(std_raw_final, wl_raw_ref, units_in="ph/s/m3",
+                                     units_out=disp_sed_units, wavelength_units="m")
+        sed_true = convert_spectral_units(sed_true_raw_ref, wl_raw_ref, units_in="ph/s/m3",
+                                          units_out=disp_sed_units, wavelength_units="m")
 
         fig_sed = _sed_fig(wl, sed, std, sed_true, disp_wl_units, disp_sed_units,
                            ylim_min=ylim_min, ylim_max=ylim_max)
-        f_cov = np.asarray(
-            convert_spectral_units(np.ones(len(wl_raw)), wl_raw, units_in="ph/s/m3", units_out=disp_sed_units,
-                                   wavelength_units="m"))
-        cov_display = np.outer(f_cov, f_cov) * cov_arr
+        f_cov = np.asarray(convert_spectral_units(
+            np.ones(len(wl_raw_ref)), wl_raw_ref, units_in="ph/s/m3",
+            units_out=disp_sed_units, wavelength_units="m"))
+        cov_display = np.outer(f_cov, f_cov) * cov_arr_final
         vmax_cov = max(abs(float(np.nanmin(cov_display))), abs(float(np.nanmax(cov_display)))) or 1.0
         linthresh_default = vmax_cov * 1e-3
-        fig_cov = _cov_fig(cov_display)
-        fig_map = _map_fig(np.asarray(filt_map))
+        fig_cov = _cov_fig(cov_display, scale=cov_scale, linthresh=linthresh_default)
+        fig_map = _map_fig(np.asarray(filt_map_final))
         _log("Plots rendered. Done.")
 
         snr = np.sqrt(np.sum((np.array(sed_true) / (np.array(std) + 1e-30)) ** 2))
+        avg_label = f" · avg of {n_runs} runs" if n_runs > 1 else ""
         sig_html = (f'<div class="metric-card">'
-                    f'<div class="metric-val">{det_sig:.2f} σ</div>'
+                    f'<div class="metric-val">{det_sig_final:.2f} σ</div>'
                     f'<div class="metric-label">Detection Significance</div>'
-                    f'<div class="metric-sub">SNR ≈ {snr:.1f} · preset v{seo.version} · {len(wl)} channels</div>'
+                    f'<div class="metric-sub">SNR ≈ {snr:.1f} · preset v{seo.version}'
+                    f' · {len(wl)} channels{avg_label}</div>'
                     f'</div>')
         done_status = ('<div class="status-bar">'
                        '<span class="dot" style="background:#3ddc84"></span>'
@@ -658,11 +658,11 @@ def run_simulation(
         yield (
             fig_sed, fig_cov, fig_map,
             sig_html, done_status, _log_text(),
-            gr.update(visible=True),  # results_col
-            gr.update(visible=False),  # download button hidden while preparing zip
+            gr.update(visible=True),
+            gr.update(visible=False),
             gr.update(value=f"{linthresh_default:.1e}"),
-            gr.update(visible=False),  # stop_btn
-            gr.update(visible=False),  # no_results_html
+            gr.update(visible=False),
+            gr.update(visible=False),
         )
 
         zip_path = _zip_tmp_from_cache(disp_sed_units, disp_wl_units)
@@ -671,10 +671,10 @@ def run_simulation(
             fig_sed, fig_cov, fig_map,
             sig_html, done_status, _log_text(),
             gr.update(visible=True),
-            gr.update(value=zip_path, visible=True),  # download button ready
+            gr.update(value=zip_path, visible=True),
             gr.update(value=f"{linthresh_default:.1e}"),
             gr.update(visible=False),
-            gr.update(visible=False),  # no_results_html
+            gr.update(visible=False),
         )
 
     except Exception:
@@ -701,21 +701,16 @@ with gr.Blocks(title="LIFEsimMC") as demo:
     with gr.Row(equal_height=True):
         with gr.Column(scale=1, min_width=160):
             if _logo_path:
-                # gr.Image(_logo_path, height=56, show_label=False,
-                #          container=False, elem_id="lifesim-logo")
-                # gr.HTML(f'<img src="{_logo_path}" style="height:56px;">')
-
                 def _img_to_base64(path):
-                    with open(path, "rb") as f:
-                        return base64.b64encode(f.read()).decode()
+                    with open(path, "rb") as fh:
+                        return base64.b64encode(fh.read()).decode()
 
 
-                if _logo_path:
-                    img_b64 = _img_to_base64(_logo_path)
-                    gr.HTML(
-                        f'<img src="data:image/png;base64,{img_b64}" '
-                        'style="height:56px; width:auto; object-fit:contain;">'
-                    )
+                img_b64 = _img_to_base64(_logo_path)
+                gr.HTML(
+                    f'<img src="data:image/png;base64,{img_b64}" '
+                    'style="height:56px; width:auto; object-fit:contain;">'
+                )
         with gr.Column(scale=5):
             gr.HTML('<h2 style="margin:0;font-size:1.45rem;font-weight:700;color:#e8e8e8;">'
                     'Single-Epoch Observation Simulator</h2>'
@@ -731,6 +726,12 @@ with gr.Blocks(title="LIFEsimMC") as demo:
         stop_btn = gr.Button("⏹  Stop", variant="secondary",
                              scale=0, size="lg", min_width=100, visible=False)
         status_html = gr.HTML(_READY, scale=3)
+    with gr.Row(equal_height=True):
+        avg_runs_enabled = gr.Checkbox(value=False, label="Average Over Runs", elem_classes="avg-runs",
+                                       container=False, min_width=0)
+        avg_runs_count = gr.Number(value=10, minimum=2, show_label=False,
+                                   container=False, visible=False, scale=0, min_width=70)
+        gr.HTML("<div style='flex:1'></div>")
 
     gr.HTML('<hr style="border:none;border-top:1px solid #181818;margin:0.4rem 0 0.6rem;">')
 
@@ -742,6 +743,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
         # ════════════════════════════════════════════════════════════════════
         with gr.Column(scale=6, min_width=420, elem_classes="panel-config"):
             with gr.Row(elem_classes="config-cols", equal_height=False):
+
                 # ── Scene ────────────────────────────────────────────────
                 with gr.Column(scale=1, min_width=260, elem_classes="config-scene"):
                     gr.HTML('<div class="sec-label">Scene</div>')
@@ -789,9 +791,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                             with gr.Row():
                                 planet_mass = gr.Number(value=1.0, label="Mass (M⊕)", minimum=0.001)
                                 planet_rad = gr.Number(value=1.0, label="Radius (R⊕)", minimum=0.001)
-                            sed_mode = gr.Radio(
-                                ["Blackbody", "Custom"],
-                                value="Blackbody", label="SED")
+                            sed_mode = gr.Radio(["Blackbody", "Custom"], value="Blackbody", label="SED")
                             with gr.Group(visible=False) as sed_custom_group:
                                 sed_file = gr.File(label="SED file (.txt / .dat / .csv)",
                                                    file_types=[".txt", ".dat", ".csv"])
@@ -839,15 +839,14 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                         with gr.Row():
                             tot_int_val = gr.Number(value=1.0, minimum=0.001, label="Integration Time")
                             tot_int_unit = gr.Dropdown(["d", "h", "s"], value="d", label="Unit")
-
                         spec_res = gr.Number(value=20, label="Spectral Resolving Power",
                                              minimum=1, maximum=10000)
-
                         with gr.Accordion("More", open=False):
                             use_det_int = gr.Checkbox(value=False,
                                                       label="Override Detector Integration Time")
                             with gr.Row(visible=False) as det_int_row:
-                                det_int_val = gr.Number(value=432.0, label="Detector Integration Time", minimum=0.001)
+                                det_int_val = gr.Number(value=432.0, label="Detector Integration Time",
+                                                        minimum=0.001)
                                 det_int_unit = gr.Dropdown(["d", "h", "s"], value="s", label="Unit")
                             use_mod = gr.Checkbox(value=False, label="Override Modulation Period")
                             with gr.Row(visible=False) as mod_row:
@@ -868,9 +867,11 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                         with gr.Accordion("More", open=False):
                             with gr.Row():
                                 ap_diam = gr.Number(value=3.5, label="Aperture Diameter (m)", minimum=0.1)
-                                throughput = gr.Number(value=0.15, label="Throughput", minimum=0.0, maximum=1.0)
+                                throughput = gr.Number(value=0.15, label="Throughput",
+                                                       minimum=0.0, maximum=1.0)
                             with gr.Row():
-                                qe = gr.Number(value=0.6, label="Quantum Efficiency", minimum=0.0, maximum=1.0)
+                                qe = gr.Number(value=0.6, label="Quantum Efficiency",
+                                               minimum=0.0, maximum=1.0)
                             with gr.Row():
                                 bl_min = gr.Number(value=10.0, label="Min. Null. Baseline (m)", minimum=0.1)
                                 bl_max = gr.Number(value=100.0, label="Max. Null. Baseline (m)", minimum=1.0)
@@ -893,7 +894,8 @@ with gr.Blocks(title="LIFEsimMC") as demo:
 
 
                         _devs = _available_devices()
-                        device_str = gr.Radio([s.upper() for s in _devs], value="CPU", label="Compute Device")
+                        device_str = gr.Radio([s.upper() for s in _devs], value="CPU",
+                                              label="Compute Device")
                         with gr.Accordion("More", open=False):
                             grid_size = gr.Number(value=40, label="Grid Size", minimum=4, maximum=512)
                             templ_fov = gr.Number(value=1e-6, label="Template FOV (rad)")
@@ -1042,6 +1044,11 @@ GPL-3.0 License · © Philipp A. Huber
     cov_scale.change(
         lambda x: gr.update(visible=x == "SymLog"), cov_scale, linthresh, queue=False)
 
+    # show_progress="hidden" suppresses the loading overlay on the number field
+    avg_runs_enabled.change(
+        lambda x: gr.update(visible=x), avg_runs_enabled, avg_runs_count,
+        queue=False, show_progress="hidden")
+
     # ── Run / Stop ────────────────────────────────────────────────────────────
     _all_inputs = [
         star_inc, planet_inc, exozodi_inc, lzodi_inc,
@@ -1060,6 +1067,8 @@ GPL-3.0 License · © Philipp A. Huber
         ref_star_dist, ref_star_lum, ref_star_mass, ref_star_ra, ref_star_dec,
         disp_sed_units, disp_wl_units,
         ylim_min, ylim_max,
+        cov_scale, linthresh,
+        avg_runs_enabled, avg_runs_count,
     ]
 
     # 11 outputs — every yield in run_simulation must return exactly 11 values
@@ -1081,27 +1090,15 @@ GPL-3.0 License · © Philipp A. Huber
         outputs=[status_html, stop_btn],
         cancels=[run_event])
 
-    # prepare_downloads_btn.click(
-    #     fn=prepare_downloads,
-    #     inputs=[],
-    #     outputs=[download_status, prepare_downloads_btn],
-    #     queue=True,
-    # )
-
     # ── Replot triggers ───────────────────────────────────────────────────────
     _rp_in = [disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthresh]
-    # Unit changes: use replot (3 outputs) so linthresh auto-updates to match new units
     for _w in [disp_sed_units, disp_wl_units]:
         _w.change(replot, _rp_in, [plot_sed, plot_cov, linthresh], queue=False)
-    # Scale / ylim changes: use replot_nolt (2 outputs) so user's linthresh is preserved
     for _w in [ylim_min, ylim_max, cov_scale]:
         _w.change(replot_nolt, _rp_in, [plot_sed, plot_cov], queue=False)
-    # linthresh: use blur/submit so programmatic updates from the generator
-    # don't trigger replot concurrently with the final yield
     linthresh.blur(replot_nolt, _rp_in, [plot_sed, plot_cov], queue=False)
     linthresh.submit(replot_nolt, _rp_in, [plot_sed, plot_cov], queue=False)
 
-    # Regenerate download zip when display units change (if a run has completed)
     _dl_inputs = [disp_sed_units, disp_wl_units]
     for _w in [disp_sed_units, disp_wl_units]:
         _w.change(update_download_units, _dl_inputs, prepare_downloads_btn, queue=True)
