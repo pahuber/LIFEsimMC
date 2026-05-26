@@ -375,7 +375,7 @@ def run_simulation(
         sol_ecl_lat, baseline_mode, custom_bl,
         ap_diam, throughput, qe, templ_fov, bl_min, bl_max, wl_min, wl_max,
         grid_size, use_seed, seed_val, device_str,
-        ref_star_dist, ref_star_lum, ref_star_mass, ref_star_ra, ref_star_dec,
+        ref_star_dist, ref_star_rad, ref_star_temp, ref_star_mass, ref_star_ra, ref_star_dec,
         disp_sed_units, disp_wl_units,
         ylim_min, ylim_max,
         cov_scale, linthresh,
@@ -478,21 +478,12 @@ def run_simulation(
                 _log(f"{_pfx}Star added.")
 
             if lzodi_inc:
-                scene.add_source(LocalZodi(
-                    **({} if star_inc else {
-                        "host_star_declination": f"{ref_star_dec} deg",
-                        "host_star_right_ascension": f"{ref_star_ra} deg",
-                    })
-                ))
+                scene.add_source(LocalZodi())
                 _log(f"{_pfx}Local zodi added.")
 
             if exozodi_inc:
                 scene.add_source(Exozodi(
-                    level=exozodi_level,
-                    **({} if star_inc else {
-                        "host_star_distance": f"{ref_star_dist} pc",
-                        "host_star_luminosity": f"{ref_star_lum} Lsun",
-                    })
+                    level=exozodi_level
                 ))
                 _log(f"{_pfx}Exozodi (level {int(exozodi_level)}) added.")
 
@@ -520,11 +511,7 @@ def run_simulation(
                     inclination=f"{planet_inc_deg} deg",
                     raan=f"{planet_raan} deg",
                     argument_of_periapsis=f"{planet_aop} deg",
-                    true_anomaly=f"{planet_ta} deg",
-                    **({} if star_inc else {
-                        "host_star_distance": f"{ref_star_dist} pc",
-                        "host_star_mass": f"{ref_star_mass} Msun",
-                    })
+                    true_anomaly=f"{planet_ta} deg"
                 ))
                 _log(f"{_pfx}Planet added.")
 
@@ -561,6 +548,15 @@ def run_simulation(
                 grid_size=int(grid_size),
                 seed=seed_this_run,
                 device=torch.device(device_str.lower()),
+                **({} if star_inc else {
+                    "host_star_radius": f"{ref_star_rad} Rsun",
+                    "host_star_temperature": f"{ref_star_temp} K",
+                    "host_star_mass": f"{ref_star_mass} Msun",
+                    "host_star_distance": f"{ref_star_dist} pc",
+                    "host_star_declination": f"{ref_star_dec} deg",
+                    "host_star_right_ascension": f"{ref_star_ra} deg",
+
+                })
             )
             _log(f"{_pfx}Preset v{seo.version} created.")
 
@@ -772,10 +768,11 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                 '<div style="font-size:0.72rem;color:#3a4460;margin-bottom:0.5rem;">'
                                 'Needed for scene geometry when star is excluded.</div>')
                         with gr.Row():
-                            ref_star_dist = gr.Number(value=10.0, label="Distance (pc)", minimum=0.001)
-                            ref_star_lum = gr.Number(value=1.0, label="Luminosity (L☉)", minimum=0.0001)
+                            ref_star_rad = gr.Number(value=1.0, label="Radius (R☉)", minimum=0.01)
                             ref_star_mass = gr.Number(value=1.0, label="Mass (M☉)", minimum=0.01)
+                            ref_star_temp = gr.Number(value=5780, label="Temperature (K)", minimum=2000)
                         with gr.Row():
+                            ref_star_dist = gr.Number(value=10.0, label="Distance (pc)", minimum=0.1)
                             ref_star_ra = gr.Number(value=10.0, label="RA (h)")
                             ref_star_dec = gr.Number(value=45.0, label="Dec (°)")
 
@@ -1064,7 +1061,7 @@ GPL-3.0 License · © Philipp A. Huber
         sol_ecl_lat, baseline_mode, custom_bl,
         ap_diam, throughput, qe, templ_fov, bl_min, bl_max, wl_min, wl_max,
         grid_size, use_seed, seed_val, device_str,
-        ref_star_dist, ref_star_lum, ref_star_mass, ref_star_ra, ref_star_dec,
+        ref_star_dist, ref_star_rad, ref_star_temp, ref_star_mass, ref_star_ra, ref_star_dec,
         disp_sed_units, disp_wl_units,
         ylim_min, ylim_max,
         cov_scale, linthresh,

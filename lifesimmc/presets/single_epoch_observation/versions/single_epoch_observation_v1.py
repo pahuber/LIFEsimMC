@@ -90,6 +90,24 @@ class SingleEpochObservationV1(SingleEpochObservation):
 
     device : torch.device, optional
         Compute device used for the simulation (CPU or GPU).
+
+    host_star_radius : float or str or Quantity, optional
+        Host star radius. Only required if no star is specified in the scene.
+
+    host_star_temperature : float or str or Quantity, optional
+        Host star temperature. Only required if no star is specified in the scene.
+
+    host_star_mass : float or str or Quantity, optional
+        Host star mass. Only required if no star is specified in the scene.
+
+    host_star_distance : float or str or Quantity, optional
+        Host star distance. Only required if no star is specified in the scene.
+
+    host_star_right_ascension : float or str or Quantity, optional
+        Host star right ascension. Only required if no star is specified in the scene.
+
+    host_star_declination : float or str or Quantity, optional
+        Host star declination. Only required if no star is specified in the scene.
     """
 
     def __init__(
@@ -117,6 +135,13 @@ class SingleEpochObservationV1(SingleEpochObservation):
             seed: int = None,
             grid_size: int = 40,
             device: torch.device = torch.device('cpu'),
+            host_star_radius: Union[float, str, Quantity, None] = None,
+            host_star_temperature: Union[float, str, Quantity, None] = None,
+            host_star_mass: Union[str, float, Quantity, None] = None,
+            host_star_distance: Union[float, str, Quantity, None] = None,
+            host_star_right_ascension: Union[str, float, Quantity, None] = None,
+            host_star_declination: Union[str, float, Quantity, None] = None
+
     ):
         """Initialize the single-epoch observation preset.
 
@@ -143,6 +168,12 @@ class SingleEpochObservationV1(SingleEpochObservation):
         self.grid_size = grid_size
         self.seed = seed
         self.device = device
+        self.host_star_radius = host_star_radius
+        self.host_star_temperature = host_star_temperature
+        self.host_star_mass = host_star_mass
+        self.host_star_distance = host_star_distance
+        self.host_star_right_ascension = host_star_right_ascension
+        self.host_star_declination = host_star_declination
 
         self._diagonal_only = False
         self._instrument = self._create_instrument()
@@ -213,7 +244,16 @@ class SingleEpochObservationV1(SingleEpochObservation):
             detector_integration_time=detector_integration_time,
             modulation_period=modulation_period,
             solar_ecliptic_latitude='0 deg',
-            nulling_baseline=self.nulling_baseline
+            nulling_baseline=self.nulling_baseline,
+            **({} if self.scene.star is not None else {
+                "host_star_radius": self.host_star_radius,
+                "host_star_temperature": self.host_star_temperature,
+                "host_star_mass": self.host_star_mass,
+                "host_star_distance": self.host_star_distance,
+                "host_star_declination": self.host_star_declination,
+                "host_star_right_ascension": self.host_star_right_ascension,
+
+            })
         )
 
     def extract_sed(self, units: Union[str, Quantity] = 'ph/s/m3') -> tuple[np.ndarray, np.ndarray, np.ndarray]:
