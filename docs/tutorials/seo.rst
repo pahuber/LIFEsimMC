@@ -41,18 +41,6 @@ However, it can also be run in a regular Python script through the Python API.
 
 Graphical User Interface (GUI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To run the GUI (see screenshot below) locally (after `installing LIFEsimMC <../installation.rst>`_), open a console and run the following command:
-
-.. code-block:: console
-
-    lifesimmc-gui
-
-
-The single-epoch observation simulator will then be hosted locally on your machine and you can just click on `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_
-to open it. Alternatively, you can open a browser and manually navigate to `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_. A screenshot of the GUI
-is shown in the figure below.
-
 .. _fig-gui:
 
 .. figure:: ../_static/gui.png
@@ -61,6 +49,16 @@ is shown in the figure below.
    :align: center
 
    Screenshot of the GUI of the single-epoch observation simulator.
+
+To run the GUI (see screenshot below) locally (after `installing LIFEsimMC <../installation.rst>`_), open a console and run the following command:
+
+.. code-block:: console
+
+    lifesimmc-gui
+
+The single-epoch observation simulator will then be hosted locally on your machine and you can just click on `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_
+to open it. Alternatively, you can open a browser and manually navigate to `http://127.0.0.1:7861 <http://127.0.0.1:7861>`_. A screenshot of the GUI
+is shown in the figure above.
 
 After specification of the astrophysical scene and the integration time (and optionally other parameters), the full simulation
 can directly be run by clicking the "Run Simulation" button. The estimated planet SED and several other outputs are then displayed in the GUI.
