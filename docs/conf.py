@@ -25,6 +25,7 @@ extensions = [
     "nbsphinx",
     "recommonmark",
     "sphinx_contributors",
+    "sphinx_design"
 ]
 
 master_doc = "index"

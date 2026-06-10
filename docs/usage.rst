@@ -7,6 +7,10 @@ Usage
 
 This page provides a brief overview of the different ways to use ``LIFEsimMC``.
 
+.. note::
+    ``LIFEsimMC`` is designed to run on both CPUs and GPUs. The use of GPUs is recommended, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
+
+
 Presets (Recommended)
 ---------------------
 
@@ -97,5 +101,3 @@ Alternatively, ``LIFEsimMC`` can also be used with config files (see :doc:`Confi
     module = SetupModule(n_config_out='config', configuration=Configuration(path=Path('path/to/config.py')))
     pipeline.add_module(module)
 
-.. note::
-    It is recommended to run ``LIFEsimMC`` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.

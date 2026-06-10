@@ -3,12 +3,16 @@
 Single-Epoch Observations
 =========================
 
-The **single-epoch observation preset** provides a straightforward way to simulate a measurement as expected by the **current
-reference architecture of LIFE**. This includes the generation of synthetic data including instrumental noise, data post-processing,
-and several tools for signal extraction.
+Overview
+--------
 
-For a **detailed documentation of the architecture and the corresponding instrument parameters** see the
-:doc:`SingleEpochObservation <../source/presets/seo>` class documentation.
+The **single-epoch observation preset** provides a straightforward way to simulate a measurement using the **current
+reference architecture of LIFE**. This includes
+
+* the **generation of synthetic data** including **instrumental noise**,
+* data **post-processing** (data whitening), and
+* several tools for **signal extraction**.
+
 
 .. hint::
     A **public web interface** is available for ``LIFEsimMC``, providing access to the **GUI for the single-epoch observation** preset.
@@ -24,20 +28,40 @@ For a **detailed documentation of the architecture and the corresponding instrum
 
 
 
+Implementation & Assumptions
+----------------------------
 
+As the **reference design of LIFE is evolving** and instrument specifications and assumptions will change in the future,
+the implementation of the single-epoch observation preset will also change. To account for this, the **preset
+is versioned** and all versions are available `here <https://github.com/pahuber/LIFEsimMC/tree/main/lifesimmc/presets/single_epoch_observation/versions>`_.
+The API **documentation of the current version including a list of all configurable parameters** can be found in the
+:doc:`SingleEpochObservation <../source/presets/seo>` class documentation.
+
+The current single-epoch observation preset includes the **following assumptions**:
+
+* **Instrument Architecture:**
+  Emma-X design with a 1:6 baseline ratio. Numerical values of the instrument parameters can be found `here <https://github.com/pahuber/LIFEsimMC/blob/main/lifesimmc/presets/single_epoch_observation/versions/single_epoch_observation_v1.py#L129>`_.
+* **Noise Sources:**
+  The noise consists of uncorrelated photon noise form astrophysical sources  (star, local zodi exozodi, planet) and correlated instrumental noise from instrumental perturbations
+  (no, optimistic, or pessimistic levels as defined in `Huber et al. 2025 <https://doi.org/10.3847/1538-3881/adfb6b>`_).
+* **Post-Processing:**
+  Data whitening is applied to the synthetic data to reduce the impact of correlated instrumental noise (see `Huber et al. 2025 <https://doi.org/10.3847/1538-3881/adfb6b>`_).
+* **Signal Extraction:**
+  The planetary SED (, i.e., spectral energy distribution) is estimated using a numerical maximum likelihood estimator (see `Huber et al. 2025 <https://doi.org/10.3847/1538-3881/adfb6b>`_).
+  It currently assumes the true planet position and SED as the initial values for the optimization.
 
 Running a Single-Epoch Observation
 ----------------------------------
 
-The singe-epoch observation preset requires the **specification of the astrophysical scene**, including information on the
+The single-epoch observation preset requires the **specification of the astrophysical scene**, including information on the
 target star, exozodiacal dust, and the observed planet. Additionally, the **integration time** for the observation must be specified.
 
 .. note::
-    For a documentation of all configurable parameters and default values, check out the :doc:`SingleEpochObservation <../source/presets/seo>` class documentation.
+    For a **documentation of all configurable parameters and default values**, check out the :doc:`SingleEpochObservation <../source/presets/seo>` class documentation.
 
-The easiest way to run a single-epoch observation simulation with ``LIFEsimMC`` is through the GUI.
-This can be done through the `public web interface <https://huggingface.co/spaces/pahuber/LIFEsimMC-Test>`_ or by running it locally.
-However, it can also be run in a regular Python script through the Python API.
+The easiest way to run a single-epoch observation simulation with ``LIFEsimMC`` is through the **GUI**.
+This can be done through the `public web interface <https://huggingface.co/spaces/pahuber/LIFEsimMC-Test>`_ or by running it **locally**.
+However, it can also be run in a regular Python script through the **Python API**.
 
 Graphical User Interface (GUI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,5 +98,4 @@ setup the astrophysical scene, run the single-epoch observation and plot all res
 .. include:: seo_api.ipynb
    :parser: myst_nb.docutils_
 
-.. note::
-    It is recommended to run ``LIFEsimMC`` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
+
