@@ -13,6 +13,7 @@ reference architecture of LIFE**. This includes
 * data **post-processing** (data whitening), and
 * several tools for **signal extraction**.
 
+It requires the **specification of the astrophysical scene** (e.g. properties of the observed target) and returns the **estimated planet SED** with corresponding uncertainties/covariances.
 
 .. hint::
     A **public web interface** is available for ``LIFEsimMC``, providing access to the **GUI for the single-epoch observation** preset.
