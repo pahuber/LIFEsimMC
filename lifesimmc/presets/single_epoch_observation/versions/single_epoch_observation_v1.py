@@ -37,6 +37,9 @@ class SingleEpochObservationV1(SingleEpochObservation):
     total_integration_time : str or float or Quantity
         Total observation time.
 
+    whitening : bool
+        Whether to perform data whitening to mitigate correlations in instrumental noise. If False, detection significance values should be interpreted with caution.
+
     num_reps : int, optional
         Number of repetitions of the observation.
 
@@ -117,6 +120,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             self,
             scene: Scene,
             total_integration_time: Union[str, float, Quantity],
+            whitening: bool,
             num_reps: int = 1,
             detector_integration_time: Union[str, float, Quantity] = None,
             modulation_period: Union[str, float, Quantity] = None,
@@ -155,6 +159,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
         super().__init__()
         self.scene = scene
         self.total_integration_time = total_integration_time
+        self.whitening = whitening
         self.num_reps = num_reps
         self.detector_integration_time = detector_integration_time
         self.modulation_period = modulation_period
@@ -180,7 +185,6 @@ class SingleEpochObservationV1(SingleEpochObservation):
         self.host_star_right_ascension = host_star_right_ascension
         self.host_star_declination = host_star_declination
 
-        self._diagonal_only = False
         self._instrument = self._create_instrument()
         self._observation = self._create_observation()
         self._pipelines = None
@@ -207,7 +211,6 @@ class SingleEpochObservationV1(SingleEpochObservation):
             amplitude_perturbation = None
             phase_perturbation = None
             polarization_perturbation = None
-            self._diagonal_only = True
 
         return Instrument(
             array_configuration_matrix=XArrayConfiguration.acm,
@@ -279,7 +282,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
             r_planets_ml = pipeline.get_resource('planets_ml')
             sed = r_planets_ml.collection[0].sed
             std = r_planets_ml.collection[0].std
-            cov = r_planets_ml.collection[0].cov[:-2, :-2]
+            cov_raw = r_planets_ml.collection[0].cov
 
             units = u.Unit(units) if isinstance(units, str) else units
 
@@ -298,13 +301,17 @@ class SingleEpochObservationV1(SingleEpochObservation):
                 wavelength_units='m'
             )
 
-            cov = convert_spectral_units(
-                cov,
-                self.get_wavelength_bin_centers(),
-                units_in=(u.ph / u.s / u.m ** 3) ** 2,
-                units_out=units ** 2,
-                wavelength_units='m'
-            )
+            if cov_raw is None:
+                # lmfit could not estimate the covariance matrix for this fit
+                cov = np.full((len(sed), len(sed)), np.nan)
+            else:
+                cov = convert_spectral_units(
+                    cov_raw[:-2, :-2],
+                    self.get_wavelength_bin_centers(),
+                    units_in=(u.ph / u.s / u.m ** 3) ** 2,
+                    units_out=units ** 2,
+                    wavelength_units='m'
+                )
 
             seds.append(sed)
             stds.append(std)
@@ -399,7 +406,7 @@ class SingleEpochObservationV1(SingleEpochObservation):
                 n_data_out='data_white',
                 n_template_out='temp_white',
                 n_transformation_out='zca',
-                diagonal_only=self._diagonal_only
+                diagonal_only=not self.whitening
             )
             pipeline.add_module(module)
 

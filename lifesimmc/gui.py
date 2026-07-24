@@ -2,6 +2,8 @@
 import base64
 import inspect
 import json
+import multiprocessing as mp
+import queue
 import re
 import sys
 import tempfile
@@ -230,7 +232,15 @@ button.label-wrap { border-radius: 0px 0px 12px 12px !important; }
 
 /* spinner */
 @keyframes lsm-spin { to { transform: rotate(360deg); } }
-.spin { display: inline-block; animation: lsm-spin 0.9s linear infinite; }
+.spin {
+    display: inline-block;
+    width: 0.85em; height: 0.85em;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; box-sizing: border-box;
+    transform-origin: center;
+    vertical-align: -0.08em;
+    animation: lsm-spin 0.9s linear infinite;
+}
 
 /* status bar */
 .status-bar {
@@ -283,13 +293,26 @@ input[type="number"] { color: #c9d1e0 !important; }
     color: #7aa8ff;
     background: #1a2845;
 }
+
+/* Whitening toggle message */
+#whitening-msg, #whitening-msg p {
+    color: #8898b8 !important;
+    text-align: justify;
+    font-size: 0.85rem;
+}
 """
 
 # ── Cache for replot ───────────────────────────────────────────────────────────
 _cache: dict = {}
+_simulation_process: mp.Process | None = None
+_simulation_process_lock = threading.Lock()
 
 # ── Plot helpers ───────────────────────────────────────────────────────────────
 _BG = "#0f1117"
+
+# Messages
+_WHITENING_YES_MSG = "Data whitening is applied to mitigate correlated instrumental errors (see Huber+25)."
+_WHITENING_NO_MSG = "Data whitening is not applied. Correlated instrumental errors may be present in the outputs. Interpret results with caution (see Huber+25)."
 
 
 def _ax_style(fig, ax):
@@ -324,6 +347,19 @@ def _sed_fig(wl, sed, std, sed_true, wl_u, sed_u, ylim_min=None, ylim_max=None):
 
 
 def _cov_fig(cov, scale="Linear", linthresh=None):
+    if cov is None or not np.isfinite(cov).any():
+        fig, ax = plt.subplots(figsize=(5, 5))
+        _ax_style(fig, ax)
+        ax.text(0.5, 0.5, "Could not estimate covariance matrix",
+                ha="center", va="center", color="#8898b8", fontsize=11,
+                wrap=True, transform=ax.transAxes)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        fig.tight_layout(pad=0.5)
+        return fig
+
     vmax = max(abs(float(np.nanmin(cov))), abs(float(np.nanmax(cov)))) or 1.0
     if scale == "SymLog":
         try:
@@ -364,6 +400,19 @@ def _map_fig(fmap):
     ax.set_ylabel("Dec [mas]")
     fig.tight_layout(pad=0.3)
     return fig
+
+
+def _resolve_unit(sel, custom):
+    return custom if sel == "Custom…" else sel
+
+
+def _sed_needs_solid_angle_inputs(sed_units):
+    unit = u.Unit(sed_units)
+
+    for base, power in zip(unit.bases, unit.powers):
+        if base == u.sr and power < 0:
+            return False
+    return True
 
 
 def _safe_unit_name(unit):
@@ -443,9 +492,14 @@ def _zip_tmp_from_cache(disp_sed_units, disp_wl_units):
 
 
 # ── Replot (unit / scale changes after run) ────────────────────────────────────
-def replot(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthresh):
+def replot(disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom,
+           ylim_min, ylim_max, cov_scale, linthresh):
     if not _cache:
         return None, None, gr.update()
+    disp_sed_units = _resolve_unit(disp_sed_units, disp_sed_units_custom)
+    disp_wl_units = _resolve_unit(disp_wl_units, disp_wl_units_custom)
+    if not disp_sed_units or not disp_wl_units:
+        return gr.update(), gr.update(), gr.update()
     from lifesimmc.util.spectrum import convert_spectral_units, convert_wavelength_units
     r = _cache
     wl = convert_wavelength_units(r["wl_raw"], units_in="m", units_out=disp_wl_units)
@@ -459,7 +513,10 @@ def replot(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthre
         np.ones(len(r["wl_raw"])), r["wl_raw"], units_in="ph/s/m3",
         units_out=disp_sed_units, wavelength_units="m"))
     cov = np.outer(f, f) * r["cov_raw"]
-    vmax = max(abs(float(np.nanmin(cov))), abs(float(np.nanmax(cov)))) or 1.0
+    if np.isfinite(cov).any():
+        vmax = max(abs(float(np.nanmin(cov))), abs(float(np.nanmax(cov)))) or 1.0
+    else:
+        vmax = 1.0
     new_linthresh = f"{vmax * 1e-3:.1e}"
     plt.close("all")
     return (
@@ -470,9 +527,14 @@ def replot(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthre
     )
 
 
-def replot_nolt(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthresh):
+def replot_nolt(disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom,
+                ylim_min, ylim_max, cov_scale, linthresh):
     if not _cache:
         return None, None
+    disp_sed_units = _resolve_unit(disp_sed_units, disp_sed_units_custom)
+    disp_wl_units = _resolve_unit(disp_wl_units, disp_wl_units_custom)
+    if not disp_sed_units or not disp_wl_units:
+        return gr.update(), gr.update()
     from lifesimmc.util.spectrum import convert_spectral_units, convert_wavelength_units
     r = _cache
     wl = convert_wavelength_units(r["wl_raw"], units_in="m", units_out=disp_wl_units)
@@ -494,20 +556,25 @@ def replot_nolt(disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, li
     )
 
 
-def update_download_units(disp_sed_units, disp_wl_units):
+def update_download_units(disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom):
     if not _cache:
+        return gr.update()
+    disp_sed_units = _resolve_unit(disp_sed_units, disp_sed_units_custom)
+    disp_wl_units = _resolve_unit(disp_wl_units, disp_wl_units_custom)
+    if not disp_sed_units or not disp_wl_units:
         return gr.update()
     zip_path = _zip_tmp_from_cache(disp_sed_units, disp_wl_units)
     return gr.update(value=zip_path, visible=True)
 
 
 # ── Simulation generator ───────────────────────────────────────────────────────
-def run_simulation(
+def _run_simulation_worker(
         star_inc, planet_inc, exozodi_inc, lzodi_inc,
         star_dist, star_mass, star_rad, star_temp, star_ra, star_dec,
         planet_mass, planet_rad, planet_temp, planet_sma,
         planet_ecc, planet_inc_deg, planet_raan, planet_aop, planet_ta,
         sed_mode, sed_file, sed_units_sel, sed_wl_sel, sed_units_custom, sed_wl_custom,
+        sed_obs_planet_radius, sed_obs_star_dist,
         exozodi_level,
         tot_int_val, tot_int_unit,
         noise_label, spec_res,
@@ -517,11 +584,13 @@ def run_simulation(
         ap_diam, throughput, qe, templ_fov, bl_min, bl_max, wl_min, wl_max,
         grid_size, use_seed, seed_val, device_str,
         ref_star_dist, ref_star_rad, ref_star_temp, ref_star_mass, ref_star_ra, ref_star_dec,
-        disp_sed_units, disp_wl_units,
+        disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom,
         ylim_min, ylim_max,
         cov_scale, linthresh,
-        avg_runs_enabled, avg_runs_count,
+        avg_runs_enabled, avg_runs_count, whitening_str
 ):
+    disp_sed_units = _resolve_unit(disp_sed_units, disp_sed_units_custom)
+    disp_wl_units = _resolve_unit(disp_wl_units, disp_wl_units_custom)
     _UNIT = {"d": u.d, "h": u.hour, "s": u.s}
     _NA = (None, None, None, None)
     _hide_download = (gr.update(visible=False),)
@@ -538,7 +607,7 @@ def run_simulation(
 
     def _status(msg, color="#f4a227", spin=True):
         elapsed = time.time() - _t0
-        icon = '<span class="spin">↻</span>&nbsp; ' if spin else ""
+        icon = '<span class="spin" aria-hidden="true"></span>&nbsp; ' if spin else ""
         return (f'<div class="status-bar">'
                 f'<span class="dot" style="background:{color}"></span>'
                 f'<span style="color:{color};font-weight:600">{icon}{msg}</span>'
@@ -632,13 +701,27 @@ def run_simulation(
                 sed_loader_obj = None
                 if sed_mode == "Custom" and sed_file is not None:
                     from phringe.io.sed_loader import SEDLoader
-                    su = sed_units_custom if sed_units_sel == "Custom…" else sed_units_sel
-                    wu = sed_wl_custom if sed_wl_sel == "Custom…" else sed_wl_sel
+                    su = _resolve_unit(sed_units_sel, sed_units_custom)
+                    wu = _resolve_unit(sed_wl_sel, sed_wl_custom)
                     _tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
                     with open(sed_file, "rb") as f:
                         _tmp.write(f.read())
                     _tmp.flush()
-                    sed_loader_obj = SEDLoader(path_to_file=_tmp.name, sed_units=su, wavelength_units=wu)
+                    print(su)
+                    needs_solid_angle = _sed_needs_solid_angle_inputs(su)
+                    print(needs_solid_angle)
+                    print(sed_obs_star_dist)
+                    print(sed_obs_planet_radius)
+                    if needs_solid_angle:
+                        sed_loader_obj = SEDLoader(
+                            path_to_file=_tmp.name, sed_units=su, wavelength_units=wu,
+                            observed_planet_radius=f"{sed_obs_planet_radius} Rearth",
+                            observed_host_star_distance=f"{sed_obs_star_dist} pc",
+                        )
+                    else:
+                        sed_loader_obj = SEDLoader(
+                            path_to_file=_tmp.name, sed_units=su, wavelength_units=wu
+                        )
                     _log(f"{_pfx}SED file loaded ({su}, {wu}).")
                 scene.add_source(Planet(
                     name="",
@@ -672,6 +755,7 @@ def run_simulation(
             seo = SingleEpochObservation(
                 scene=scene,
                 total_integration_time=tot_int_val * _UNIT[tot_int_unit],
+                whitening=True if whitening_str == "Yes (Recommended)" else False,
                 detector_integration_time=det_int_val * _UNIT[det_int_unit] if use_det_int else None,
                 modulation_period=mod_val * _UNIT[mod_unit] if use_mod else None,
                 solar_ecliptic_latitude=f"{sol_ecl_lat} deg",
@@ -780,7 +864,10 @@ def run_simulation(
             np.ones(len(wl_raw_ref)), wl_raw_ref, units_in="ph/s/m3",
             units_out=disp_sed_units, wavelength_units="m"))
         cov_display = np.outer(f_cov, f_cov) * cov_arr_final
-        vmax_cov = max(abs(float(np.nanmin(cov_display))), abs(float(np.nanmax(cov_display)))) or 1.0
+        if np.isfinite(cov_display).any():
+            vmax_cov = max(abs(float(np.nanmin(cov_display))), abs(float(np.nanmax(cov_display)))) or 1.0
+        else:
+            vmax_cov = 1.0
         linthresh_default = vmax_cov * 1e-3
         fig_cov = _cov_fig(cov_display, scale=cov_scale, linthresh=linthresh_default)
         fig_map = _map_fig(np.asarray(filt_map_final))
@@ -827,6 +914,84 @@ def run_simulation(
                _status("Failed — check Log tab", "#f44336", spin=False), _log_text(),
                gr.update(visible=False), *_hide_download,
                gr.update(), gr.update(visible=False), gr.update(visible=True))
+
+
+def _simulation_process_target(args, updates):
+    """Run the simulation outside the Gradio worker process.
+
+    A process can be terminated reliably; Python threads cannot.
+    """
+    global _cache
+    try:
+        for update in _run_simulation_worker(*args):
+            updates.put(("update", update))
+        updates.put(("cache", _cache))
+    except BaseException:
+        updates.put(("error", traceback.format_exc()))
+
+
+def run_simulation(*args):
+    """Stream child-process updates back to the Gradio session."""
+    global _simulation_process
+    # Yield before spawning: a spawned Python process needs time to import the
+    # scientific stack, but the UI should acknowledge the click immediately.
+    yield (None, None, None, None,
+           '<div class="status-bar"><span class="dot" style="background:#f4a227"></span>'
+           '<span style="color:#f4a227;font-weight:600"><span class="spin" aria-hidden="true"></span>&nbsp; Starting simulation…</span>'
+           '</div>',
+           "", gr.update(visible=False), gr.update(visible=False), gr.update(),
+           gr.update(visible=True), gr.update(visible=True))
+
+    context = mp.get_context("spawn")
+    updates = context.Queue()
+    process = context.Process(target=_simulation_process_target, args=(args, updates))
+
+    process.start()
+    with _simulation_process_lock:
+        _simulation_process = process
+
+    try:
+        while True:
+            try:
+                if process.is_alive():
+                    kind, payload = updates.get(timeout=0.25)
+                else:
+                    kind, payload = updates.get_nowait()
+            except queue.Empty:
+                if not process.is_alive():
+                    break
+                continue
+            if kind == "update":
+                yield payload
+            elif kind == "cache":
+                _cache.update(payload)
+            elif kind == "error":
+                yield (None, None, None, None,
+                       '<div class="status-bar"><span class="dot" style="background:#f44336"></span>'
+                       '<span style="color:#f44336;font-weight:600">Simulation failed — check Log tab</span></div>',
+                       payload, gr.update(visible=False), gr.update(visible=False),
+                       gr.update(), gr.update(visible=False), gr.update(visible=True))
+    finally:
+        if process.is_alive():
+            process.terminate()
+        process.join(timeout=2)
+        with _simulation_process_lock:
+            if _simulation_process is process:
+                _simulation_process = None
+
+
+def stop_simulation():
+    """Immediately terminate the simulation child process, if one is active."""
+    global _simulation_process
+    with _simulation_process_lock:
+        process = _simulation_process
+        if process is not None and process.is_alive():
+            process.terminate()
+            process.join(timeout=2)
+        _simulation_process = None
+    stopped = ('<div class="status-bar"><span class="dot" style="background:#8898b8"></span>'
+               '<span style="color:#8898b8;font-weight:600">Simulation stopped</span></div>')
+    return stopped, gr.update(interactive=True), gr.update(visible=False)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -968,10 +1133,16 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                     sed_wl_sel = gr.Dropdown(_WL_P, value="um",
                                                              label="Wavelength Units")
                                 sed_units_custom = gr.Textbox(label="Custom SED units",
-                                                              placeholder="e.g. erg/s/cm2/AA",
-                                                              visible=False)
+                                                              placeholder="e.g. erg/s/cm2/AA")
                                 sed_wl_custom = gr.Textbox(label="Custom Wavelength Units",
                                                            placeholder="e.g. AA", visible=False)
+                                with gr.Row() as sed_solid_angle_group:
+                                    sed_obs_planet_radius = gr.Number(
+                                        value=1.0, label="Observed Planet Radius (R⊕)",
+                                        minimum=0.001)
+                                    sed_obs_star_dist = gr.Number(
+                                        value=10.0, label="Observed Host Star Distance (pc)",
+                                        minimum=0.001)
                             with gr.Accordion("More", open=False):
                                 with gr.Row():
                                     planet_ecc = gr.Number(value=0.0, label="Eccentricity",
@@ -1068,6 +1239,14 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                                 wl_max = gr.Number(value=18.5, label="Max. Wavelength (µm)",
                                                    minimum=0.1, elem_id="p-wl-max")
 
+                    gr.HTML('<div class="sec-label">Data Processing</div>')
+
+                    with gr.Group(elem_classes="source-card"):
+                        whitening_str = gr.Radio(['Yes (Recommended)', 'No'], value="Yes (Recommended)",
+                                                 label="Data Whitening", elem_id="p-whitening")
+
+                    whitening_msg = gr.Markdown(_WHITENING_YES_MSG, elem_id="whitening-msg")
+
                     gr.HTML('<div class="sec-label">Simulation</div>')
 
                     with gr.Group(elem_classes="source-card"):
@@ -1093,7 +1272,7 @@ with gr.Blocks(title="LIFEsimMC") as demo:
                             with gr.Row():
                                 use_seed = gr.Checkbox(value=False, label="Fixed Seed")
                                 seed_val = gr.Number(value=42, label="Seed", minimum=0,
-                                                     elem_id="p-seed")
+                                                     visible=False, elem_id="p-seed")
 
         # ════════════════════════════════════════════════════════════════════
         # RIGHT — Results
@@ -1104,10 +1283,14 @@ with gr.Blocks(title="LIFEsimMC") as demo:
             with gr.Group(elem_classes="source-card"):
                 with gr.Row():
                     disp_sed_units = gr.Dropdown(
-                        ["ph/s/m2/um", "ph/s/m3", "W/m2/um", "W/m3", "erg/s/cm2/AA", "erg/s/cm2/Hz"],
+                        ["ph/s/m2/um", "ph/s/m3", "W/m2/um", "W/m3", "erg/s/cm2/AA", "erg/s/cm2/Hz", "Custom…"],
                         value="ph/s/m2/um", label="SED Units", scale=1)
                     disp_wl_units = gr.Dropdown(
-                        ["um", "nm", "m"], value="um", label="Wavelength Units", scale=1)
+                        ["um", "nm", "m", "Custom…"], value="um", label="Wavelength Units", scale=1)
+                disp_sed_units_custom = gr.Textbox(label="Custom SED units",
+                                                   placeholder="e.g. erg/s/cm2/AA", visible=False)
+                disp_wl_units_custom = gr.Textbox(label="Custom Wavelength units",
+                                                  placeholder="e.g. AA", visible=False)
 
                 sig_html = gr.HTML()
 
@@ -1221,23 +1404,65 @@ GPL-3.0 License · © Philipp A. Huber
     sed_mode.change(
         lambda x: gr.update(visible=x == "Custom"),
         sed_mode, sed_custom_group, queue=False)
-    sed_units_sel.change(
-        lambda x: gr.update(visible=x == "Custom…"), sed_units_sel, sed_units_custom, queue=False)
     sed_wl_sel.change(
-        lambda x: gr.update(visible=x == "Custom…"), sed_wl_sel, sed_wl_custom, queue=False)
+        lambda x: gr.update(visible=x == "Custom…"), sed_wl_sel, sed_wl_custom,
+        queue=False, show_progress="hidden")
+
+
+    def _update_sed_units_visibility(sel, custom):
+        is_custom = sel == "Custom…"
+        try:
+            needs_solid_angle = _sed_needs_solid_angle_inputs(_resolve_unit(sel, custom))
+        except (TypeError, ValueError):
+            # An incomplete custom unit must not prevent its textbox from being
+            # revealed.  Treat it conservatively until the user finishes typing.
+            needs_solid_angle = True
+        return gr.update(visible=is_custom), gr.update(visible=needs_solid_angle)
+
+
+    # queue=True (rather than the usual queue=False for instant toggles) is intentional here:
+    # sed_units_custom.blur() fires right before sed_units_sel.change() when the dropdown is
+    # clicked while the textbox still has focus, and unqueued calls can race and arrive out of
+    # order, letting the stale blur-response clobber the newer change-response.
+    sed_units_sel.change(
+        _update_sed_units_visibility, [sed_units_sel, sed_units_custom],
+        [sed_units_custom, sed_solid_angle_group], queue=True, show_progress="hidden")
+    sed_units_custom.blur(
+        _update_sed_units_visibility, [sed_units_sel, sed_units_custom],
+        [sed_units_custom, sed_solid_angle_group], queue=True, show_progress="hidden")
+    sed_units_custom.submit(
+        _update_sed_units_visibility, [sed_units_sel, sed_units_custom],
+        [sed_units_custom, sed_solid_angle_group], queue=True, show_progress="hidden")
+
+    # sed_units_custom / sed_solid_angle_group are defined visible=True so they actually mount in
+    # the DOM (a component defined visible=False never mounts until first revealed, and revealing
+    # two such never-mounted components together in one update silently drops one). This corrects
+    # their visibility to match the default SED units right after the real page load.
+    demo.load(
+        _update_sed_units_visibility, [sed_units_sel, sed_units_custom],
+        [sed_units_custom, sed_solid_angle_group], queue=False)
+
+    whitening_str.change(
+        lambda x: _WHITENING_YES_MSG if x == "Yes (Recommended)" else _WHITENING_NO_MSG,
+        whitening_str, whitening_msg, queue=False)
 
     use_det_int.change(
         lambda x: gr.update(visible=x), use_det_int, det_int_row, queue=False)
     use_mod.change(
         lambda x: gr.update(visible=x), use_mod, mod_row, queue=False)
     baseline_mode.change(
-        lambda x: gr.update(visible=x == "Custom (m)"), baseline_mode, custom_bl, queue=False)
+        lambda x: gr.update(visible=x == "Custom (m)"), baseline_mode, custom_bl,
+        queue=False, show_progress="hidden")
 
     cov_scale.change(
         lambda x: gr.update(visible=x == "SymLog"), cov_scale, linthresh, queue=False)
 
     avg_runs_enabled.change(
         lambda x: gr.update(visible=x), avg_runs_enabled, avg_runs_count,
+        queue=False, show_progress="hidden")
+
+    use_seed.change(
+        lambda x: gr.update(visible=x), use_seed, seed_val,
         queue=False, show_progress="hidden")
 
     # ── Run / Stop ────────────────────────────────────────────────────────────
@@ -1247,6 +1472,7 @@ GPL-3.0 License · © Philipp A. Huber
         planet_mass, planet_rad, planet_temp, planet_sma,
         planet_ecc, planet_inc_deg, planet_raan, planet_aop, planet_ta,
         sed_mode, sed_file, sed_units_sel, sed_wl_sel, sed_units_custom, sed_wl_custom,
+        sed_obs_planet_radius, sed_obs_star_dist,
         exozodi_level,
         tot_int_val, tot_int_unit,
         noise_label, spec_res,
@@ -1256,10 +1482,10 @@ GPL-3.0 License · © Philipp A. Huber
         ap_diam, throughput, qe, templ_fov, bl_min, bl_max, wl_min, wl_max,
         grid_size, use_seed, seed_val, device_str,
         ref_star_dist, ref_star_rad, ref_star_temp, ref_star_mass, ref_star_ra, ref_star_dec,
-        disp_sed_units, disp_wl_units,
+        disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom,
         ylim_min, ylim_max,
         cov_scale, linthresh,
-        avg_runs_enabled, avg_runs_count,
+        avg_runs_enabled, avg_runs_count, whitening_str
     ]
 
     # 11 outputs — every yield in run_simulation must return exactly 11 values
@@ -1274,25 +1500,41 @@ GPL-3.0 License · © Philipp A. Huber
     ]
 
     run_event = run_btn.click(
-        fn=run_simulation, inputs=_all_inputs, outputs=_all_outputs)
+        fn=run_simulation, inputs=_all_inputs, outputs=_all_outputs,
+        concurrency_limit=1)
 
     stop_btn.click(
-        fn=lambda: (_READY, gr.update(visible=False)),
-        outputs=[status_html, stop_btn],
+        fn=stop_simulation,
+        outputs=[status_html, run_btn, stop_btn],
+        queue=False,
         cancels=[run_event])
 
     # ── Replot triggers ───────────────────────────────────────────────────────
-    _rp_in = [disp_sed_units, disp_wl_units, ylim_min, ylim_max, cov_scale, linthresh]
+    disp_sed_units.change(
+        lambda x: gr.update(visible=x == "Custom…"), disp_sed_units, disp_sed_units_custom,
+        queue=False, show_progress="hidden")
+    disp_wl_units.change(
+        lambda x: gr.update(visible=x == "Custom…"), disp_wl_units, disp_wl_units_custom,
+        queue=False, show_progress="hidden")
+
+    _rp_in = [disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom,
+              ylim_min, ylim_max, cov_scale, linthresh]
     for _w in [disp_sed_units, disp_wl_units]:
         _w.change(replot, _rp_in, [plot_sed, plot_cov, linthresh], queue=False)
+    for _w in [disp_sed_units_custom, disp_wl_units_custom]:
+        _w.blur(replot, _rp_in, [plot_sed, plot_cov, linthresh], queue=False)
+        _w.submit(replot, _rp_in, [plot_sed, plot_cov, linthresh], queue=False)
     for _w in [ylim_min, ylim_max, cov_scale]:
         _w.change(replot_nolt, _rp_in, [plot_sed, plot_cov], queue=False)
     linthresh.blur(replot_nolt, _rp_in, [plot_sed, plot_cov], queue=False)
     linthresh.submit(replot_nolt, _rp_in, [plot_sed, plot_cov], queue=False)
 
-    _dl_inputs = [disp_sed_units, disp_wl_units]
+    _dl_inputs = [disp_sed_units, disp_wl_units, disp_sed_units_custom, disp_wl_units_custom]
     for _w in [disp_sed_units, disp_wl_units]:
         _w.change(update_download_units, _dl_inputs, prepare_downloads_btn, queue=True)
+    for _w in [disp_sed_units_custom, disp_wl_units_custom]:
+        _w.blur(update_download_units, _dl_inputs, prepare_downloads_btn, queue=True)
+        _w.submit(update_download_units, _dl_inputs, prepare_downloads_btn, queue=True)
 
     # ── Info-button injection (tooltips from docstrings) ──────────────────────
     gr.HTML(f"""<script>
