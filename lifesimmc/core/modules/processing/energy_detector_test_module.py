@@ -98,15 +98,13 @@ class EnergyDetectorTestModule(BaseModule):
         posx = r_planet_params_in.collection[0].pos_x.cpu().numpy()
         posy = r_planet_params_in.collection[0].pos_y.cpu().numpy()
 
-        print(posx.shape)
-
         model = r_config_in.phringe.get_model_counts(
             spectral_energy_distribution=flux,
             x_position=posx,
             y_position=posy,
             kernels=True
         )[:, :, 0, 0, :]  # TODO: Handle orbital motion
-        print(model.shape)
+
         for transf in transformations:
             model = transf(model)
         modelf = model.flatten()
