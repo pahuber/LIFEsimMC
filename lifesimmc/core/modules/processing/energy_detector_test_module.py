@@ -31,7 +31,7 @@ class EnergyDetectorTestModule(BaseModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            n_planet_params_in: str,
+            n_planets_in: str,
             n_test_out: str,
             pfa: float,
             n_transformation_in: Union[str, tuple[str], None] = None,
@@ -44,7 +44,7 @@ class EnergyDetectorTestModule(BaseModule):
             Name of the input configuration resource.
         n_data_in : str
             Name of the input data resource.
-        n_planet_params_in : str
+        n_planets_in : str
             Name of the input planet parameters resource.
         n_transformation_in : str or tuple[str]
             Name of the input transformation resource.
@@ -53,7 +53,7 @@ class EnergyDetectorTestModule(BaseModule):
         self.n_test_out = n_test_out
         self.pfa = pfa
         self.n_config_in = n_setup_in
-        self.n_planet_params_in = n_planet_params_in
+        self.n_planets_in = n_planets_in
         self.n_transformation_in = n_transformation_in
 
     def run(self, pipeline_resources: list[BaseResource]) -> TestResource:
@@ -75,7 +75,7 @@ class EnergyDetectorTestModule(BaseModule):
         r_config_in = self.get_resource_from_name(self.n_config_in) if self.n_config_in is not None else None
         transformations = get_transformations_from_resource_name(self, self.n_transformation_in)
         r_planet_params_in = self.get_resource_from_name(
-            self.n_planet_params_in) if self.n_planet_params_in is not None else None
+            self.n_planets_in) if self.n_planets_in is not None else None
 
         times = r_config_in.phringe.get_time_steps().cpu().numpy()
         wavelengths = r_config_in.phringe.get_wavelength_bin_centers().cpu().numpy()
@@ -92,18 +92,21 @@ class EnergyDetectorTestModule(BaseModule):
         xsi = ncx2.ppf(1 - self.pfa, df=ndim, nc=0)
 
         # TODO: handle mutiple planets
-        flux = r_planet_params_in.params[0].sed.cpu().numpy()
+        flux = r_planet_params_in.collection[0].sed.cpu().numpy()
 
         # TODO: Handle orbital motion
-        posx = r_planet_params_in.params[0].pos_x
-        posy = r_planet_params_in.params[0].pos_y
+        posx = r_planet_params_in.collection[0].pos_x.cpu().numpy()
+        posy = r_planet_params_in.collection[0].pos_y.cpu().numpy()
+
+        print(posx.shape)
 
         model = r_config_in.phringe.get_model_counts(
             spectral_energy_distribution=flux,
             x_position=posx,
             y_position=posy,
             kernels=True
-        )
+        )[:, :, 0, 0, :]  # TODO: Handle orbital motion
+        print(model.shape)
         for transf in transformations:
             model = transf(model)
         modelf = model.flatten()
@@ -128,4 +131,4 @@ class EnergyDetectorTestModule(BaseModule):
         )
 
         print('Done')
-        return r_test_out
+        return r_test_out,

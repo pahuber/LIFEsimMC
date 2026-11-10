@@ -140,7 +140,9 @@ class SetupModule(BaseModule):
         r_planet_out = ResourceCollection[PlanetResource](name=self.n_planets_out)
 
         for planet in phringe._scene.planets:
-            planet_resource = PlanetResource(name=planet.name, planet=planet)
+            pos = planet.sky_coordinates[:, 0, :, 0, 0]  # shape dim x n_times
+            planet_resource = PlanetResource(name=planet.name, planet=planet, sed=planet.spectral_energy_distribution,
+                                             pos_x=pos[1], pos_y=pos[0])
             r_planet_out.collection.append(planet_resource)
 
         print('Done')

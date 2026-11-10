@@ -32,7 +32,6 @@ class NeymanPearsonTestModule(BaseModule):
             self,
             n_setup_in: str,
             n_data_in: str,
-            # n_planets_est_in: str,
             n_planets_true_in: str,
             n_test_out: str,
             pfa: float,
