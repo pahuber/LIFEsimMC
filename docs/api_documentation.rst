@@ -4,7 +4,7 @@ API Documentation
 =================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: API Documentation
 
    source/core

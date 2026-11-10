@@ -22,11 +22,15 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx_autodoc_typehints",
     "nbsphinx",
     "recommonmark",
     "sphinx_contributors",
     "sphinx_design"
 ]
+
+autodoc_typehints = "none"
+typehints_defaults = "comma"
 
 master_doc = "index"
 
@@ -125,3 +129,54 @@ def setup(app):
 
         os.makedirs(local_dir, exist_ok=True)
         urllib.request.urlretrieve(url, os.path.join(local_dir, filename))
+
+    # -- Import PHRINGE tutorials --------------------------------------------
+
+    base_url = (
+        "https://raw.githubusercontent.com/pahuber/PHRINGE/"
+        "refs/heads/main/docs"
+    )
+
+    tutorial_dir = os.path.join(
+        os.path.dirname(__file__), "tutorials", "_phringe"
+    )
+    os.makedirs(tutorial_dir, exist_ok=True)
+
+    for filename in [
+        "create_custom_instrument.rst",
+        "use_custom_spectrum.rst",
+    ]:
+        url = f"{base_url}/tutorials/{filename}"
+
+        with urllib.request.urlopen(url) as response:
+            content = response.read().decode("utf-8")
+
+        # Add note at the beginning of each tutorial
+        note = (
+            ".. note::\n\n"
+            "   This tutorial is imported from the "
+            "`PHRINGE documentation "
+            "<https://phringe.readthedocs.io/en/latest/>`_.\n\n"
+        )
+
+        # Insert note after the main page heading
+        titles = {
+            "create_custom_instrument.rst": "Custom Instrument",
+            "use_custom_spectrum.rst": "Custom Input Spectrum",
+        }
+
+        title = titles[filename]
+        heading = f"{title}\n{'=' * len(title)}\n"
+
+        content = content.replace(
+            heading,
+            heading + "\n" + note,
+            1,
+        )
+
+        with open(
+                os.path.join(tutorial_dir, filename),
+                "w",
+                encoding="utf-8",
+        ) as file:
+            file.write(content)

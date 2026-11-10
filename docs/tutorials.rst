@@ -4,7 +4,7 @@ Tutorials
 =========
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     tutorials/seo
     tutorials/advanced
